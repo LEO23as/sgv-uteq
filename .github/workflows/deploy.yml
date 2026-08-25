@@ -24,7 +24,6 @@ jobs:
           port: 22
           script: |
             echo "🚀 Iniciando despliegue automático en AWS EC2..."
-            
             mkdir -p ~/app
             cd ~/app
             
@@ -37,5 +36,4 @@ jobs:
             
             sudo docker-compose down || true
             sudo docker-compose up -d --build
-            
-            echo "✅ Despliegue completado exitosamente en AWS EC2"
+            echo "✅ Despliegue completado exitosamente"
