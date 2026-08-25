@@ -1,0 +1,41 @@
+name: Despliegue Automático CI/CD a AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    name: Desplegar en Servidor AWS EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Clave SSH y Desplegar en AWS EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            echo "🚀 Iniciando despliegue automático en AWS EC2..."
+            
+            mkdir -p ~/app
+            cd ~/app
+            
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              git fetch origin
+              git reset --hard origin/main
+            fi
+            
+            sudo docker-compose down || true
+            sudo docker-compose up -d --build
+            
+            echo "✅ Despliegue completado exitosamente en AWS EC2"
