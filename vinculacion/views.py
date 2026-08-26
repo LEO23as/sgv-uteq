@@ -1460,8 +1460,9 @@ def api_me(request):
         'id': u.id_usuario,
         'nombre': u.nombres or u.username,
         'username': u.username,
-        'rol': u.id_rol.nombre,
-        'periodo': {'nombre': periodo.nombre, 'codigo': periodo.codigo} if periodo else None,
+        'email': u.email or f"{u.username}@uteq.edu.ec",
+        'rol': u.id_rol.nombre if u.id_rol else 'Usuario',
+        'periodo': {'nombre': periodo.nombre, 'codigo': periodo.codigo, 'id_periodo': periodo.id_periodo} if periodo else None,
     })
 
 

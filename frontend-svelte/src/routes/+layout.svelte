@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
-  import { user, checkAuth, logout, capaNBIActiva } from '$lib/stores';
+  import { user, checkAuth, logout, capaNBIActiva, fetchAPI } from '$lib/stores';
   import Toasts from '$lib/Toasts.svelte';
 
   let { children } = $props();
@@ -17,17 +17,13 @@
   let showPeriodModal = $state(false);
   let showProfileDropdown = $state(false);
   let searchPeriod = $state('');
-  
   let periodosList = $state([
     { id: 1, codigo: 'REGULAR - 2026-2027 PPA', activo: true },
     { id: 2, codigo: 'REGULAR - 2025-2026 SPA', activo: false },
     { id: 3, codigo: 'REGULAR - 2025-2026 PPA', activo: false },
     { id: 4, codigo: 'REGULAR - 2024-2025 - SPA', activo: false },
     { id: 5, codigo: 'REGULAR - 2024-2025 - PPA', activo: false },
-    { id: 6, codigo: 'REGULAR - 2023-2024 - SPA', activo: false },
-    { id: 7, codigo: 'REGULAR - 2023-2024 - PPA', activo: false },
   ]);
-
   let selectedPeriodCode = $state('REGULAR - 2026-2027 PPA');
 
   // Live Clock for Footer
@@ -39,11 +35,41 @@
     currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   }
 
+  async function cargarPeriodosDB() {
+    try {
+      const data = await fetchAPI('/api/periodos/');
+      if (Array.isArray(data) && data.length > 0) {
+        periodosList = data.map(p => ({
+          id: p.id_periodo,
+          codigo: p.codigo || p.nombre,
+          nombre: p.nombre,
+          activo: p.activo
+        }));
+        
+        const activo = data.find(p => p.activo);
+        if (activo) {
+          selectedPeriodCode = activo.codigo || activo.nombre;
+        } else if (data[0]) {
+          selectedPeriodCode = data[0].codigo || data[0].nombre;
+        }
+      }
+    } catch (e) {
+      console.log('Cargando períodos fallback:', e);
+    }
+  }
+
   onMount(async () => {
-    await checkAuth();
+    const u = await checkAuth();
     authChecked = true;
     const path = get(page).url.pathname;
-    if (!$user && !PUBLIC.includes(path)) goto('/');
+    if (!u && !PUBLIC.includes(path)) goto('/');
+
+    if (u) {
+      if (u.periodo?.codigo) {
+        selectedPeriodCode = u.periodo.codigo;
+      }
+      await cargarPeriodosDB();
+    }
 
     updateClock();
     clockInterval = setInterval(updateClock, 1000);
@@ -83,7 +109,7 @@
   }
 
   let filteredPeriods = $derived(
-    periodosList.filter(p => p.codigo.toLowerCase().includes(searchPeriod.toLowerCase()))
+    periodosList.filter(p => (p.codigo || p.nombre || '').toLowerCase().includes(searchPeriod.toLowerCase()))
   );
 
   const ESTADOS = [
@@ -249,8 +275,8 @@
                   <i class="bi bi-person-circle"></i>
                 </div>
                 <div class="profile-dropdown-info">
-                  <div class="profile-full-name">{$user?.nombre || 'Castro Lopez Pedro Leonardo'}</div>
-                  <div class="profile-email">{$user?.email || 'pcastrol@uteq.edu.ec'}</div>
+                  <div class="profile-full-name">{$user?.nombre || $user?.username || 'Administrador'}</div>
+                  <div class="profile-email">{$user?.email || `${$user?.username}@uteq.edu.ec`}</div>
                 </div>
               </div>
 
@@ -259,7 +285,7 @@
                 <div class="profile-section-label">• PERFILES DISPONIBLES</div>
                 <div class="profile-role-item active-role">
                   <i class="bi bi-check-lg check-role"></i>
-                  <span>{$user?.rol || 'SOFT-R'}</span>
+                  <span>{$user?.rol || 'Administrador'}</span>
                 </div>
               </div>
 
@@ -384,7 +410,7 @@
 
     </div>
 
-    <!-- FOOTER INFERIOR FIJO (Estilo SGA UTEQ) -->
+    <!-- FOOTER INFERIOR FIJO (ESTILO SGA UTEQ) -->
     <footer class="sga-fixed-footer">
       <div class="footer-left">Universidad Técnica Estatal De Quevedo</div>
       <div class="footer-center">© 2026 - Todos los derechos reservados</div>
