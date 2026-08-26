@@ -1456,11 +1456,12 @@ def api_me(request):
     except Usuario.DoesNotExist:
         return JsonResponse({'error': 'No autenticado'}, status=401)
     periodo = PeriodoAcademico.objects.filter(activo=True).first()
+    correo_val = getattr(u, 'correo', None) or getattr(u, 'email', None) or f"{u.username}@uteq.edu.ec"
     return JsonResponse({
         'id': u.id_usuario,
         'nombre': u.nombres or u.username,
         'username': u.username,
-        'email': u.email or f"{u.username}@uteq.edu.ec",
+        'email': correo_val,
         'rol': u.id_rol.nombre if u.id_rol else 'Usuario',
         'periodo': {'nombre': periodo.nombre, 'codigo': periodo.codigo, 'id_periodo': periodo.id_periodo} if periodo else None,
     })
