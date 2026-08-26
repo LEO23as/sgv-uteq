@@ -43,12 +43,15 @@
     </div>
   </header>
 
-  <!-- Body Section with Campus Background -->
+  <!-- Main Body with banner.png Campus Background -->
   <div class="sga-body">
     <div class="sga-right-panel">
       <!-- Login Card -->
       <div class="sga-card">
-        <h2 class="sga-card-heading">Entrada al SGV</h2>
+        <div class="sga-card-header">
+          <img src="/logo-uteq.png" alt="UTEQ Mascot" class="sga-mascot-logo" />
+          <h2 class="sga-card-heading">Entrada al SGV</h2>
+        </div>
 
         <form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="sga-form">
           {#if error}
@@ -108,31 +111,6 @@
           </a>
         </div>
       </div>
-
-      <!-- Downloads / Quick Access Card -->
-      <div class="sga-card sga-downloads">
-        <h3 class="sga-downloads-heading">DESCARGAS</h3>
-        <div class="sga-downloads-grid">
-          <a href="/dashboard" class="sga-download-box">
-            <div class="sga-icon-bg bg-blue">
-              <i class="bi bi-journal-text"></i>
-            </div>
-            <span>Manual de acceso al SGV y Gestión</span>
-          </a>
-          <a href="/dashboard" class="sga-download-box">
-            <div class="sga-icon-bg bg-orange">
-              <i class="bi bi-laptop"></i>
-            </div>
-            <span>Procedimiento de Vinculación</span>
-          </a>
-          <a href="/dashboard" class="sga-download-box">
-            <div class="sga-icon-bg bg-green">
-              <i class="bi bi-file-earmark-check"></i>
-            </div>
-            <span>Solicitud de Proyectos</span>
-          </a>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -169,22 +147,22 @@
     font-weight: 700;
   }
 
-  /* Main Body with UTEQ Campus Photo */
+  /* Main Body with banner.png Background */
   .sga-body {
     flex: 1;
-    background: url('https://sga.uteq.edu.ec/static/images/loginsga.jpg') no-repeat center center / cover;
+    background: url('/banner.png') no-repeat center center / cover;
     background-color: #1b7a2b;
     display: flex;
     justify-content: flex-end;
     align-items: flex-start;
-    padding: 30px 40px;
+    padding: 40px 50px;
     box-sizing: border-box;
     min-height: calc(100vh - 44px);
   }
 
   .sga-right-panel {
     width: 100%;
-    max-width: 410px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -193,16 +171,31 @@
   /* SGA White Card Container */
   .sga-card {
     background: #ffffff;
-    border-radius: 4px;
-    padding: 24px 26px 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+    padding: 26px 28px 22px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .sga-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+
+  .sga-mascot-logo {
+    height: 75px;
+    width: auto;
+    object-fit: contain;
   }
 
   .sga-card-heading {
-    margin: 0 0 18px 0;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #333333;
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #222222;
+    text-align: center;
   }
 
   .sga-form {
@@ -289,9 +282,9 @@
     color: #ffffff;
     border: 1px solid #4cae4c;
     border-radius: 4px;
-    padding: 7px 16px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    padding: 8px 18px;
+    font-size: 0.92rem;
+    font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -344,61 +337,6 @@
 
   .sga-forgot:hover {
     text-decoration: underline;
-  }
-
-  /* Downloads Panel */
-  .sga-downloads-heading {
-    margin: 0 0 14px 0;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #495057;
-    text-align: center;
-    letter-spacing: 0.5px;
-  }
-
-  .sga-downloads-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-
-  .sga-download-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 6px;
-    text-decoration: none;
-    color: #212529;
-    padding: 8px 4px;
-    border-radius: 4px;
-    transition: background-color 0.15s;
-  }
-
-  .sga-download-box:hover {
-    background-color: #f8f9fa;
-  }
-
-  .sga-icon-bg {
-    width: 42px;
-    height: 42px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    color: #ffffff;
-  }
-
-  .bg-blue { background-color: #0056b3; }
-  .bg-orange { background-color: #fd7e14; }
-  .bg-green { background-color: #28a745; }
-
-  .sga-download-box span {
-    font-size: 0.7rem;
-    font-weight: 600;
-    line-height: 1.2;
-    color: #0056b3;
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }
