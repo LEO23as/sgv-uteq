@@ -17,14 +17,10 @@
   let showPeriodModal = $state(false);
   let showProfileDropdown = $state(false);
   let searchPeriod = $state('');
-  let periodosList = $state([
-    { id: 1, codigo: 'REGULAR - 2026-2027 PPA', activo: true },
-    { id: 2, codigo: 'REGULAR - 2025-2026 SPA', activo: false },
-    { id: 3, codigo: 'REGULAR - 2025-2026 PPA', activo: false },
-    { id: 4, codigo: 'REGULAR - 2024-2025 - SPA', activo: false },
-    { id: 5, codigo: 'REGULAR - 2024-2025 - PPA', activo: false },
-  ]);
-  let selectedPeriodCode = $state('REGULAR - 2026-2027 PPA');
+  
+  // Períodos cargados exclusivamente desde la Base de Datos
+  let periodosList = $state([]);
+  let selectedPeriodCode = $state('Cargando...');
 
   // Live Clock for Footer
   let currentTime = $state('');
@@ -43,18 +39,23 @@
           id: p.id_periodo,
           codigo: p.codigo || p.nombre,
           nombre: p.nombre,
-          activo: p.activo
+          activo: Boolean(p.activo)
         }));
         
-        const activo = data.find(p => p.activo);
+        const activo = periodosList.find(p => p.activo);
         if (activo) {
-          selectedPeriodCode = activo.codigo || activo.nombre;
-        } else if (data[0]) {
-          selectedPeriodCode = data[0].codigo || data[0].nombre;
+          selectedPeriodCode = activo.codigo;
+        } else {
+          selectedPeriodCode = periodosList[0].codigo;
         }
+      } else {
+        periodosList = [];
+        selectedPeriodCode = 'Sin período';
       }
     } catch (e) {
-      console.log('Cargando períodos fallback:', e);
+      console.log('Error cargando períodos:', e);
+      periodosList = [];
+      selectedPeriodCode = 'Sin período';
     }
   }
 
@@ -65,9 +66,6 @@
     if (!u && !PUBLIC.includes(path)) goto('/');
 
     if (u) {
-      if (u.periodo?.codigo) {
-        selectedPeriodCode = u.periodo.codigo;
-      }
       await cargarPeriodosDB();
     }
 
@@ -204,7 +202,7 @@
             <i class="bi bi-chevron-down caret-icon"></i>
           </button>
 
-          <!-- MODAL / DROPDOWN DE PERÍODO ACADÉMICO (Exacto a SGA UTEQ) -->
+          <!-- MODAL / DROPDOWN DE PERÍODO ACADÉMICO -->
           {#if showPeriodModal}
             <div class="sga-period-modal" onclick={(e) => e.stopPropagation()}>
               <div class="period-modal-header">
@@ -217,34 +215,40 @@
                 </button>
               </div>
 
-              <div class="period-search-box">
-                <i class="bi bi-search search-icon"></i>
-                <input 
-                  type="text" 
-                  placeholder="Buscar período..." 
-                  bind:value={searchPeriod} 
-                />
-              </div>
+              {#if periodosList.length > 3}
+                <div class="period-search-box">
+                  <i class="bi bi-search search-icon"></i>
+                  <input 
+                    type="text" 
+                    placeholder="Buscar período..." 
+                    bind:value={searchPeriod} 
+                  />
+                </div>
+              {/if}
 
               <div class="period-list-container">
                 <div class="period-subtitle">• PERÍODOS DISPONIBLES</div>
                 <div class="period-items-list">
-                  {#each filteredPeriods as p}
-                    <button 
-                      class="period-item-row" 
-                      class:selected-period={p.activo || p.codigo === selectedPeriodCode}
-                      onclick={() => selectPeriod(p)}
-                    >
-                      <span class="radio-indicator">
-                        {#if p.activo || p.codigo === selectedPeriodCode}
-                          <i class="bi bi-check-lg check-active"></i>
-                        {:else}
-                          <span class="radio-circle"></span>
-                        {/if}
-                      </span>
-                      <span class="period-item-label">{p.codigo}</span>
-                    </button>
-                  {/each}
+                  {#if filteredPeriods.length === 0}
+                    <div class="period-empty-msg">No hay períodos registrados en la base de datos</div>
+                  {:else}
+                    {#each filteredPeriods as p}
+                      <button 
+                        class="period-item-row" 
+                        class:selected-period={p.codigo === selectedPeriodCode}
+                        onclick={() => selectPeriod(p)}
+                      >
+                        <span class="radio-indicator">
+                          {#if p.codigo === selectedPeriodCode}
+                            <i class="bi bi-check-lg check-active"></i>
+                          {:else}
+                            <span class="radio-circle"></span>
+                          {/if}
+                        </span>
+                        <span class="period-item-label">{p.codigo}</span>
+                      </button>
+                    {/each}
+                  {/if}
                 </div>
               </div>
 
@@ -256,33 +260,31 @@
           {/if}
         </div>
 
-        <!-- Selector de Usuario / Perfil (Botón) -->
+        <!-- Selector de Usuario / Perfil -->
         <div class="profile-menu-container">
           <button class="profile-btn" class:active={showProfileDropdown} onclick={toggleProfileDropdown} title="Menú de usuario">
             <div class="user-avatar-sm">
               <i class="bi bi-person-fill"></i>
             </div>
-            <span class="profile-name">{$user?.username || 'SOFT-R'}</span>
+            <span class="profile-name">{$user?.username || 'Usuario'}</span>
             <i class="bi bi-chevron-down caret-icon"></i>
           </button>
 
-          <!-- DROPDOWN DE PERFIL DE USUARIO (Exacto a SGA UTEQ) -->
+          <!-- DROPDOWN DE PERFIL DE USUARIO -->
           {#if showProfileDropdown}
             <div class="profile-dropdown show" onclick={(e) => e.stopPropagation()}>
-              <!-- User Info Card Header -->
               <div class="profile-dropdown-header">
                 <div class="profile-avatar-lg">
                   <i class="bi bi-person-circle"></i>
                 </div>
                 <div class="profile-dropdown-info">
-                  <div class="profile-full-name">{$user?.nombre || $user?.username || 'Administrador'}</div>
+                  <div class="profile-full-name">{$user?.nombre || $user?.username}</div>
                   <div class="profile-email">{$user?.email || `${$user?.username}@uteq.edu.ec`}</div>
                 </div>
               </div>
 
-              <!-- Roles / Profiles Available -->
               <div class="profile-roles-section">
-                <div class="profile-section-label">• PERFILES DISPONIBLES</div>
+                <div class="profile-section-label">• ROL ACTIVO</div>
                 <div class="profile-role-item active-role">
                   <i class="bi bi-check-lg check-role"></i>
                   <span>{$user?.rol || 'Administrador'}</span>
@@ -291,34 +293,6 @@
 
               <div class="profile-divider"></div>
 
-              <!-- Menu Options -->
-              <div class="profile-menu-items">
-                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-person"></i>
-                  <span>Mi perfil</span>
-                </a>
-                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-display"></i>
-                  <span>Mis dispositivos</span>
-                </a>
-                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-image"></i>
-                  <span>Cambio de foto</span>
-                </a>
-                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-lock"></i>
-                  <span>Cambio de clave</span>
-                </a>
-                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-envelope"></i>
-                  <span>Gestión de correos</span>
-                  <span class="badge-nuevo">NUEVO</span>
-                </a>
-              </div>
-
-              <div class="profile-divider"></div>
-
-              <!-- Logout Button -->
               <div class="profile-menu-footer">
                 <button class="pmenu-item btn-logout-red" onclick={handleLogout}>
                   <i class="bi bi-box-arrow-left"></i>
@@ -410,7 +384,7 @@
 
     </div>
 
-    <!-- FOOTER INFERIOR FIJO (ESTILO SGA UTEQ) -->
+    <!-- FOOTER INFERIOR FIJO -->
     <footer class="sga-fixed-footer">
       <div class="footer-left">Universidad Técnica Estatal De Quevedo</div>
       <div class="footer-center">© 2026 - Todos los derechos reservados</div>
@@ -427,7 +401,7 @@
   flex-direction: column; 
   min-height: 100vh; 
   background: #f4f6f3; 
-  padding-bottom: 28px; /* espacio para footer fijo */
+  padding-bottom: 28px;
 }
 
 .checking { 
@@ -441,12 +415,12 @@
   gap: 10px; 
 }
 
-/* ── NAVBAR SUPERIOR (SGA UTEQ) ── */
+/* ── NAVBAR SUPERIOR ── */
 .sga-navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1b7a2b; /* Verde institucional UTEQ */
+  background: #1b7a2b;
   height: 48px;
   padding: 0 16px;
   position: sticky;
@@ -528,7 +502,6 @@
 .period-btn:hover { background: rgba(255, 255, 255, 0.25); }
 .caret-icon { font-size: 0.65rem; opacity: 0.8; }
 
-/* MODAL DE PERÍODO (SGA UTEQ) */
 .sga-period-modal {
   position: absolute;
   top: calc(100% + 8px);
@@ -612,6 +585,13 @@
   gap: 4px;
   max-height: 220px;
   overflow-y: auto;
+}
+
+.period-empty-msg {
+  font-size: 0.78rem;
+  color: #888;
+  padding: 8px;
+  text-align: center;
 }
 
 .period-item-row {
@@ -700,12 +680,11 @@
   font-weight: 700;
 }
 
-/* DROPDOWN DE PERFIL (CSS exacto del SGA) */
 .profile-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 310px;
+  width: 280px;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(26, 117, 4, 0.15), 0 0 0 1px rgba(26, 117, 4, 0.08);
@@ -778,12 +757,6 @@
   margin: 2px 0;
 }
 
-.profile-menu-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .pmenu-item {
   display: flex;
   align-items: center;
@@ -802,16 +775,6 @@
 }
 
 .pmenu-item:hover { background: #f4f6f8; color: #1a7504; }
-
-.badge-nuevo {
-  margin-left: auto;
-  background: #28a745;
-  color: #ffffff;
-  font-size: 0.55rem;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 10px;
-}
 
 .btn-logout-red {
   color: #c13e3e !important;
@@ -979,14 +942,14 @@
 .fc-home:hover { background: #f5faf0 !important; color: var(--verde) !important; border-left-color: var(--verde) !important; }
 .fc-home:hover i { color: var(--verde) !important; }
 
-/* ── FOOTER FIJO (ESTILO SGA UTEQ) ── */
+/* ── FOOTER FIJO ── */
 .sga-fixed-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   height: 28px;
-  background: #1b7a2b; /* Verde institucional UTEQ */
+  background: #1b7a2b;
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 600;
