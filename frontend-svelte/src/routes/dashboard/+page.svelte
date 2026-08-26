@@ -32,23 +32,24 @@
 
 <svelte:head><title>Dashboard — SGV UTEQ</title></svelte:head>
 
-<!-- BARRA SECUNDARIA -->
+<!-- BARRA SECUNDARIA BREADCRUMB + BUSCADOR -->
 <div class="subbar">
   <nav class="breadcrumb">
     <a href="/dashboard">Inicio</a>
     <span class="sep">/</span>
-    <span class="current">Dashboard</span><span class="sep">/</span>
+    <span class="current">Dashboard</span>
+    <span class="sep">/</span>
   </nav>
   <div class="search-wrap">
     <i class="bi bi-search"></i>
-    <input bind:value={buscar} placeholder="Buscar módulo..." />
+    <input bind:value={buscar} placeholder="Buscar..." />
   </div>
 </div>
 
-<!-- CUERPO PRINCIPAL -->
+<!-- CUERPO PRINCIPAL DEL DASHBOARD -->
 <div class="dash-body">
 
-  <!-- PANEL IZQUIERDO: imagen informativa -->
+  <!-- PANEL IZQUIERDO: DEPARTAMENTO DE VINCULACIÓN -->
   <aside class="info-panel">
     <div class="info-card">
       <div class="info-img-wrap">
@@ -70,13 +71,15 @@
     </div>
   </aside>
 
-  <!-- MÓDULOS -->
+  <!-- SECCIÓN DE CARDS DE MÓDULOS (ESTILO EXACTO SGA UTEQ) -->
   <section class="modulos-wrap">
     <div class="modulos-grid">
       {#each filtered as m}
         {#if m.disabled}
           <div class="mod-card disabled">
-            <i class="bi bi-star-fill mod-star"></i>
+            <div class="mod-card-top">
+              <i class="bi bi-star mod-star"></i>
+            </div>
             <div class="mod-icon-wrap">
               {#if m.bi}
                 <i class="bi {m.bi} mod-bi"></i>
@@ -84,15 +87,19 @@
                 <img src={m.icon} alt={m.label} class="mod-img" />
               {/if}
             </div>
-            <div class="mod-name">{m.label}</div>
-            <div class="mod-desc">{m.desc}</div>
+            <div class="mod-card-bottom">
+              <div class="mod-name">{m.label}</div>
+              <div class="mod-desc">{m.desc}</div>
+            </div>
           </div>
         {:else}
           <a href={m.href} class="mod-card">
-            <i class="bi bi-star-fill mod-star"></i>
-            {#if !cargando && stats && m.key && stats[m.key] !== undefined}
-              <span class="mod-badge">{stats[m.key]}</span>
-            {/if}
+            <div class="mod-card-top">
+              <i class="bi bi-star-fill mod-star"></i>
+              {#if !cargando && stats && m.key && stats[m.key] !== undefined}
+                <span class="mod-badge">{stats[m.key]}</span>
+              {/if}
+            </div>
             <div class="mod-icon-wrap">
               {#if m.bi}
                 <i class="bi {m.bi} mod-bi"></i>
@@ -100,8 +107,10 @@
                 <img src={m.icon} alt={m.label} class="mod-img" />
               {/if}
             </div>
-            <div class="mod-name">{m.label}</div>
-            <div class="mod-desc">{m.desc}</div>
+            <div class="mod-card-bottom">
+              <div class="mod-name">{m.label}</div>
+              <div class="mod-desc">{m.desc}</div>
+            </div>
           </a>
         {/if}
       {/each}
@@ -117,27 +126,53 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 24px;
-  background: #fff;
-  border-bottom: 1px solid var(--borde);
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.breadcrumb a {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb .sep {
+  color: #999999;
+}
+
+.breadcrumb .current {
+  color: #1b7a2b;
+  font-weight: 700;
 }
 
 .search-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--gris-claro);
-  border: 1.5px solid var(--borde);
-  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #ced4da;
+  border-radius: 18px;
   padding: 0 14px;
-  min-width: 260px;
-  transition: border-color .2s;
+  width: 220px;
+  transition: border-color 0.2s;
 }
-.search-wrap:focus-within { border-color: var(--verde); background: #fff; }
-.search-wrap i { color: var(--gris); }
+.search-wrap:focus-within { border-color: #1b7a2b; }
+.search-wrap i { color: #888888; font-size: 0.85rem; }
 .search-wrap input {
-  border: none; outline: none;
-  padding: 8px 0;
-  font-size: .88rem;
+  border: none; 
+  outline: none;
+  padding: 6px 0;
+  font-size: 0.82rem;
   font-family: inherit;
   background: transparent;
   width: 100%;
@@ -146,7 +181,6 @@
 /* ── BODY ── */
 .dash-body {
   display: flex;
-  gap: 0;
   align-items: flex-start;
   padding: 20px 24px;
   gap: 20px;
@@ -154,7 +188,7 @@
 
 /* ── PANEL IZQUIERDO ── */
 .info-panel {
-  width: 240px;
+  width: 230px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -163,147 +197,188 @@
 @media (max-width: 900px) { .info-panel { display: none; } }
 
 .info-card {
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid var(--borde);
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e3e3e3;
   overflow: hidden;
-  box-shadow: var(--sombra);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .info-img-wrap {
-  background: var(--verde);
-  padding: 28px 20px;
+  background: #1b7a2b;
+  padding: 24px 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .info-logo {
-  width: 140px;
+  width: 130px;
   filter: brightness(0) invert(1);
 }
 .info-text {
-  padding: 16px 16px 20px;
+  padding: 14px 14px 18px;
   text-align: center;
 }
 .info-text h3 {
-  font-size: .9rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--negro);
+  color: #222222;
   margin-bottom: 8px;
 }
 .info-sep {
-  width: 40px;
+  width: 36px;
   height: 3px;
-  background: var(--dorado);
+  background: #d4a017;
   border-radius: 2px;
-  margin: 0 auto 10px;
+  margin: 0 auto 8px;
 }
 .info-text p {
-  font-size: .78rem;
-  color: var(--dorado);
+  font-size: 0.76rem;
+  color: #d4a017;
   font-weight: 700;
+  margin: 0;
 }
 
 .notice {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 10px;
+  padding: 14px;
+  gap: 8px;
 }
 .notice-icon {
-  width: 36px; height: 36px;
-  background: var(--verde-claro);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--verde);
-  font-size: 1.1rem;
+  width: 34px; 
+  height: 34px;
+  background: #eaf5ea;
+  border-radius: 8px;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  color: #1b7a2b;
+  font-size: 1rem;
 }
 .notice-body strong {
-  font-size: .85rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  color: var(--negro);
+  color: #222222;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .notice-body p {
-  font-size: .75rem;
-  color: var(--gris);
+  font-size: 0.73rem;
+  color: #777777;
+  margin: 0;
 }
 
-/* ── MÓDULOS ── */
+/* ── CARDS MÓDULOS (ESTILO EXACTO SGA UTEQ) ── */
 .modulos-wrap { flex: 1; min-width: 0; }
 
 .modulos-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 16px;
 }
-@media (max-width: 900px) { .modulos-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .modulos-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .mod-card {
-  background: #fff;
-  border: 1.5px solid #c8e6bc;
-  border-radius: 16px;
-  padding: 22px 10px 18px;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 10px 10px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   text-align: center;
   text-decoration: none;
   position: relative;
-  transition: border-color .2s, box-shadow .2s, transform .18s;
-  min-height: 195px;
+  transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+  height: 200px;
+  box-sizing: border-box;
 }
+
 .mod-card:hover {
-  border-color: var(--verde);
-  box-shadow: 0 8px 28px rgba(27,117,5,.16);
-  transform: translateY(-4px);
+  background: #ebf3fb; /* Resalte azul-grisáceo suave estilo SGA */
+  border-color: #b8d4f2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-.mod-card.disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+
+.mod-card.disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+  pointer-events: none; 
+}
+
+.mod-card-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 18px;
+}
 
 .mod-star {
-  position: absolute; top: 9px; left: 10px;
-  color: #e8d98a; font-size: .72rem;
-  transition: color .2s;
+  color: #f39c12;
+  font-size: 0.75rem;
 }
-.mod-card:hover .mod-star { color: var(--dorado); }
+
+.mod-card.disabled .mod-star {
+  color: #d0d0d0;
+}
 
 .mod-badge {
-  position: absolute; top: 8px; right: 10px;
-  background: var(--verde); color: #fff;
-  font-size: .62rem; font-weight: 800;
-  padding: 2px 7px; border-radius: 20px;
+  background: #1b7a2b;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 12px;
+  line-height: 1.3;
 }
 
-/* Contenedor ícono: caja fija para que todos los PNG queden iguales */
+/* Contenedor ícono */
 .mod-icon-wrap {
-  width: 90px;
-  height: 90px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-bottom: 10px;
+  margin: 4px 0;
 }
+
 .mod-img {
-  width: 90px;
-  height: 90px;
+  width: 78px;
+  height: 78px;
   object-fit: contain;
 }
+
 .mod-bi {
-  font-size: 68px;
-  color: var(--verde);
+  font-size: 64px;
+  color: #1b7a2b;
   line-height: 1;
 }
 
+.mod-card-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .mod-name {
-  font-size: .88rem; font-weight: 800;
-  color: #1a1a1a; margin-bottom: 3px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #222222;
   line-height: 1.2;
 }
-.mod-card:hover .mod-name { color: var(--verde); }
 
-.mod-desc { font-size: .72rem; color: #b0b0b0; font-weight: 500; }
+.mod-card:hover .mod-name { 
+  color: #0056b3; 
+}
+
+.mod-desc { 
+  font-size: 0.7rem; 
+  color: #888888; 
+  font-weight: 400; 
+  line-height: 1.2; 
+}
 </style>
