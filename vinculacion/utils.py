@@ -14,26 +14,20 @@ def quitar_tildes(texto):
 
 def generar_username(nombres, apellidos):
     """
-    Genera username institucional: 
-    2 primeras letras del nombre + 1er apellido completo + 1ª letra del 2º apellido
-    Ejemplo: Pedro Castro López → pecastrol
+    Genera username institucional dinámico según los nombres y apellidos:
+    - Con 2 apellidos (ej: Pedro Castro López): 1ª letra nombre + apellido1 + 1ª letra apellido2 → pcastrol
+    - Con 1 apellido (ej: Jairo Jiménez): 1ª letra nombre + apellido1 → jjimenez
     """
     from vinculacion.models import Usuario
     
     nombres_split = nombres.strip().split()
     apellidos_split = apellidos.strip().split()
     
-    # 2 primeras letras del nombre (ej: "pe" de "Pedro")
-    nombre_limpio = quitar_tildes(nombres_split[0]).lower() if nombres_split else 'us'
-    prefijo_nombre = nombre_limpio[:2] if len(nombre_limpio) >= 2 else nombre_limpio
-    
-    # Primer apellido completo (ej: "castro")
+    primera_nombre = quitar_tildes(nombres_split[0][0]).lower() if nombres_split and nombres_split[0] else 'u'
     apellido1 = quitar_tildes(apellidos_split[0]).lower() if len(apellidos_split) > 0 else 'usuario'
-    
-    # Primera letra del segundo apellido (ej: "l" de "López")
     primera_apellido2 = quitar_tildes(apellidos_split[1][0]).lower() if len(apellidos_split) > 1 else ''
     
-    username_base = f"{prefijo_nombre}{apellido1}{primera_apellido2}"
+    username_base = f"{primera_nombre}{apellido1}{primera_apellido2}"
     username = username_base
     
     # Verificar duplicados
