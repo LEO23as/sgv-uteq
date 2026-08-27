@@ -1852,34 +1852,34 @@ COPY public.capa_indicador_canton (id_indicador, tipo_indicador, dpa_canton, pro
 
 COPY public.carrera (id_carrera, id_facultad, nombre, codigo, activo, creado_en, horas_vinculacion, area_conocimiento, sub_area) FROM stdin;
 1	5	INGENIERIA EN SOFTWARE	IS-130	t	2026-06-09 21:29:36.877841	160		
-11	5	Ingeniero/a en Sistemas de Informaci├│n	sistemas-de-informacion	t	2026-06-30 22:03:55.136827	160		
+11	5	Ingeniero/a en Sistemas de Información	sistemas-de-informacion	t	2026-06-30 22:03:55.136827	160		
 12	5	Ingeniero/a en Software	software	t	2026-06-30 22:03:55.136827	160		
-13	5	Ingeniero/a en Tecnolog├¡as de la Informaci├│n	tecnologias-de-lainformacion	t	2026-06-30 22:03:55.136827	160		
-14	5	Ingeniero/a en Telem├ítica	telematica	t	2026-06-30 22:03:55.136827	160		
-15	6	Ingeniero/a Acu├¡cola	acuicultura	t	2026-07-07 19:17:51.025425	160		
+13	5	Ingeniero/a en Tecnologías de la Información	tecnologias-de-lainformacion	t	2026-06-30 22:03:55.136827	160		
+14	5	Ingeniero/a en Telemática	telematica	t	2026-06-30 22:03:55.136827	160		
+15	6	Ingeniero/a Acuícola	acuicultura	t	2026-07-07 19:17:51.025425	160		
 16	6	Ingeniero/a Agropecuario/a	agropecuaria	t	2026-07-07 19:17:51.025425	160		
-17	6	Bi├│logo/a	biologia	t	2026-07-07 19:17:51.025425	160		
+17	6	Biólogo/a	biologia	t	2026-07-07 19:17:51.025425	160		
 18	6	Ingeniero/a Zootecnista	zootecnia	t	2026-07-07 19:17:51.025425	160		
 19	4	Ingeniero/a Ambiental	ingenieria-ambiental	t	2026-07-07 19:17:51.025425	160		
 20	4	Arquitecto/a	arquitectura	t	2026-07-07 19:17:51.025425	160		
 21	4	Ingeniero/a Civil	ingenieria-civil	t	2026-07-07 19:17:51.025425	160		
-22	4	Ingeniero/a El├®ctrico/a	electricidad	t	2026-07-07 19:17:51.025425	160		
-23	4	Ingeniero/a Mec├ínico/a	mecanica	t	2026-07-07 19:17:51.025425	160		
+22	4	Ingeniero/a Eléctrico/a	electricidad	t	2026-07-07 19:17:51.025425	160		
+23	4	Ingeniero/a Mecánico/a	mecanica	t	2026-07-07 19:17:51.025425	160		
 24	9	Ingeniero/a en Agroindustria	agroindustria	t	2026-07-07 19:17:51.025425	160		
 25	9	Ingeniero/a en Alimentos	alimentos	t	2026-07-07 19:17:51.025425	160		
 26	9	Ingeniero/a Industrial	ingenieria-industrial	t	2026-07-07 19:17:51.025425	160		
 27	9	Ingeniero/a en Seguridad Industrial	seguridad-industrial	t	2026-07-07 19:17:51.025425	160		
-28	1	Ingeniero/a en Agroecolog├¡a	agroecologia	t	2026-07-07 19:17:51.025425	160		
-29	1	Ingeniero/a Agr├│nomo/a	agronomia	t	2026-07-07 19:17:51.025425	160		
-30	3	Licenciado/a en Educaci├│n Inicial	educacion-inicial	t	2026-07-07 19:17:51.025425	160		
-31	3	Licenciado/a en Educaci├│n B├ísica	educacion-basica	t	2026-07-07 19:17:51.025425	160		
-32	3	Licenciado/a en Ciencias de la Educaci├│n	educacion-linea	t	2026-07-07 19:17:51.025425	160		
-33	8	Licenciado/a en Administraci├│n P├║blica	administracion-publica	t	2026-07-07 19:17:51.025425	160		
+28	1	Ingeniero/a en Agroecología	agroecologia	t	2026-07-07 19:17:51.025425	160		
+29	1	Ingeniero/a Agrónomo/a	agronomia	t	2026-07-07 19:17:51.025425	160		
+30	3	Licenciado/a en Educación Inicial	educacion-inicial	t	2026-07-07 19:17:51.025425	160		
+31	3	Licenciado/a en Educación Básica	educacion-basica	t	2026-07-07 19:17:51.025425	160		
+32	3	Licenciado/a en Ciencias de la Educación	educacion-linea	t	2026-07-07 19:17:51.025425	160		
+33	8	Licenciado/a en Administración Pública	administracion-publica	t	2026-07-07 19:17:51.025425	160		
 34	8	Economista	economia	t	2026-07-07 19:17:51.025425	160		
-35	2	Licenciado/a en Administraci├│n de Empresas	administracion-de-empresas	t	2026-07-07 19:17:51.025425	160		
-36	2	Licenciado/a en Contabilidad y Auditor├¡a	contabilidad-y-auditoria	t	2026-07-07 19:17:51.025425	160		
+35	2	Licenciado/a en Administración de Empresas	administracion-de-empresas	t	2026-07-07 19:17:51.025425	160		
+36	2	Licenciado/a en Contabilidad y Auditoría	contabilidad-y-auditoria	t	2026-07-07 19:17:51.025425	160		
 37	7	Licenciado/a en Enfermeria	enfermeria	t	2026-07-09 21:54:16.572341	160		
-42	1	Ingeniero/a Agr├¡cola	ingenieria-agricola	t	2026-08-20 04:15:45.18999	160	\N	\N
+42	1	Ingeniero/a Agrícola	ingenieria-agricola	t	2026-08-20 04:15:45.18999	160	\N	\N
 43	1	Ingeniero/a Forestal	ingenieria-forestal	t	2026-08-20 04:15:45.18999	160	\N	\N
 \.
 
@@ -1889,34 +1889,34 @@ COPY public.carrera (id_carrera, id_facultad, nombre, codigo, activo, creado_en,
 --
 
 COPY public.carrera_periodo (id_carrera_periodo, id_carrera, id_facultad_periodo, id_periodo, codigo, nombre, horas_vinculacion, vigente, creado_en) FROM stdin;
-1	35	2	1	administracion-de-empresas	Licenciado/a en Administraci├│n de Empresas	160	t	2026-07-23 18:25:55.12154
-2	36	2	1	contabilidad-y-auditoria	Licenciado/a en Contabilidad y Auditor├¡a	160	t	2026-07-23 18:25:55.605694
-3	30	3	1	educacion-inicial	Licenciado/a en Educaci├│n Inicial	160	t	2026-07-23 18:25:56.494563
-4	31	3	1	educacion-basica	Licenciado/a en Educaci├│n B├ísica	160	t	2026-07-23 18:25:56.931684
-5	32	3	1	educacion-linea	Licenciado/a en Ciencias de la Educaci├│n	160	t	2026-07-23 18:25:57.182805
+1	35	2	1	administracion-de-empresas	Licenciado/a en Administración de Empresas	160	t	2026-07-23 18:25:55.12154
+2	36	2	1	contabilidad-y-auditoria	Licenciado/a en Contabilidad y Auditoría	160	t	2026-07-23 18:25:55.605694
+3	30	3	1	educacion-inicial	Licenciado/a en Educación Inicial	160	t	2026-07-23 18:25:56.494563
+4	31	3	1	educacion-basica	Licenciado/a en Educación Básica	160	t	2026-07-23 18:25:56.931684
+5	32	3	1	educacion-linea	Licenciado/a en Ciencias de la Educación	160	t	2026-07-23 18:25:57.182805
 6	19	4	1	ingenieria-ambiental	Ingeniero/a Ambiental	160	t	2026-07-23 18:25:58.124327
 7	20	4	1	arquitectura	Arquitecto/a	160	t	2026-07-23 18:25:58.564977
 8	21	4	1	ingenieria-civil	Ingeniero/a Civil	160	t	2026-07-23 18:25:59.005331
-9	22	4	1	electricidad	Ingeniero/a El├®ctrico/a	160	t	2026-07-23 18:25:59.441241
-10	23	4	1	mecanica	Ingeniero/a Mec├ínico/a	160	t	2026-07-23 18:25:59.800412
-11	15	5	1	acuicultura	Ingeniero/a Acu├¡cola	160	t	2026-07-23 18:26:00.681994
+9	22	4	1	electricidad	Ingeniero/a Eléctrico/a	160	t	2026-07-23 18:25:59.441241
+10	23	4	1	mecanica	Ingeniero/a Mecánico/a	160	t	2026-07-23 18:25:59.800412
+11	15	5	1	acuicultura	Ingeniero/a Acuícola	160	t	2026-07-23 18:26:00.681994
 12	16	5	1	agropecuaria	Ingeniero/a Agropecuario/a	160	t	2026-07-23 18:26:00.91244
-13	17	5	1	biologia	Bi├│logo/a	160	t	2026-07-23 18:26:01.4182
+13	17	5	1	biologia	Biólogo/a	160	t	2026-07-23 18:26:01.4182
 14	18	5	1	zootecnia	Ingeniero/a Zootecnista	160	t	2026-07-23 18:26:01.859911
 15	37	6	1	enfermeria	Licenciado/a en Enfermeria	160	t	2026-07-23 18:26:02.732819
-16	33	7	1	administracion-publica	Licenciado/a en Administraci├│n P├║blica	160	t	2026-07-23 18:26:03.377698
+16	33	7	1	administracion-publica	Licenciado/a en Administración Pública	160	t	2026-07-23 18:26:03.377698
 17	34	7	1	economia	Economista	160	t	2026-07-23 18:26:03.956011
 18	24	8	1	agroindustria	Ingeniero/a en Agroindustria	160	t	2026-07-23 18:26:04.831794
 19	25	8	1	alimentos	Ingeniero/a en Alimentos	160	t	2026-07-23 18:26:05.266162
 20	26	8	1	ingenieria-industrial	Ingeniero/a Industrial	160	t	2026-07-23 18:26:05.625663
 21	27	8	1	seguridad-industrial	Ingeniero/a en Seguridad Industrial	160	t	2026-07-23 18:26:06.063764
 22	1	9	1	IS-130	INGENIERIA EN SOFTWARE	160	t	2026-07-23 18:26:06.7157
-23	11	9	1	sistemas-de-informacion	Ingeniero/a en Sistemas de Informaci├│n	160	t	2026-07-23 18:26:07.206581
+23	11	9	1	sistemas-de-informacion	Ingeniero/a en Sistemas de Información	160	t	2026-07-23 18:26:07.206581
 24	12	9	1	software	Ingeniero/a en Software	160	t	2026-07-23 18:26:07.647407
-25	13	9	1	tecnologias-de-lainformacion	Ingeniero/a en Tecnolog├¡as de la Informaci├│n	160	t	2026-07-23 18:26:08.527981
-26	14	9	1	telematica	Ingeniero/a en Telem├ítica	160	t	2026-07-23 18:26:08.77873
-27	28	10	1	agroecologia	Ingeniero/a en Agroecolog├¡a	160	t	2026-07-23 18:26:09.719501
-28	29	10	1	agronomia	Ingeniero/a Agr├│nomo/a	160	t	2026-07-23 18:26:10.154233
+25	13	9	1	tecnologias-de-lainformacion	Ingeniero/a en Tecnologías de la Información	160	t	2026-07-23 18:26:08.527981
+26	14	9	1	telematica	Ingeniero/a en Telemática	160	t	2026-07-23 18:26:08.77873
+27	28	10	1	agroecologia	Ingeniero/a en Agroecología	160	t	2026-07-23 18:26:09.719501
+28	29	10	1	agronomia	Ingeniero/a Agrónomo/a	160	t	2026-07-23 18:26:10.154233
 \.
 
 
@@ -2064,16 +2064,16 @@ rzg7v8gdk8imahb51x0fphitfqoac0f9	.eJyrViotLk0sysyPz0xRsjLWgXPz8nOTilKVrJQcU3Iz8z
 --
 
 COPY public.docente (id_docente, cedula, apellidos, nombres, titulo, correo, telefono, titularidad, activo, creado_en) FROM stdin;
-7	1711669380	Bermeo Toledo	C├®sar Ramiro	Ing.	cbermeo@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
-8	1203055163	Sabando ├üvila	Freddy Agust├¡n	Ing.	fsabando@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
-9	1103270417	Valdiviezo Vidal	Vicente Agust├¡n	Ing.	vvaldiviezov@uteq.edu.ec	\N	CONTRATADO	t	2026-08-20 04:15:45.18999
+7	1711669380	Bermeo Toledo	César Ramiro	Ing.	cbermeo@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
+8	1203055163	Sabando Ávila	Freddy Agustín	Ing.	fsabando@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
+9	1103270417	Valdiviezo Vidal	Vicente Agustín	Ing.	vvaldiviezov@uteq.edu.ec	\N	CONTRATADO	t	2026-08-20 04:15:45.18999
 10	1101862751	Matute	Leonardo Gonzalo	Ing.	lmatute@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
 11	1203448459	Solano	Edison	Ing.	esolano@uteq.edu.ec	\N	TITULAR	t	2026-08-20 04:15:45.18999
 13	0502537764	Ramos Corrales	Pablo Cesar	Ing. PhD	pramos@uteq.edu.ec	\N	TITULAR	t	2026-08-21 16:56:21.105818
 14	1105739823	Luna Chalan	Angel Arcecio	Ing.	alunac@uteq.edu.ec	\N	CONTRATADO	t	2026-08-21 16:56:21.105818
-15	1721554432	Morej├│n	Mauricio	Ing. MSc	mmorejon@uteq.edu.ec	\N	CONTRATADO	t	2026-08-21 16:56:21.105818
-16	1203849540	Menac├® Almea	Mois├®s Arturo	Ing. MSc	mmenace@uteq.edu.ec	\N	TITULAR	t	2026-08-21 16:56:21.105818
-17	1204268039	Gaibor Fern├índez	Ramiro Remigio	Ing. MSc	rgaibor@uteq.edu.ec	\N	TITULAR	t	2026-08-21 16:56:21.105818
+15	1721554432	Morejón	Mauricio	Ing. MSc	mmorejon@uteq.edu.ec	\N	CONTRATADO	t	2026-08-21 16:56:21.105818
+16	1203849540	Menacé Almea	Moisés Arturo	Ing. MSc	mmenace@uteq.edu.ec	\N	TITULAR	t	2026-08-21 16:56:21.105818
+17	1204268039	Gaibor Fernández	Ramiro Remigio	Ing. MSc	rgaibor@uteq.edu.ec	\N	TITULAR	t	2026-08-21 16:56:21.105818
 \.
 
 
@@ -2090,14 +2090,14 @@ COPY public.documento_proyecto (id_documento, id_proyecto, id_tipo_doc, id_perio
 --
 
 COPY public.entidad_cooperante (id_entidad, id_tipo, nombre, nombre_corto, ruc, representante_legal, cargo_representante, telefono, correo, pagina_web, provincia, canton, parroquia, sector, direccion, latitud, longitud, numero_acuerdo, fecha_constitucion, activo, observaciones, creado_en) FROM stdin;
-1	7	Gobierno Aut├│nomo Descentralizado Municipal del Cant├│n Buena Fe	GAD Buena Fe	1260001234001	Ing. Mario S├ínchez	Alcalde	092 754 1009	info@buenafe.gob.ec	www.buenafe.gob.ec	Los R├¡os	Buena Fe	Buena Fe	P├║blico	Av. 7 de Agosto y Calle Quito, Buena Fe	\N	\N	\N	\N	t	Entidad cooperante hist├│rica del departamento de Vinculaci├│n, con varios proyectos de intervenci├│n social desde 2022.	2026-06-19 15:24:03.493901
-5	1	Asociaci├│n de Agricultores Nueva Generaci├│n	\N	\N	\N	\N	\N	\N	\N	Guayas	El Empalme	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
-6	1	Asociaci├│n de Producci├│n Agr├¡cola Uni├│n 71	\N	\N	\N	\N	\N	\N	\N	Los R├¡os	Buena Fe	Patricia Pilar	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
-7	7	GAD Cantonal de Quevedo	\N	\N	\N	\N	\N	\N	\N	Los R├¡os	Quevedo	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
-8	4	Unidad Educativa Jos├® Rodr├¡guez Labandera	\N	\N	\N	\N	\N	\N	\N	Los R├¡os	Quevedo	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
-9	7	GAD Cantonal Valencia	\N	\N	\N	\N	\N	\N	\N	Los R├¡os	Valencia	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
-10	8	Gobierno Aut├│nomo Descentralizado Parroquial Rural La Esperanza	GAD Parroquial La Esperanza	\N	\N	\N	\N	\N	\N	Los R├¡os	Quevedo	La Esperanza	\N	\N	\N	\N	\N	\N	t	\N	2026-08-21 16:56:21.105818
-11	1	Asociaci├│n de Campesinos Lamanenses (ASCALA)	ASCALA	\N	\N	\N	\N	\N	\N	Cotopaxi	La Man├í	La Man├í	\N	\N	\N	\N	\N	\N	t	\N	2026-08-21 16:56:21.105818
+1	7	Gobierno Autónomo Descentralizado Municipal del Cantón Buena Fe	GAD Buena Fe	1260001234001	Ing. Mario Sánchez	Alcalde	092 754 1009	info@buenafe.gob.ec	www.buenafe.gob.ec	Los Ríos	Buena Fe	Buena Fe	Público	Av. 7 de Agosto y Calle Quito, Buena Fe	\N	\N	\N	\N	t	Entidad cooperante histórica del departamento de Vinculación, con varios proyectos de intervención social desde 2022.	2026-06-19 15:24:03.493901
+5	1	Asociación de Agricultores Nueva Generación	\N	\N	\N	\N	\N	\N	\N	Guayas	El Empalme	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
+6	1	Asociación de Producción Agrícola Unión 71	\N	\N	\N	\N	\N	\N	\N	Los Ríos	Buena Fe	Patricia Pilar	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
+7	7	GAD Cantonal de Quevedo	\N	\N	\N	\N	\N	\N	\N	Los Ríos	Quevedo	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
+8	4	Unidad Educativa José Rodríguez Labandera	\N	\N	\N	\N	\N	\N	\N	Los Ríos	Quevedo	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
+9	7	GAD Cantonal Valencia	\N	\N	\N	\N	\N	\N	\N	Los Ríos	Valencia	\N	\N	\N	\N	\N	\N	\N	t	\N	2026-08-20 04:15:45.18999
+10	8	Gobierno Autónomo Descentralizado Parroquial Rural La Esperanza	GAD Parroquial La Esperanza	\N	\N	\N	\N	\N	\N	Los Ríos	Quevedo	La Esperanza	\N	\N	\N	\N	\N	\N	t	\N	2026-08-21 16:56:21.105818
+11	1	Asociación de Campesinos Lamanenses (ASCALA)	ASCALA	\N	\N	\N	\N	\N	\N	Cotopaxi	La Maná	La Maná	\N	\N	\N	\N	\N	\N	t	\N	2026-08-21 16:56:21.105818
 \.
 
 
@@ -2131,13 +2131,13 @@ COPY public.evaluacion_impacto (id_evaluacion, id_proyecto, id_periodo, total_en
 
 COPY public.facultad (id_facultad, codigo, nombre, nombre_corto, campus, fecha_desde, fecha_hasta, activo, creado_en) FROM stdin;
 2	FCE	Facultad de Ciencias Empresariales	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
-3	FCEDU	Facultad de Ciencias de la Educaci├│n	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
-6	FCP	Facultad de Ciencias Pecuarias	\N	La Mar├¡a	2000-01-01	\N	t	2026-05-29 01:22:27.02996
+3	FCEDU	Facultad de Ciencias de la Educación	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
+6	FCP	Facultad de Ciencias Pecuarias	\N	La María	2000-01-01	\N	t	2026-05-29 01:22:27.02996
 7	FCS	Facultad de Ciencias de la Salud	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
-8	FCSEF	Facultad de Ciencias Sociales, Educaci├│n y Filosof├¡a	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
-9	FCIP	Facultad de Ciencias de la Industria y Producci├│n	FCIP	La Mar├¡a	2026-06-11	\N	t	2026-06-11 20:22:17.153731
-5	FCC	Facultad de Ciencias de la Computaci├│n y Dise├▒o Digital	\N	Campus Central	2023-01-01	\N	t	2026-05-29 01:22:27.02996
-1	FCAF	Facultad de Ciencias Agrarias y Forestales	\N	La Mar├¡a	2000-01-01	\N	t	2026-05-30 17:22:27.02996
+8	FCSEF	Facultad de Ciencias Sociales, Educación y Filosofía	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
+9	FCIP	Facultad de Ciencias de la Industria y Producción	FCIP	La María	2026-06-11	\N	t	2026-06-11 20:22:17.153731
+5	FCC	Facultad de Ciencias de la Computación y Diseño Digital	\N	Campus Central	2023-01-01	\N	t	2026-05-29 01:22:27.02996
+1	FCAF	Facultad de Ciencias Agrarias y Forestales	\N	La María	2000-01-01	\N	t	2026-05-30 17:22:27.02996
 4	FCI	Facultad de Ciencias de la Ingenieria	\N	Campus Central	2000-01-01	\N	t	2026-05-29 01:22:27.02996
 \.
 
@@ -2148,14 +2148,14 @@ COPY public.facultad (id_facultad, codigo, nombre, nombre_corto, campus, fecha_d
 
 COPY public.facultad_periodo (id_facultad_periodo, id_facultad, id_periodo, codigo, nombre, nombre_corto, campus, vigente, creado_en) FROM stdin;
 2	2	1	FCE	Facultad de Ciencias Empresariales	\N	Campus Central	t	2026-07-23 18:25:54.406979
-3	3	1	FCEDU	Facultad de Ciencias de la Educaci├│n	\N	Campus Central	t	2026-07-23 18:25:56.048459
-4	4	1	FCI	Facultad de Ciencias de la Ingenier├¡a	\N	Campus Central	t	2026-07-23 18:25:57.573644
-5	6	1	FCP	Facultad de Ciencias Pecuarias	\N	La Mar├¡a	t	2026-07-23 18:26:00.242273
+3	3	1	FCEDU	Facultad de Ciencias de la Educación	\N	Campus Central	t	2026-07-23 18:25:56.048459
+4	4	1	FCI	Facultad de Ciencias de la Ingeniería	\N	Campus Central	t	2026-07-23 18:25:57.573644
+5	6	1	FCP	Facultad de Ciencias Pecuarias	\N	La María	t	2026-07-23 18:26:00.242273
 6	7	1	FCS	Facultad de Ciencias de la Salud	\N	Campus Central	t	2026-07-23 18:26:02.294816
-7	8	1	FCSEF	Facultad de Ciencias Sociales, Educaci├│n y Filosof├¡a	\N	Campus Central	t	2026-07-23 18:26:02.982744
-8	9	1	FCIP	Facultad de Ciencias de la Industria y Producci├│n	FCIP	La Mar├¡a	t	2026-07-23 18:26:04.393256
-9	5	1	FCC	Facultad de Ciencias de la Computaci├│n y Dise├▒o Digital	\N	Campus Central	t	2026-07-23 18:26:06.515704
-10	1	1	FCAF	Facultad de Ciencias Agrarias y Forestales	\N	La Mar├¡a	t	2026-07-23 18:26:09.165822
+7	8	1	FCSEF	Facultad de Ciencias Sociales, Educación y Filosofía	\N	Campus Central	t	2026-07-23 18:26:02.982744
+8	9	1	FCIP	Facultad de Ciencias de la Industria y Producción	FCIP	La María	t	2026-07-23 18:26:04.393256
+9	5	1	FCC	Facultad de Ciencias de la Computación y Diseño Digital	\N	Campus Central	t	2026-07-23 18:26:06.515704
+10	1	1	FCAF	Facultad de Ciencias Agrarias y Forestales	\N	La María	t	2026-07-23 18:26:09.165822
 \.
 
 
@@ -2194,7 +2194,7 @@ COPY public.informe_semestral (id_informe, id_proyecto, id_docente, id_periodo, 
 --
 
 COPY public.periodo_academico (id_periodo, codigo, nombre, tipo, fecha_inicio, fecha_fin, activo, creado_en, creado_por) FROM stdin;
-1	SPA 2025-2026	Segundo Per├¡odo Acad├®mico 2025-2026	SPA	2025-08-01	2026-01-31	f	2026-05-29 16:28:49.787516	\N
+1	SPA 2025-2026	Segundo Período Académico 2025-2026	SPA	2025-08-01	2026-01-31	f	2026-05-29 16:28:49.787516	\N
 \.
 
 
@@ -2206,14 +2206,14 @@ COPY public.proyecto (id_proyecto, codigo, nombre, nombre_corto, id_facultad, id
 7	FJSSEVFC-FCC-DD	Prueba-01	PR	5	1	1	\N	\N	\N	\N	\N	\N	\N	\N	Prueba 3	\N	EN_EJECUCION	\N	\N	\N	\N	\N	Los Rios	Quevedo	Mocache	Laureles	-1.1870994	-79.5095702	2026-06-13 00:50:45.106378	2026-06-16 19:25:21.451217	prueba	\N	\N	\N	\N	\N
 6	DFJDFFKG-FCC-DWD	Admision	AD	5	1	1	\N	\N	\N	\N	\N	\N	\N	\N	Ninguna	\N	EN_EJECUCION	\N	\N	\N	\N	\N	Los Rios	Quevedo	Buena Fe	Las palmas	-0.8892129	-79.4891749	2026-06-12 19:42:45.108787	2026-06-16 19:31:47.646219	Prueba	\N	\N	\N	\N	\N
 5	OSDBUJER-SDJHA	prueba	prb	5	1	1	\N	\N	\N	\N	\N	\N	\N	\N	Ninguna	\N	EN_EJECUCION	\N	\N	\N	\N	\N	Los Rios	Quevedo	San Carlos	Barrio Central	-1.1170853	-79.4363612	2026-06-12 08:10:17.954022	2026-06-16 19:33:30.177437	Ninguna	\N	\N	\N	\N	\N
-9	PVSUTEQ-FCS-04	Estrategias para fortalecer la promoci├│n de la donaci├│n de sangre en Quevedo-Ecuador	DONACI├ôN DE SANGRE	7	37	1	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	APROBADO	\N	\N	\N	\N	\N	Los R├¡os	Quevedo	la venus	\N	-0.9968869	-79.4681223	2026-07-10 03:10:11.955546	2026-07-10 17:08:17.724779	\N	\N	\N	\N	\N	\N
-11	DPDOGFCV-35W3	Prueba-ultima	Prueba-ultima	9	27	1	\N	Gestion	Agricultura	Prueba grande	Agricultira	\N	Prueba	\N	\N	100.00	EN_CIERRE	\N	2026-02-17	2026-08-17	\N	ODS 2, ODS 13, ODS 14	Sucumb├¡os	Lago Agrio	Dureno	\N	0.0508735	-76.6784334	2026-08-11 19:29:55.706212	2026-08-11 19:29:55.706216	\N	Prueba	Ing. Moises Cabrera	moiges@gamil.com	\N	\N
-8	PVSUTEQ-FCAF-01	Optimizaci├│n de la Productividad y Competitividad en las Asociaciones Productoras de Cacao de la Zona de Influencia de la UTEQ	Optimizaci├│n Productividad Cacao	1	29	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Desarrollo e Innovaci├│n de Procesos y Productos Provenientes del Sector Agropecuario	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Provincial	Optimizar la productividad y competitividad en las asociaciones productoras de cacao de la zona de influencia de la UTEQ	\N	Ninguna	3200.00	EN_EJECUCION	\N	2025-10-11	2026-03-23	\N	\N	Guayas	El Empalme	\N	\N	\N	\N	2026-07-08 00:25:49.082226	2026-08-20 04:15:45.18999	\N	\N	Ing. C├®sar Ramiro Bermeo Toledo, MSc.	cbermeo@uteq.edu.ec	2024-08-30	Segunda Resoluci├│n, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
-12	PVSUTEQ-FCAF-02	Desarrollo de Huertos Agr├¡colas Mediante Innovaciones Tecnol├│gicas y Conocimientos Ancestrales Garantizando Seguridad Alimentaria en Grupos de Inter├®s Social	Desarrollo de Huertos Agr├¡colas	1	42	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Agricultura, Silvicultura y Agroecolog├¡a	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	\N	\N	\N	1000.00	EN_EJECUCION	\N	2025-11-21	2026-02-27	\N	\N	Los R├¡os	Quevedo	\N	\N	\N	\N	2026-08-20 04:15:45.18999	2026-08-20 04:15:45.18999	\N	\N	Ing. Vicente Agust├¡n Valdiviezo Vidal, MSc.	vvaldiviezov@uteq.edu.ec	2024-08-30	Cuarta Resoluci├│n, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
-13	PVSUTEQ-FCAF-03	Rescate de Especies Forestales del Litoral Ecuatoriano en los Cantones de Influencia de la UTEQ	Rescate de Especies Forestales	1	43	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Desarrollo e Innovaci├│n de Procesos y Productos Provenientes del Sector Agropecuario	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Regional	\N	\N	\N	\N	EN_EJECUCION	\N	2025-11-10	2026-03-13	\N	\N	Los R├¡os	Valencia	\N	\N	\N	\N	2026-08-20 04:15:45.18999	2026-08-20 04:15:45.18999	\N	\N	Ing. Edison Solano Apuntes, MSc.	esolano@uteq.edu.ec	2024-08-30	Primera Resoluci├│n, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
-14	PVSUTEQ-FCAF-05	Implementaci├│n de Sistemas Hidrop├│nicos en Hortalizas Garantizando la Seguridad Alimentaria de las Zonas de Influencia de la UTEQ	Implementaci├│n de Sistemas Hidrop├│nicos	1	42	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Agricultura, Silvicultura y Agroecolog├¡a	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	Implementar sistemas hidrop├│nicos en hortalizas para garantizar la seguridad alimentaria en las zonas de influencia de la UTEQ.	\N	Proyecto de vinculaci├│n enfocado en la transferencia tecnol├│gica e implementaci├│n de sistemas hidrop├│nicos para la producci├│n de hortalizas.	7500.00	EN_EJECUCION	\N	2025-11-21	2026-02-27	\N	\N	Los R├¡os	Quevedo	La Esperanza	Parroquia Rural La Esperanza	-0.9856000	-79.4410000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Pablo Cesar Ramos Corrales, PhD	pramos@uteq.edu.ec	2025-08-20	Resoluci├│n Tercera del Consejo de Vinculaci├│n / Notif. UTEQ-SECGEN-2025-0301-M
-15	PVSUTEQ-FCAP-01	Manejo y Gesti├│n Sostenible de Unidades de Producci├│n Agr├¡cola (UPAS) en la Zona de Impacto de la UTEQ	Manejo y Gesti├│n de UPAs	1	29	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Agricultura, Silvicultura y Agroecolog├¡a	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	Capacitar y asesorar a los productores agropecuarios en el manejo y gesti├│n sostenible de las Unidades de Producci├│n Agr├¡cola (UPAs).	\N	Proyecto de vinculaci├│n enfocado en el fortalecimiento t├®cnico, productivo y administrativo de las UPAs en la zona de influencia de la UTEQ.	5000.00	EN_EJECUCION	\N	2025-11-14	2026-03-20	\N	\N	Cotopaxi	La Man├í	La Man├í	Sectores productivos de La Man├í	-0.9419000	-79.2244000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Mauricio Morej├│n, MSc	mmorejon@uteq.edu.ec	2021-03-04	Resoluci├│n Novena, Consejo Directivo FCAF (Sesi├│n 04/03/2021) / FODIVINC
-16	PVSUTEQ-FCAP-02	Implementaci├│n de Huertos Productivos de Plantas Arom├íticas y Medicinales en la Zona de Influencia de la UTEQ	Implementaci├│n de Huertos de Plantas Arom├íticas y Medicinales	1	29	1	\N	Gesti├│n de proyectos de vinculaci├│n con la sociedad	Biolog├¡a, Ecolog├¡a y Conservaci├│n de Flora y Fauna Marina y Terrestre	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Provincial	Implementar huertos productivos de plantas arom├íticas y medicinales en la zona de influencia de la UTEQ para promover la salud comunitaria y el aprovechamiento sustentable.	\N	Proyecto de vinculaci├│n para el establecimiento y manejo t├®cnico de huertos de plantas medicinales y arom├íticas con grupos comunitarios.	3500.00	EN_EJECUCION	\N	2025-11-13	2026-03-20	\N	\N	Los R├¡os	Buena Fe	Buena Fe	Avenida 7 de Agosto y V├¡ctor Juez	-0.8931000	-79.4892000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Mois├®s Arturo Menac├® Almea, MSc	mmenace@uteq.edu.ec	2021-03-04	Resoluci├│n Octava, Consejo Directivo FCAF (Sesi├│n 04/03/2021) / FODIVINC
+9	PVSUTEQ-FCS-04	Estrategias para fortalecer la promoción de la donación de sangre en Quevedo-Ecuador	DONACIÓN DE SANGRE	7	37	1	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	APROBADO	\N	\N	\N	\N	\N	Los Ríos	Quevedo	la venus	\N	-0.9968869	-79.4681223	2026-07-10 03:10:11.955546	2026-07-10 17:08:17.724779	\N	\N	\N	\N	\N	\N
+11	DPDOGFCV-35W3	Prueba-ultima	Prueba-ultima	9	27	1	\N	Gestion	Agricultura	Prueba grande	Agricultira	\N	Prueba	\N	\N	100.00	EN_CIERRE	\N	2026-02-17	2026-08-17	\N	ODS 2, ODS 13, ODS 14	Sucumbíos	Lago Agrio	Dureno	\N	0.0508735	-76.6784334	2026-08-11 19:29:55.706212	2026-08-11 19:29:55.706216	\N	Prueba	Ing. Moises Cabrera	moiges@gamil.com	\N	\N
+8	PVSUTEQ-FCAF-01	Optimización de la Productividad y Competitividad en las Asociaciones Productoras de Cacao de la Zona de Influencia de la UTEQ	Optimización Productividad Cacao	1	29	1	\N	Gestión de proyectos de vinculación con la sociedad	Desarrollo e Innovación de Procesos y Productos Provenientes del Sector Agropecuario	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Provincial	Optimizar la productividad y competitividad en las asociaciones productoras de cacao de la zona de influencia de la UTEQ	\N	Ninguna	3200.00	EN_EJECUCION	\N	2025-10-11	2026-03-23	\N	\N	Guayas	El Empalme	\N	\N	\N	\N	2026-07-08 00:25:49.082226	2026-08-20 04:15:45.18999	\N	\N	Ing. César Ramiro Bermeo Toledo, MSc.	cbermeo@uteq.edu.ec	2024-08-30	Segunda Resolución, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
+12	PVSUTEQ-FCAF-02	Desarrollo de Huertos Agrícolas Mediante Innovaciones Tecnológicas y Conocimientos Ancestrales Garantizando Seguridad Alimentaria en Grupos de Interés Social	Desarrollo de Huertos Agrícolas	1	42	1	\N	Gestión de proyectos de vinculación con la sociedad	Agricultura, Silvicultura y Agroecología	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	\N	\N	\N	1000.00	EN_EJECUCION	\N	2025-11-21	2026-02-27	\N	\N	Los Ríos	Quevedo	\N	\N	\N	\N	2026-08-20 04:15:45.18999	2026-08-20 04:15:45.18999	\N	\N	Ing. Vicente Agustín Valdiviezo Vidal, MSc.	vvaldiviezov@uteq.edu.ec	2024-08-30	Cuarta Resolución, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
+13	PVSUTEQ-FCAF-03	Rescate de Especies Forestales del Litoral Ecuatoriano en los Cantones de Influencia de la UTEQ	Rescate de Especies Forestales	1	43	1	\N	Gestión de proyectos de vinculación con la sociedad	Desarrollo e Innovación de Procesos y Productos Provenientes del Sector Agropecuario	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Regional	\N	\N	\N	\N	EN_EJECUCION	\N	2025-11-10	2026-03-13	\N	\N	Los Ríos	Valencia	\N	\N	\N	\N	2026-08-20 04:15:45.18999	2026-08-20 04:15:45.18999	\N	\N	Ing. Edison Solano Apuntes, MSc.	esolano@uteq.edu.ec	2024-08-30	Primera Resolución, Consejo Directivo FCAF (Memorando UTEQ-FCAF-2024-0178-M del 16/08/2024)
+14	PVSUTEQ-FCAF-05	Implementación de Sistemas Hidropónicos en Hortalizas Garantizando la Seguridad Alimentaria de las Zonas de Influencia de la UTEQ	Implementación de Sistemas Hidropónicos	1	42	1	\N	Gestión de proyectos de vinculación con la sociedad	Agricultura, Silvicultura y Agroecología	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	Implementar sistemas hidropónicos en hortalizas para garantizar la seguridad alimentaria en las zonas de influencia de la UTEQ.	\N	Proyecto de vinculación enfocado en la transferencia tecnológica e implementación de sistemas hidropónicos para la producción de hortalizas.	7500.00	EN_EJECUCION	\N	2025-11-21	2026-02-27	\N	\N	Los Ríos	Quevedo	La Esperanza	Parroquia Rural La Esperanza	-0.9856000	-79.4410000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Pablo Cesar Ramos Corrales, PhD	pramos@uteq.edu.ec	2025-08-20	Resolución Tercera del Consejo de Vinculación / Notif. UTEQ-SECGEN-2025-0301-M
+15	PVSUTEQ-FCAP-01	Manejo y Gestión Sostenible de Unidades de Producción Agrícola (UPAS) en la Zona de Impacto de la UTEQ	Manejo y Gestión de UPAs	1	29	1	\N	Gestión de proyectos de vinculación con la sociedad	Agricultura, Silvicultura y Agroecología	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Cantonal	Capacitar y asesorar a los productores agropecuarios en el manejo y gestión sostenible de las Unidades de Producción Agrícola (UPAs).	\N	Proyecto de vinculación enfocado en el fortalecimiento técnico, productivo y administrativo de las UPAs en la zona de influencia de la UTEQ.	5000.00	EN_EJECUCION	\N	2025-11-14	2026-03-20	\N	\N	Cotopaxi	La Maná	La Maná	Sectores productivos de La Maná	-0.9419000	-79.2244000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Mauricio Morejón, MSc	mmorejon@uteq.edu.ec	2021-03-04	Resolución Novena, Consejo Directivo FCAF (Sesión 04/03/2021) / FODIVINC
+16	PVSUTEQ-FCAP-02	Implementación de Huertos Productivos de Plantas Aromáticas y Medicinales en la Zona de Influencia de la UTEQ	Implementación de Huertos de Plantas Aromáticas y Medicinales	1	29	1	\N	Gestión de proyectos de vinculación con la sociedad	Biología, Ecología y Conservación de Flora y Fauna Marina y Terrestre	Agricultura, silvicultura, pesca y veterinaria	Agricultura	Provincial	Implementar huertos productivos de plantas aromáticas y medicinales en la zona de influencia de la UTEQ para promover la salud comunitaria y el aprovechamiento sustentable.	\N	Proyecto de vinculación para el establecimiento y manejo técnico de huertos de plantas medicinales y aromáticas con grupos comunitarios.	3500.00	EN_EJECUCION	\N	2025-11-13	2026-03-20	\N	\N	Los Ríos	Buena Fe	Buena Fe	Avenida 7 de Agosto y Víctor Juez	-0.8931000	-79.4892000	2026-08-21 16:56:21.105818	2026-08-21 16:56:21.105818	\N	\N	Ing. Moisés Arturo Menacé Almea, MSc	mmenace@uteq.edu.ec	2021-03-04	Resolución Octava, Consejo Directivo FCAF (Sesión 04/03/2021) / FODIVINC
 \.
 
 
@@ -2256,16 +2256,16 @@ COPY public.proyecto_estudiante (id_proyecto_estudiante, id_proyecto, id_estudia
 --
 
 COPY public.proyecto_ubicacion (id_ubicacion, id_proyecto, id_entidad, nombre_lugar, provincia, canton, parroquia, sector, latitud, longitud, es_principal, observaciones) FROM stdin;
-1	9	\N	Unidad Educativa Eloy Alfaro	Los R├¡os	Quevedo	la venus		-0.9968869	-79.4681223	t	\N
-3	11	\N	Dureno, Parroquia Dureno	Sucumb├¡os	Lago Agrio	Dureno	\N	0.0508735	-76.6784334	t	\N
-4	8	5	Asociaci├│n de Agricultores Nueva Generaci├│n	Guayas	El Empalme	\N	\N	\N	\N	t	\N
-5	8	6	Asociaci├│n de Producci├│n Agr├¡cola Uni├│n 71	Los R├¡os	Buena Fe	Patricia Pilar	\N	\N	\N	f	\N
-6	12	7	GAD Cantonal de Quevedo	Los R├¡os	Quevedo	\N	\N	\N	\N	t	\N
-7	12	8	Unidad Educativa Jos├® Rodr├¡guez Labandera	Los R├¡os	Quevedo	\N	\N	\N	\N	f	\N
-8	13	9	GAD Cantonal Valencia	Los R├¡os	Valencia	\N	\N	\N	\N	t	\N
-9	14	10	GAD Parroquial La Esperanza	Los R├¡os	Quevedo	La Esperanza	Centro Parroquial	-0.9856000	-79.4410000	t	\N
-10	15	11	Asociaci├│n ASCALA - La Man├í	Cotopaxi	La Man├í	La Man├í	Zona de influencia ASCALA	-0.9419000	-79.2244000	t	\N
-11	16	1	GAD Cantonal Buena Fe	Los R├¡os	Buena Fe	Buena Fe	Av. 7 de Agosto y V├¡ctor Juez	-0.8931000	-79.4892000	t	\N
+1	9	\N	Unidad Educativa Eloy Alfaro	Los Ríos	Quevedo	la venus		-0.9968869	-79.4681223	t	\N
+3	11	\N	Dureno, Parroquia Dureno	Sucumbíos	Lago Agrio	Dureno	\N	0.0508735	-76.6784334	t	\N
+4	8	5	Asociación de Agricultores Nueva Generación	Guayas	El Empalme	\N	\N	\N	\N	t	\N
+5	8	6	Asociación de Producción Agrícola Unión 71	Los Ríos	Buena Fe	Patricia Pilar	\N	\N	\N	f	\N
+6	12	7	GAD Cantonal de Quevedo	Los Ríos	Quevedo	\N	\N	\N	\N	t	\N
+7	12	8	Unidad Educativa José Rodríguez Labandera	Los Ríos	Quevedo	\N	\N	\N	\N	f	\N
+8	13	9	GAD Cantonal Valencia	Los Ríos	Valencia	\N	\N	\N	\N	t	\N
+9	14	10	GAD Parroquial La Esperanza	Los Ríos	Quevedo	La Esperanza	Centro Parroquial	-0.9856000	-79.4410000	t	\N
+10	15	11	Asociación ASCALA - La Maná	Cotopaxi	La Maná	La Maná	Zona de influencia ASCALA	-0.9419000	-79.2244000	t	\N
+11	16	1	GAD Cantonal Buena Fe	Los Ríos	Buena Fe	Buena Fe	Av. 7 de Agosto y Víctor Juez	-0.8931000	-79.4892000	t	\N
 \.
 
 
@@ -2275,10 +2275,10 @@ COPY public.proyecto_ubicacion (id_ubicacion, id_proyecto, id_entidad, nombre_lu
 
 COPY public.rol (id_rol, nombre, descripcion) FROM stdin;
 1	ADMIN	Administrador del sistema, acceso total
-2	DIRECTOR_VINCULACION	Directora/Director de Vinculaci├│n, acceso completo
-3	TECNICO	T├®cnico del departamento, puede ingresar y editar informaci├│n
+2	DIRECTOR_VINCULACION	Directora/Director de Vinculación, acceso completo
+3	TECNICO	Técnico del departamento, puede ingresar y editar información
 4	DOCENTE	Docente director de proyecto, acceso a sus propios proyectos
-5	CONSULTA	Solo visualizaci├│n, sin modificaciones
+5	CONSULTA	Solo visualización, sin modificaciones
 \.
 
 
@@ -2287,27 +2287,27 @@ COPY public.rol (id_rol, nombre, descripcion) FROM stdin;
 --
 
 COPY public.tipo_documento (id_tipo_doc, codigo, nombre, numero_carpeta, descripcion, obligatorio) FROM stdin;
-1	DOC_01	Resoluci├│n de aprobaci├│n del proyecto	1	\N	t
-2	DOC_02	Planificaci├│n de actividades	2	\N	t
+1	DOC_01	Resolución de aprobación del proyecto	1	\N	t
+2	DOC_02	Planificación de actividades	2	\N	t
 3	DOC_03	Convenios	3	\N	t
 4	DOC_04	Matriz de proyecto planificado	4	\N	t
-5	DOC_05	Evaluaci├│n inicial del proyecto	5	\N	t
-6	DOC_06	Informe de evaluaci├│n inicial	6	\N	t
+5	DOC_05	Evaluación inicial del proyecto	5	\N	t
+6	DOC_06	Informe de evaluación inicial	6	\N	t
 7	DOC_07	Matriz de docentes	7	\N	t
-8	DOC_08	Quipux - Autorizaci├│n de estudiantes	8	\N	t
-9	DOC_09	Matriz de an├ílisis, seguimiento y monitoreo	9	\N	t
+8	DOC_08	Quipux - Autorización de estudiantes	8	\N	t
+9	DOC_09	Matriz de análisis, seguimiento y monitoreo	9	\N	t
 10	DOC_10	Matriz de estudiantes	10	\N	t
 11	DOC_11	Matriz de beneficiarios	11	\N	t
-12	DOC_12	Certificaci├│n del cumplimiento del proceso	12	\N	t
-13	DOC_13	Resoluci├│n de inicio y fin de vinculaci├│n	13	\N	t
+12	DOC_12	Certificación del cumplimiento del proceso	12	\N	t
+13	DOC_13	Resolución de inicio y fin de vinculación	13	\N	t
 14	DOC_14	Informe final del semestre	14	\N	t
 15	DOC_15	Monitoreo	15	\N	t
 16	DOC_16	Certificados de estudiantes	16	\N	t
 17	DOC_17	Certificados de beneficiarios	17	\N	t
-18	DOC_18	Informe de vinculaci├│n de un estudiante	18	\N	t
+18	DOC_18	Informe de vinculación de un estudiante	18	\N	t
 19	DOC_19	Matriz de cumplimiento de resultados	19	\N	t
 20	DOC_20	Informe final del cierre del proyecto	20	\N	t
-21	DOC_21	Evaluaci├│n del impacto social	21	\N	t
+21	DOC_21	Evaluación del impacto social	21	\N	t
 22	DOC_22	Mociones y actas	22	\N	f
 \.
 
@@ -2317,18 +2317,18 @@ COPY public.tipo_documento (id_tipo_doc, codigo, nombre, numero_carpeta, descrip
 --
 
 COPY public.tipo_entidad (id_tipo, nombre, descripcion) FROM stdin;
-1	Asociaci├│n agr├¡cola	Asociaciones de productores agropecuarios
-2	Asociaci├│n comunitaria	Organizaciones comunitarias y barriales
-3	Unidad educativa - B├ísica	Escuelas de educaci├│n b├ísica
+1	Asociación agrícola	Asociaciones de productores agropecuarios
+2	Asociación comunitaria	Organizaciones comunitarias y barriales
+3	Unidad educativa - Básica	Escuelas de educación básica
 4	Unidad educativa - Bachillerato	Colegios y bachilleratos
 5	Centro de salud	Centros de salud, subcentros, dispensarios
-6	Hospital	Hospitales p├║blicos o privados
-7	GAD Municipal	Gobierno Aut├│nomo Descentralizado Municipal
-8	GAD Parroquial	Gobierno Aut├│nomo Descentralizado Parroquial
-9	GAD Provincial	Gobierno Aut├│nomo Descentralizado Provincial
+6	Hospital	Hospitales públicos o privados
+7	GAD Municipal	Gobierno Autónomo Descentralizado Municipal
+8	GAD Parroquial	Gobierno Autónomo Descentralizado Parroquial
+9	GAD Provincial	Gobierno Autónomo Descentralizado Provincial
 10	Empresa privada	Empresas del sector privado
 11	ONG	Organizaciones no gubernamentales
-12	Instituci├│n p├║blica	Otras instituciones del Estado
+12	Institución pública	Otras instituciones del Estado
 13	Comunidad / Recinto	Comunidades, recintos o sectores rurales
 \.
 
