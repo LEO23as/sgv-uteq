@@ -37,6 +37,14 @@ urlpatterns = [
     path('api/capas-indicador/upload/',                   views.api_capas_indicador_upload, name='api_capas_indicador_upload'),
     path('api/capas-indicador/<str:tipo>/<int:anio>/',    views.api_capas_indicador_delete, name='api_capas_indicador_delete'),
 
+    # Usuarios y Roles
+    path('api/roles/',                                views.api_roles_list,             name='api_roles_list'),
+    path('api/usuarios/',                             views.api_usuarios_list,          name='api_usuarios_list'),
+    path('api/usuarios/crear/',                       views.api_usuario_crear,          name='api_usuario_crear'),
+    path('api/usuarios/<int:id_usuario>/editar/',     views.api_usuario_editar,         name='api_usuario_editar'),
+    path('api/usuarios/<int:id_usuario>/reset-password/', views.api_usuario_reset_password, name='api_usuario_reset_password'),
+    path('api/usuarios/<int:id_usuario>/toggle-activo/',  views.api_usuario_toggle_activo,  name='api_usuario_toggle_activo'),
+
     # CRUD
     path('api/periodos/create/',        views.api_periodos_post,          name='api_periodos_post'),
     path('api/periodos/<int:id>/',      views.api_periodo_detail,          name='api_periodo_detail'),

@@ -9,6 +9,8 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     environment:
       - DB_NAME=postgres
       - DB_USER=postgres
@@ -28,6 +30,9 @@ services:
     ports:
       - "5174:5174"
       - "80:5174"
+    volumes:
+      - ./frontend-svelte:/app
+      - /app/node_modules
     environment:
       - VITE_BACKEND_URL=http://backend:8000
     depends_on:

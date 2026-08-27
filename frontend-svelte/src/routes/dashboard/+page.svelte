@@ -88,14 +88,14 @@
       disabled: true 
     },
     { 
-      href: null, 
+      href: '/usuarios', 
       bi: 'bi-people', 
       label: 'Usuarios', 
       desc: 'Gestión de accesos', 
-      key: null, 
+      key: 'usuarios', 
       color: '#9333ea', 
       bg: '#faf5ff',
-      disabled: true 
+      disabled: false 
     },
   ];
 

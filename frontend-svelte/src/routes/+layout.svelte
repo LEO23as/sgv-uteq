@@ -291,6 +291,13 @@
                 </div>
               </div>
 
+              <div class="profile-links-section">
+                <a href="/usuarios" class="pmenu-item" onclick={() => showProfileDropdown = false}>
+                  <i class="bi bi-people-fill"></i>
+                  <span>Gestión de Usuarios</span>
+                </a>
+              </div>
+
               <div class="profile-divider"></div>
 
               <div class="profile-menu-footer">

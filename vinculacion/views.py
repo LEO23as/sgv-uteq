@@ -1477,6 +1477,7 @@ def api_dashboard_stats(request):
         'convenios': Convenio.objects.count(),
         'facultades': Facultad.objects.filter(activo=True).count(),
         'periodos': PeriodoAcademico.objects.count(),
+        'usuarios': Usuario.objects.count(),
         'proyectos_activos': Proyecto.objects.filter(estado='EN_EJECUCION').count(),
     })
 
@@ -2530,3 +2531,217 @@ def api_capas_indicador_delete(request, tipo, anio):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     n, _ = CapaIndicadorCanton.objects.filter(tipo_indicador=tipo.upper(), anio=int(anio)).delete()
     return JsonResponse({'ok': True, 'eliminados': n})
+
+
+# ── MÓDULO DE USUARIOS & ROLES ──
+
+@api_view(['GET'])
+def api_roles_list(request):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    roles = Rol.objects.all().order_by('id_rol')
+    data = [{'id_rol': r.id_rol, 'nombre': r.nombre, 'descripcion': r.descripcion} for r in roles]
+    return Response(data)
+
+
+@api_view(['GET'])
+def api_usuarios_list(request):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    
+    usuarios = Usuario.objects.select_related('id_rol', 'id_facultad').all().order_by('-id_usuario')
+    data = []
+    for u in usuarios:
+        data.append({
+            'id_usuario': u.id_usuario,
+            'username': u.username,
+            'nombres': u.nombres or u.username,
+            'correo': getattr(u, 'correo', None) or '',
+            'id_rol': u.id_rol.id_rol if u.id_rol else None,
+            'rol': u.id_rol.nombre if u.id_rol else 'Sin Rol',
+            'rol_desc': u.id_rol.descripcion if u.id_rol else '',
+            'id_facultad': u.id_facultad.id_facultad if u.id_facultad else None,
+            'facultad': u.id_facultad.nombre if u.id_facultad else None,
+            'activo': u.activo,
+            'debe_cambiar_clave': getattr(u, 'debe_cambiar_clave', False),
+            'ultimo_acceso': u.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if u.ultimo_acceso else None,
+            'creado_en': u.creado_en.strftime('%d/%m/%Y') if u.creado_en else None,
+        })
+    return Response(data)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_usuario_crear(request):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    
+    from vinculacion.utils import generar_username, generar_password_temporal, hashear_password, enviar_credenciales
+    data = request.data
+    nombres = (data.get('nombres') or '').strip()
+    apellidos = (data.get('apellidos') or '').strip()
+    correo = (data.get('correo') or '').strip().lower()
+    id_rol = data.get('id_rol')
+    id_facultad = data.get('id_facultad')
+    custom_username = (data.get('username') or '').strip().lower()
+    custom_password = (data.get('password') or '').strip()
+
+    if not nombres:
+        return Response({'error': 'Los nombres son requeridos'}, status=400)
+    if not id_rol:
+        return Response({'error': 'Debe seleccionar un rol'}, status=400)
+
+    try:
+        rol = Rol.objects.get(id_rol=id_rol)
+    except Rol.DoesNotExist:
+        return Response({'error': 'Rol inválido'}, status=400)
+
+    facultad = None
+    if id_facultad:
+        try:
+            facultad = Facultad.objects.get(id_facultad=id_facultad)
+        except Facultad.DoesNotExist:
+            pass
+
+    # Generar o validar username
+    if custom_username:
+        username = custom_username
+        if Usuario.objects.filter(username=username).exists():
+            return Response({'error': f'El nombre de usuario "{username}" ya está en uso'}, status=400)
+    else:
+        if apellidos:
+            username = generar_username(nombres, apellidos)
+        else:
+            username = generar_username(nombres, 'Usuario')
+
+    # Generar o usar password
+    if custom_password:
+        password_plano = custom_password
+    else:
+        password_plano = generar_password_temporal()
+
+    password_hash = hashear_password(password_plano)
+    nombre_completo = f"{nombres} {apellidos}".strip() if apellidos else nombres
+
+    usuario = Usuario.objects.create(
+        username=username,
+        password=password_hash,
+        nombres=nombre_completo,
+        correo=correo or None,
+        id_rol=rol,
+        id_facultad=facultad,
+        activo=True,
+        debe_cambiar_clave=True,
+        creado_en=timezone.now(),
+    )
+
+    correo_enviado = False
+    if correo:
+        try:
+            correo_enviado = enviar_credenciales(correo, nombre_completo, username, password_plano)
+        except Exception:
+            correo_enviado = False
+
+    return Response({
+        'ok': True,
+        'id_usuario': usuario.id_usuario,
+        'username': usuario.username,
+        'nombres': usuario.nombres,
+        'correo': usuario.correo or '',
+        'rol': usuario.id_rol.nombre,
+        'password_temporal': password_plano,
+        'correo_enviado': correo_enviado,
+        'mensaje': 'Usuario creado exitosamente',
+    })
+
+
+@csrf_exempt
+@api_view(['PUT'])
+def api_usuario_editar(request, id_usuario):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    
+    try:
+        u = Usuario.objects.get(id_usuario=id_usuario)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado'}, status=404)
+    
+    data = request.data
+    if 'nombres' in data:
+        u.nombres = data.get('nombres', '').strip() or u.nombres
+    if 'correo' in data:
+        u.correo = data.get('correo', '').strip().lower() or None
+    if 'id_rol' in data:
+        try:
+            u.id_rol = Rol.objects.get(id_rol=data['id_rol'])
+        except Rol.DoesNotExist:
+            pass
+    if 'id_facultad' in data:
+        if data['id_facultad']:
+            try:
+                u.id_facultad = Facultad.objects.get(id_facultad=data['id_facultad'])
+            except Facultad.DoesNotExist:
+                u.id_facultad = None
+        else:
+            u.id_facultad = None
+    if 'activo' in data:
+        u.activo = bool(data['activo'])
+
+    u.save()
+    return Response({'ok': True, 'mensaje': 'Usuario actualizado correctamente'})
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_usuario_reset_password(request, id_usuario):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    
+    try:
+        u = Usuario.objects.get(id_usuario=id_usuario)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado'}, status=404)
+    
+    from vinculacion.utils import generar_password_temporal, hashear_password, enviar_credenciales
+    password_plano = generar_password_temporal()
+    u.password = hashear_password(password_plano)
+    u.debe_cambiar_clave = True
+    u.save(update_fields=['password', 'debe_cambiar_clave'])
+
+    correo_enviado = False
+    if u.correo:
+        try:
+            correo_enviado = enviar_credenciales(u.correo, u.nombres or u.username, u.username, password_plano)
+        except Exception:
+            correo_enviado = False
+
+    return Response({
+        'ok': True,
+        'username': u.username,
+        'nombres': u.nombres or u.username,
+        'password_temporal': password_plano,
+        'correo': u.correo or '',
+        'correo_enviado': correo_enviado,
+        'mensaje': 'Contraseña restablecida correctamente',
+    })
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_usuario_toggle_activo(request, id_usuario):
+    if not request.session.get('usuario_id'):
+        return Response({'error': 'No autenticado'}, status=401)
+    
+    try:
+        u = Usuario.objects.get(id_usuario=id_usuario)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Usuario no encontrado'}, status=404)
+    
+    u.activo = not u.activo
+    u.save(update_fields=['activo'])
+    return Response({
+        'ok': True, 
+        'activo': u.activo, 
+        'mensaje': f'Usuario {"activado" if u.activo else "inactivado"} correctamente'
+    })
+
