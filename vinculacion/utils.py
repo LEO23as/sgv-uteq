@@ -14,19 +14,26 @@ def quitar_tildes(texto):
 
 def generar_username(nombres, apellidos):
     """
-    Genera username: 1ª letra nombre + apellido1 + 1ª letra apellido2
-    Ejemplo: Pedro Castro López → pcastrol
+    Genera username institucional: 
+    2 primeras letras del nombre + 1er apellido completo + 1ª letra del 2º apellido
+    Ejemplo: Pedro Castro López → pecastrol
     """
     from vinculacion.models import Usuario
     
     nombres_split = nombres.strip().split()
     apellidos_split = apellidos.strip().split()
     
-    primera_nombre = quitar_tildes(nombres_split[0][0]).lower()
-    apellido1 = quitar_tildes(apellidos_split[0]).lower() if len(apellidos_split) > 0 else ''
+    # 2 primeras letras del nombre (ej: "pe" de "Pedro")
+    nombre_limpio = quitar_tildes(nombres_split[0]).lower() if nombres_split else 'us'
+    prefijo_nombre = nombre_limpio[:2] if len(nombre_limpio) >= 2 else nombre_limpio
+    
+    # Primer apellido completo (ej: "castro")
+    apellido1 = quitar_tildes(apellidos_split[0]).lower() if len(apellidos_split) > 0 else 'usuario'
+    
+    # Primera letra del segundo apellido (ej: "l" de "López")
     primera_apellido2 = quitar_tildes(apellidos_split[1][0]).lower() if len(apellidos_split) > 1 else ''
     
-    username_base = primera_nombre + apellido1 + primera_apellido2
+    username_base = f"{prefijo_nombre}{apellido1}{primera_apellido2}"
     username = username_base
     
     # Verificar duplicados
@@ -67,32 +74,32 @@ def verificar_password(password_plano, password_hash):
 
 def enviar_credenciales(correo, nombres, username, password_temporal):
     """Envía correo con credenciales de acceso al nuevo usuario."""
-    asunto = 'Acceso al Sistema de Vinculación UTEQ'
+    asunto = 'Credenciales de Acceso - Sistema de Gestión de Vinculación (SGV UTEQ)'
     mensaje = f"""
 Estimado/a {nombres},
 
-Se ha creado su cuenta de acceso en el Sistema de Gestión de Vinculación con la Colectividad de la UTEQ.
+Se ha generado su cuenta de acceso al Sistema de Gestión de Vinculación (SGV) de la Universidad Técnica Estatal de Quevedo (UTEQ).
 
 Sus credenciales de acceso son:
 
-  Usuario: {username}
-  Contraseña temporal: {password_temporal}
+  • Usuario: {username}
+  • Contraseña Temporal: {password_temporal}
+  • Enlace del Sistema: http://18.227.201.40:5174/
 
-Por seguridad, al iniciar sesión por primera vez se le solicitará cambiar su contraseña.
+IMPORTANTE:
+Por motivos de seguridad institucional, al iniciar sesión por primera vez el sistema le solicitará cambiar obligatoriamente su contraseña temporal por una personal y definitiva.
 
-Ingrese al sistema en: http://vinculacion.uteq.edu.ec
+Si usted no solicitó este acceso o presenta algún inconveniente, comuníquese con el Departamento de Vinculación con la Colectividad.
 
-Si no solicitó este acceso, comuníquese con el Departamento de Vinculación.
-
-Saludos,
+Atentamente,
 Departamento de Vinculación con la Colectividad
-Universidad Técnica Estatal de Quevedo
+Universidad Técnica Estatal de Quevedo (UTEQ)
     """
     try:
         send_mail(
             asunto,
             mensaje,
-            settings.DEFAULT_FROM_EMAIL,
+            settings.DEFAULT_FROM_EMAIL or 'soporte.vinculacion@uteq.edu.ec',
             [correo],
             fail_silently=False,
         )

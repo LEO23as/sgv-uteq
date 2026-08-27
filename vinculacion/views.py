@@ -1442,6 +1442,54 @@ def api_login(request):
     })
 
 
+@csrf_exempt
+def api_cambiar_clave_primer_acceso(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    
+    username = data.get('username', '').strip()
+    clave_actual = data.get('clave_actual', '').strip()
+    clave_nueva = data.get('clave_nueva', '').strip()
+    
+    if not username or not clave_actual or not clave_nueva:
+        return JsonResponse({'error': 'Todos los campos son obligatorios'}, status=400)
+    
+    if len(clave_nueva) < 6:
+        return JsonResponse({'error': 'La nueva contraseña debe tener al menos 6 caracteres'}, status=400)
+        
+    try:
+        usuario = Usuario.objects.select_related('id_rol').get(username=username, activo=True)
+    except Usuario.DoesNotExist:
+        return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
+        
+    from vinculacion.utils import verificar_password, hashear_password
+    if not verificar_password(clave_actual, usuario.password):
+        return JsonResponse({'error': 'La contraseña temporal ingresada es incorrecta'}, status=401)
+        
+    usuario.password = hashear_password(clave_nueva)
+    usuario.debe_cambiar_clave = False
+    usuario.ultimo_acceso = timezone.now()
+    usuario.save(update_fields=['password', 'debe_cambiar_clave', 'ultimo_acceso'])
+    
+    request.session['usuario_id'] = usuario.id_usuario
+    request.session['usuario_nombre'] = usuario.nombres or username
+    request.session['usuario_rol'] = usuario.id_rol.nombre
+    
+    return JsonResponse({
+        'ok': True,
+        'id': usuario.id_usuario,
+        'nombre': usuario.nombres or username,
+        'username': usuario.username,
+        'rol': usuario.id_rol.nombre,
+        'debe_cambiar_clave': False,
+        'mensaje': 'Contraseña actualizada con éxito',
+    })
+
+
 def api_logout(request):
     request.session.flush()
     return JsonResponse({'ok': True})
@@ -2539,8 +2587,33 @@ def api_capas_indicador_delete(request, tipo, anio):
 def api_roles_list(request):
     if not request.session.get('usuario_id'):
         return Response({'error': 'No autenticado'}, status=401)
-    roles = Rol.objects.all().order_by('id_rol')
-    data = [{'id_rol': r.id_rol, 'nombre': r.nombre, 'descripcion': r.descripcion} for r in roles]
+    
+    # Filtrar únicamente los 3 roles oficiales del SGV UTEQ
+    roles_db = Rol.objects.filter(nombre__in=['ADMIN', 'DIRECTOR_VINCULACION', 'TECNICO', 'CONSULTA']).order_by('id_rol')
+    data = []
+    vistos = set()
+    for r in roles_db:
+        if r.nombre in ['ADMIN', 'DIRECTOR_VINCULACION']:
+            nombre_oficial = 'Director(a) / Administrador'
+            desc = 'Acceso total y administración del sistema'
+        elif r.nombre == 'TECNICO':
+            nombre_oficial = 'Asistente'
+            desc = 'Gestión de proyectos, convenios, entidades y mapa'
+        elif r.nombre == 'CONSULTA':
+            nombre_oficial = 'Secretaria / Secretario'
+            desc = 'Visualización y generación de reportes'
+        else:
+            continue
+            
+        if nombre_oficial in vistos:
+            continue
+        vistos.add(nombre_oficial)
+        data.append({
+            'id_rol': r.id_rol,
+            'nombre': r.nombre,
+            'nombre_amigable': nombre_oficial,
+            'descripcion': desc
+        })
     return Response(data)
 
 

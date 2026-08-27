@@ -17,16 +17,14 @@
   let guardando = $state(false);
   let copiado = $state(false);
 
-  // Formulario de Usuario
+  // Formulario de Usuario (Limpio y 100% Automático)
   let form = $state({
     id_usuario: null,
     nombres: '',
     apellidos: '',
     correo: '',
-    id_rol: 3, // Default TECNICO (Asistente)
+    id_rol: '',
     id_facultad: '',
-    username: '',
-    password: '',
     activo: true,
   });
 
@@ -79,10 +77,8 @@
       nombres: '',
       apellidos: '',
       correo: '',
-      id_rol: roles.find(r => r.nombre === 'TECNICO')?.id_rol || (roles[0]?.id_rol ?? 3),
+      id_rol: roles.find(r => r.nombre === 'TECNICO')?.id_rol || roles[0]?.id_rol,
       id_facultad: '',
-      username: '',
-      password: '',
       activo: true,
     };
     modalUsuario = true;
@@ -90,7 +86,6 @@
 
   function abrirEditarUsuario(u) {
     modoEdicion = true;
-    const partes = (u.nombres || '').split(' ');
     form = {
       id_usuario: u.id_usuario,
       nombres: u.nombres,
@@ -98,8 +93,6 @@
       correo: u.correo || '',
       id_rol: u.id_rol,
       id_facultad: u.id_facultad || '',
-      username: u.username,
-      password: '',
       activo: u.activo,
     };
     modalUsuario = true;
@@ -108,6 +101,10 @@
   async function guardarUsuario() {
     if (!form.nombres.trim()) {
       toast.error('Ingresa los nombres del usuario');
+      return;
+    }
+    if (!modoEdicion && !form.apellidos.trim()) {
+      toast.error('Ingresa los apellidos para generar el usuario institucional');
       return;
     }
     if (!form.id_rol) {
@@ -137,7 +134,7 @@
         modalUsuario = false;
         await cargarDatos();
       } else {
-        // Crear
+        // Crear automáticamente con regla pecastrol + contraseña segura
         const res = await fetch('/api/usuarios/crear/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -147,8 +144,6 @@
             correo: form.correo.trim(),
             id_rol: form.id_rol,
             id_facultad: form.id_facultad || null,
-            username: form.username.trim(),
-            password: form.password.trim(),
           }),
           credentials: 'include',
         });
@@ -221,7 +216,7 @@
   }
 
   function copiarAlPortapapeles() {
-    const texto = `CREDENTIALES DE ACCESO - SGV UTEQ\n\nUsuario: ${credenciales.username}\nContraseña temporal: ${credenciales.password_temporal}\nRol: ${credenciales.rol}\n\nIngresa en: http://18.227.201.40:5174/`;
+    const texto = `CREDENCIALES DE ACCESO - SGV UTEQ\n\nUsuario: ${credenciales.username}\nContraseña temporal: ${credenciales.password_temporal}\nRol: ${getRolFriendlyName(credenciales.rol)}\n\nIngresa en: http://18.227.201.40:5174/`;
     navigator.clipboard.writeText(texto);
     copiado = true;
     toast.success('¡Credenciales copiadas al portapapeles!');
@@ -233,18 +228,15 @@
     const r = rol.toUpperCase();
     if (r.includes('ADMIN') || r.includes('DIRECTOR')) return 'badge-admin';
     if (r.includes('TECNICO') || r.includes('ASISTENTE')) return 'badge-tecnico';
-    if (r.includes('CONSULTA') || r.includes('SECRETARI')) return 'badge-consulta';
-    return 'badge-docente';
+    return 'badge-consulta';
   }
 
   function getRolFriendlyName(rol) {
     if (!rol) return 'Sin Rol';
     const r = rol.toUpperCase();
-    if (r.includes('ADMIN')) return 'Administrador';
-    if (r.includes('DIRECTOR')) return 'Director(a) de Vinculación';
-    if (r.includes('TECNICO')) return 'Asistente / Técnico';
-    if (r.includes('CONSULTA')) return 'Secretario(a) / Consulta';
-    if (r.includes('DOCENTE')) return 'Docente';
+    if (r.includes('ADMIN') || r.includes('DIRECTOR')) return 'Director(a) / Administrador';
+    if (r.includes('TECNICO') || r.includes('ASISTENTE')) return 'Asistente';
+    if (r.includes('CONSULTA') || r.includes('SECRETARI')) return 'Secretaria / Secretario';
     return rol;
   }
 </script>
@@ -280,7 +272,7 @@
         </div>
         <div>
           <h2>Usuarios del Sistema</h2>
-          <p>Administración de cuentas de acceso, roles institucionales y permisos de seguridad.</p>
+          <p>Administración de cuentas institucionales y permisos de seguridad (Directores, Asistentes y Secretarías).</p>
         </div>
       </div>
 
@@ -299,7 +291,7 @@
           <select bind:value={filtroRol}>
             <option value="">Todos los roles</option>
             {#each roles as r}
-              <option value={r.id_rol}>{getRolFriendlyName(r.nombre)}</option>
+              <option value={r.id_rol}>{r.nombre_amigable || getRolFriendlyName(r.nombre)}</option>
             {/each}
           </select>
         </div>
@@ -389,52 +381,58 @@
   </div>
 </div>
 
-<!-- MODAL: CREAR / EDITAR USUARIO -->
+<!-- MODAL: CREAR / EDITAR USUARIO (ESTILO INSTITUCIONAL LIMPIO) -->
 {#if modalUsuario}
   <div class="modal-backdrop" onclick={() => { modalUsuario = false; }}>
-    <div class="modal-card" onclick={(e) => e.stopPropagation()}>
-      <div class="modal-header">
-        <div class="m-icon">
-          <i class="bi {modoEdicion ? 'bi-pencil-square' : 'bi-person-plus-fill'}"></i>
+    <div class="sga-modal-window" onclick={(e) => e.stopPropagation()}>
+      
+      <!-- HEADER INSTITUCIONAL SGA -->
+      <div class="sga-modal-header">
+        <div class="sga-modal-title">
+          <i class="bi {modoEdicion ? 'bi-pencil-square' : 'bi-person-plus-fill'} green-icon"></i>
+          <span>{modoEdicion ? 'EDITAR USUARIO' : 'CREAR NUEVO USUARIO'}</span>
         </div>
-        <div class="m-titles">
-          <h3>{modoEdicion ? 'Editar Usuario' : 'Crear Nuevo Usuario'}</h3>
-          <p>{modoEdicion ? 'Modifica los datos del usuario seleccionado' : 'Ingresa la información para generar una cuenta institucional'}</p>
-        </div>
-        <button class="m-close" onclick={() => { modalUsuario = false; }}>&times;</button>
+        <button class="sga-modal-close" onclick={() => { modalUsuario = false; }}>
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
-      <form onsubmit={(e) => { e.preventDefault(); guardarUsuario(); }} class="modal-form">
-        <div class="form-grid">
-          <div class="f-group">
-            <label>Nombres *</label>
+      <div class="sga-modal-subtitle">
+        • INGRESA LA INFORMACIÓN PARA GENERAR ACCESOS Y ENVIAR CREDENCIALES
+      </div>
+
+      <!-- FORMULARIO LIMPIO -->
+      <form onsubmit={(e) => { e.preventDefault(); guardarUsuario(); }} class="sga-modal-body">
+        <div class="sga-form-grid">
+          <div class="sga-fg">
+            <label>NOMBRES *</label>
             <input type="text" bind:value={form.nombres} placeholder="Ej: Pedro Vicente" required />
           </div>
 
           {#if !modoEdicion}
-            <div class="f-group">
-              <label>Apellidos *</label>
+            <div class="sga-fg">
+              <label>APELLIDOS *</label>
               <input type="text" bind:value={form.apellidos} placeholder="Ej: Castro López" required />
             </div>
           {/if}
 
-          <div class="f-group wide">
-            <label>Correo Institucional</label>
-            <input type="email" bind:value={form.correo} placeholder="ejemplo@uteq.edu.ec" />
-            <span class="f-hint">Se utilizará para notificaciones y envío de credenciales.</span>
+          <div class="sga-fg wide">
+            <label>CORREO INSTITUCIONAL *</label>
+            <input type="email" bind:value={form.correo} placeholder="ejemplo@uteq.edu.ec" required />
+            <span class="sga-hint">Se utilizará para notificaciones de seguridad y entrega de accesos.</span>
           </div>
 
-          <div class="f-group">
-            <label>Rol de Usuario *</label>
+          <div class="sga-fg {modoEdicion ? 'wide' : ''}">
+            <label>ROL DE USUARIO *</label>
             <select bind:value={form.id_rol} required>
               {#each roles as r}
-                <option value={r.id_rol}>{getRolFriendlyName(r.nombre)}</option>
+                <option value={r.id_rol}>{r.nombre_amigable || getRolFriendlyName(r.nombre)}</option>
               {/each}
             </select>
           </div>
 
-          <div class="f-group">
-            <label>Facultad (Opcional)</label>
+          <div class="sga-fg {modoEdicion ? 'wide' : ''}">
+            <label>FACULTAD (OPCIONAL)</label>
             <select bind:value={form.id_facultad}>
               <option value="">Todas / Dirección Central</option>
               {#each facultades as f}
@@ -442,25 +440,15 @@
               {/each}
             </select>
           </div>
-
-          {#if !modoEdicion}
-            <div class="f-group">
-              <label>Nombre de Usuario <span class="f-opt">(Opcional)</span></label>
-              <input type="text" bind:value={form.username} placeholder="Automático (ej: pcastrol)" />
-            </div>
-
-            <div class="f-group">
-              <label>Contraseña Inicial <span class="f-opt">(Opcional)</span></label>
-              <input type="text" bind:value={form.password} placeholder="Automática segura (10 caracteres)" />
-            </div>
-          {/if}
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn-cancelar" onclick={() => { modalUsuario = false; }}>Cancelar</button>
-          <button type="submit" class="btn-guardar" disabled={guardando}>
+        <div class="sga-modal-footer">
+          <button type="button" class="sga-btn-cancel" onclick={() => { modalUsuario = false; }}>
+            Cancelar
+          </button>
+          <button type="submit" class="sga-btn-submit" disabled={guardando}>
             {#if guardando}
-              <i class="bi bi-arrow-repeat spin"></i> Guardando...
+              <i class="bi bi-arrow-repeat spin"></i> Procesando...
             {:else}
               <i class="bi bi-check2-circle"></i> {modoEdicion ? 'Guardar cambios' : 'Crear usuario'}
             {/if}
@@ -474,64 +462,60 @@
 <!-- MODAL: CREDENCIALES GENERADAS -->
 {#if modalCredenciales}
   <div class="modal-backdrop" onclick={() => { modalCredenciales = false; }}>
-    <div class="modal-card creds-modal" onclick={(e) => e.stopPropagation()}>
-      <div class="modal-header creds-header">
-        <div class="m-icon success">
-          <i class="bi bi-shield-check"></i>
+    <div class="sga-modal-window creds-window" onclick={(e) => e.stopPropagation()}>
+      
+      <div class="sga-modal-header">
+        <div class="sga-modal-title">
+          <i class="bi bi-shield-check green-icon"></i>
+          <span>CREDENCIALES DE ACCESO GENERADAS</span>
         </div>
-        <div class="m-titles">
-          <h3>Credenciales Generadas con Éxito</h3>
-          <p>Comparte estos accesos de forma segura con el usuario.</p>
-        </div>
-        <button class="m-close" onclick={() => { modalCredenciales = false; }}>&times;</button>
+        <button class="sga-modal-close" onclick={() => { modalCredenciales = false; }}>
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
-      <div class="creds-body">
-        <div class="creds-banner">
+      <div class="sga-modal-subtitle">
+        • COMPARTE ESTOS ACCESOS DE FORMA SEGURA CON EL USUARIO
+      </div>
+
+      <div class="creds-content-box">
+        <div class="creds-alert-box">
           <i class="bi bi-info-circle-fill"></i>
-          <span>Por seguridad, el usuario deberá cambiar su contraseña temporal al ingresar por primera vez.</span>
+          <span>Por política de seguridad de la UTEQ, el usuario deberá actualizar obligatoriamente su contraseña al iniciar sesión por primera vez.</span>
         </div>
 
-        <div class="cred-card-box">
-          <div class="cred-row">
-            <span class="cred-label">NOMBRE:</span>
-            <span class="cred-val fw-bold">{credenciales.nombres}</span>
+        <div class="cred-details-card">
+          <div class="cred-item">
+            <span class="c-label">NOMBRE:</span>
+            <span class="c-val fw-bold">{credenciales.nombres}</span>
           </div>
-          <div class="cred-row">
-            <span class="cred-label">USUARIO:</span>
-            <span class="cred-val code-val">{credenciales.username}</span>
+          <div class="cred-item">
+            <span class="c-label">USUARIO GENERADO:</span>
+            <span class="c-val code-badge">{credenciales.username}</span>
           </div>
-          <div class="cred-row">
-            <span class="cred-label">CONTRASEÑA TEMPORAL:</span>
-            <span class="cred-val pass-val">{credenciales.password_temporal}</span>
+          <div class="cred-item">
+            <span class="c-label">CONTRASEÑA TEMPORAL:</span>
+            <span class="c-val pass-badge">{credenciales.password_temporal}</span>
           </div>
-          <div class="cred-row">
-            <span class="cred-label">ROL ASIGNADO:</span>
-            <span class="cred-val">{getRolFriendlyName(credenciales.rol)}</span>
+          <div class="cred-item">
+            <span class="c-label">ROL ASIGNADO:</span>
+            <span class="c-val fw-semibold">{getRolFriendlyName(credenciales.rol)}</span>
           </div>
           {#if credenciales.correo}
-            <div class="cred-row">
-              <span class="cred-label">CORREO:</span>
-              <span class="cred-val">{credenciales.correo}</span>
+            <div class="cred-item">
+              <span class="c-label">CORREO DESTINO:</span>
+              <span class="c-val">{credenciales.correo}</span>
             </div>
           {/if}
         </div>
 
-        <div class="creds-status">
-          {#if credenciales.correo_enviado}
-            <div class="alert ok-clean"><i class="bi bi-send-check-fill text-success"></i> Credenciales enviadas automáticamente al correo institucional.</div>
-          {:else}
-            <div class="alert note-clean"><i class="bi bi-clipboard-check"></i> Puedes copiar las credenciales a continuación para enviarlas al usuario.</div>
-          {/if}
-        </div>
-
-        <div class="creds-actions">
-          <button class="btn-copiar {copiado ? 'btn-copiado' : ''}" onclick={copiarAlPortapapeles}>
+        <div class="creds-footer-actions">
+          <button class="sga-btn-copy {copiado ? 'copied' : ''}" onclick={copiarAlPortapapeles}>
             <i class="bi {copiado ? 'bi-clipboard-check-fill' : 'bi-clipboard'}"></i>
-            {copiado ? '¡Copiado al portapapeles!' : 'Copiar credenciales'}
+            {copiado ? '¡Credenciales copiadas al portapapeles!' : 'Copiar credenciales'}
           </button>
-          <button class="btn-entendido" onclick={() => { modalCredenciales = false; }}>
-            Listo, entendido
+          <button class="sga-btn-done" onclick={() => { modalCredenciales = false; }}>
+            Entendido y cerrar
           </button>
         </div>
       </div>
@@ -818,12 +802,6 @@
   border: 1px solid #bae6fd;
 }
 
-.badge-docente {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-}
-
 /* Badges de Estado */
 .badge-activo {
   background: #f0fdf4;
@@ -886,6 +864,7 @@
 .btn-tbl.toggle-on:hover { background: #f0fdf4; }
 
 .fw-bold { font-weight: 700; }
+.fw-semibold { font-weight: 600; }
 .text-dark { color: #0f172a; }
 .text-muted { color: #94a3b8; }
 .text-center { text-align: center; }
@@ -900,7 +879,7 @@
   font-weight: 600;
 }
 
-/* ── MODALES ── */
+/* ── MODALES AL ESTILO SGA UTEQ (UNIFORME Y CONSISTENTE) ── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -913,276 +892,262 @@
   padding: 16px;
 }
 
-.modal-card {
+.sga-modal-window {
   background: #ffffff;
-  border-radius: 20px;
-  width: 540px;
-  max-width: 100%;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  width: 580px;
+  max-width: 95vw;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  animation: modalIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: modalPop 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e2e8f0;
 }
 
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.modal-header {
+.sga-modal-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 24px;
+  justify-content: space-between;
+  padding: 16px 22px;
+  background: #ffffff;
   border-bottom: 1px solid #eef2f6;
-  position: relative;
 }
 
-.m-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: #e8f5e9;
-  color: #1b7a2b;
+.sga-modal-title {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-
-.m-icon.success {
-  background: #f0fdf4;
-  color: #16a34a;
-}
-
-.m-titles h3 {
-  font-size: 1rem;
+  gap: 8px;
+  font-size: 0.88rem;
   font-weight: 800;
-  color: #1e293b;
-  margin: 0 0 2px;
-}
-
-.m-titles p {
-  font-size: 0.74rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.m-close {
-  position: absolute;
-  top: 14px;
-  right: 18px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #94a3b8;
-  cursor: pointer;
-}
-
-.modal-form {
-  padding: 20px 24px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 16px;
-}
-
-.f-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.f-group.wide {
-  grid-column: span 2;
-}
-
-.f-group label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #475569;
-  text-transform: uppercase;
+  color: #1b7a2b;
   letter-spacing: 0.04em;
 }
 
-.f-opt {
-  text-transform: none;
-  font-weight: 600;
-  color: #94a3b8;
+.green-icon {
+  font-size: 1.15rem;
+  color: #1b7a2b;
 }
 
-.f-hint {
+.sga-modal-close {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.sga-modal-close:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.sga-modal-subtitle {
+  padding: 8px 22px;
+  background: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.sga-modal-body {
+  padding: 22px 24px;
+}
+
+.sga-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 18px;
+}
+
+.sga-fg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sga-fg.wide {
+  grid-column: span 2;
+}
+
+.sga-fg label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.04em;
+}
+
+.sga-hint {
   font-size: 0.7rem;
   color: #64748b;
 }
 
-.f-group input,
-.f-group select {
+.sga-fg input,
+.sga-fg select {
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 9px 13px;
+  font-size: 0.86rem;
   font-family: inherit;
   font-weight: 600;
   color: #1e293b;
   background: #f8fafc;
   outline: none;
+  transition: all 0.2s ease;
 }
 
-.f-group input:focus,
-.f-group select:focus {
+.sga-fg input:focus,
+.sga-fg select:focus {
   border-color: #1b7a2b;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(27, 122, 43, 0.1);
 }
 
-.modal-footer {
+.sga-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
-  padding-top: 14px;
+  margin-top: 22px;
+  padding-top: 16px;
   border-top: 1px solid #f1f5f9;
 }
 
-.btn-cancelar {
+.sga-btn-cancel {
   background: #f1f5f9;
   color: #475569;
-  border: none;
+  border: 1.5px solid #e2e8f0;
   border-radius: 20px;
-  padding: 8px 18px;
-  font-size: 0.82rem;
+  padding: 8px 20px;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
-.btn-guardar {
+.sga-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.sga-btn-submit {
   background: #1b7a2b;
   color: #ffffff;
   border: none;
   border-radius: 20px;
-  padding: 8px 22px;
-  font-size: 0.82rem;
+  padding: 8px 24px;
+  font-size: 0.84rem;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 3px 10px rgba(27, 122, 43, 0.2);
+  gap: 7px;
+  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.25);
+  transition: all 0.2s;
 }
 
-.btn-guardar:hover:not(:disabled) { background: #155e04; }
-.btn-guardar:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* ── MODAL CREDENCIALES ── */
-.creds-modal {
-  width: 480px;
+.sga-btn-submit:hover:not(:disabled) {
+  background: #155e04;
+  transform: translateY(-1px);
 }
 
-.creds-body {
+.sga-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── MODAL CREDENCIALES DETALLES ── */
+.creds-window {
+  width: 500px;
+}
+
+.creds-content-box {
   padding: 20px 24px;
 }
 
-.creds-banner {
+.creds-alert-box {
   background: #fffbeb;
   border: 1px solid #fde68a;
   color: #92400e;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: 12px;
+  padding: 12px 14px;
   font-size: 0.78rem;
   font-weight: 600;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
-.cred-card-box {
+.cred-details-card {
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 14px;
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
-.cred-row {
+.cred-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
 }
 
-.cred-label {
-  font-size: 0.68rem;
+.c-label {
+  font-size: 0.7rem;
   font-weight: 800;
   color: #64748b;
   letter-spacing: 0.05em;
 }
 
-.cred-val {
+.c-val {
   color: #0f172a;
 }
 
-.code-val {
+.code-badge {
   font-family: monospace;
   font-size: 0.95rem;
   font-weight: 800;
   color: #1b7a2b;
   background: #e8f5e9;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 6px;
+  border: 1px solid #c8e6c9;
 }
 
-.pass-val {
+.pass-badge {
   font-family: monospace;
   font-size: 0.95rem;
   font-weight: 800;
   color: #7c3aed;
   background: #f5f3ff;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 6px;
   border: 1px dashed #c4b5fd;
 }
 
-.alert.ok-clean {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.alert.note-clean {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.creds-actions {
+.creds-footer-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 18px;
 }
 
-.btn-copiar {
+.sga-btn-copy {
   background: #1b7a2b;
   color: #ffffff;
   border: none;
@@ -1196,21 +1161,21 @@
   justify-content: center;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.2);
+  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.25);
 }
 
-.btn-copiar:hover {
+.sga-btn-copy:hover {
   background: #155e04;
 }
 
-.btn-copiado {
+.sga-btn-copy.copied {
   background: #0f766e !important;
 }
 
-.btn-entendido {
+.sga-btn-done {
   background: #f1f5f9;
   color: #334155;
-  border: none;
+  border: 1.5px solid #e2e8f0;
   border-radius: 20px;
   padding: 8px 18px;
   font-size: 0.82rem;
