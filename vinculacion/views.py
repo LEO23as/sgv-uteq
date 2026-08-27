@@ -2480,6 +2480,7 @@ def api_capas_indicador_upload(request):
     if 'dpa_canton' not in header or 'valor' not in header:
         return JsonResponse({'error': 'CSV debe tener columnas dpa_canton y valor'}, status=400)
 
+    vistos = set()
     filas, errores = [], []
     for i, row in enumerate(reader, start=2):
         rowl = {k.strip().lower(): (v or '').strip() for k, v in row.items()}
@@ -2487,6 +2488,9 @@ def api_capas_indicador_upload(request):
         val = rowl.get('valor', '')
         if not re.fullmatch(r'\d{4}', dpa):
             errores.append(f'Fila {i}: dpa_canton inválido "{dpa}"'); continue
+        if dpa in vistos:
+            continue
+        vistos.add(dpa)
         try:
             valf = float(val)
         except ValueError:
@@ -2494,16 +2498,20 @@ def api_capas_indicador_upload(request):
         prov, cant = dpa_index.get(dpa, (rowl.get('provincia', ''), rowl.get('canton', '')))
         filas.append(CapaIndicadorCanton(
             tipo_indicador=tipo, dpa_canton=dpa,
-            provincia=prov[:80], canton=cant[:80],
+            provincia=prov[:80] if prov else '', canton=cant[:80] if cant else '',
             valor=valf, unidad=unidad[:20], fuente=fuente[:160], anio=anio,
+            fecha_carga=timezone.now(),
         ))
 
     if not filas:
         return JsonResponse({'error': 'No hay filas válidas', 'detalles': errores[:20]}, status=400)
 
-    with transaction.atomic():
-        CapaIndicadorCanton.objects.filter(tipo_indicador=tipo, anio=anio).delete()
-        CapaIndicadorCanton.objects.bulk_create(filas, batch_size=500)
+    try:
+        with transaction.atomic():
+            CapaIndicadorCanton.objects.filter(tipo_indicador=tipo, anio=anio).delete()
+            CapaIndicadorCanton.objects.bulk_create(filas, batch_size=500)
+    except Exception as exc:
+        return JsonResponse({'error': f'Error al guardar en base de datos: {str(exc)}'}, status=500)
 
     return JsonResponse({
         'ok': True,

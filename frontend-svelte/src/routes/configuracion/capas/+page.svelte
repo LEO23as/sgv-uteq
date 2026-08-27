@@ -6,6 +6,8 @@
   let capas = $state([]);
   let cargando = $state(true);
   let subiendo = $state(false);
+  let progreso = $state(0);
+  let progresoInterval;
 
   let form = $state({
     tipo_indicador: 'NBI',
@@ -20,9 +22,13 @@
 
   async function cargar() {
     cargando = true;
-    try { capas = await fetchAPI('/api/capas-indicador/'); }
-    catch (e) { toast.error('No se pudieron cargar las capas'); }
-    finally { cargando = false; }
+    try { 
+      capas = await fetchAPI('/api/capas-indicador/'); 
+    } catch (e) { 
+      toast.error('No se pudieron cargar las capas'); 
+    } finally { 
+      cargando = false; 
+    }
   }
 
   onMount(cargar);
@@ -64,7 +70,15 @@
     if (!form.archivo)      { toast.error('Selecciona un archivo CSV'); return; }
     if (!preview?.length)   { toast.error('CSV sin filas válidas');     return; }
     if (!form.fuente.trim()){ toast.error('Indica la fuente');          return; }
+    
     subiendo = true;
+    progreso = 10;
+    progresoInterval = setInterval(() => {
+      if (progreso < 85) {
+        progreso += Math.floor(Math.random() * 15) + 5;
+      }
+    }, 200);
+
     try {
       const fd = new FormData();
       fd.append('tipo_indicador', form.tipo_indicador);
@@ -72,17 +86,42 @@
       fd.append('unidad', form.unidad);
       fd.append('fuente', form.fuente);
       fd.append('archivo', form.archivo);
-      const r = await fetch('/api/capas-indicador/upload/', { method:'POST', body: fd, credentials:'include' });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Error al subir');
-      toast.success(`Cargado: ${data.insertados} filas (${data.tipo_indicador} ${data.anio})`);
-      form = { tipo_indicador:'NBI', anio: new Date().getFullYear(), unidad:'%', fuente:'', archivo:null };
-      preview = null; errores = [];
-      document.getElementById('csvinput').value = '';
+
+      const r = await fetch('/api/capas-indicador/upload/', { 
+        method: 'POST', 
+        body: fd, 
+        credentials: 'include' 
+      });
+
+      progreso = 100;
+      clearInterval(progresoInterval);
+
+      let data;
+      const textResponse = await r.text();
+      try {
+        data = JSON.parse(textResponse);
+      } catch (err) {
+        throw new Error('Error en el servidor al procesar la capa');
+      }
+
+      if (!r.ok) throw new Error(data.error || 'Error al subir la capa');
+
+      toast.success(`¡Capa guardada con éxito! ${data.insertados} registros (${data.tipo_indicador} ${data.anio})`);
+      form = { tipo_indicador: 'NBI', anio: new Date().getFullYear(), unidad: '%', fuente: '', archivo: null };
+      preview = null; 
+      errores = [];
+      const fileInput = document.getElementById('csvinput');
+      if (fileInput) fileInput.value = '';
       await cargar();
     } catch (e) {
-      toast.error(e.message);
-    } finally { subiendo = false; }
+      clearInterval(progresoInterval);
+      toast.error(e.message || 'Error al procesar el archivo');
+    } finally { 
+      setTimeout(() => {
+        subiendo = false;
+        progreso = 0;
+      }, 500);
+    }
   }
 
   async function eliminar(c) {
@@ -90,9 +129,11 @@
     try {
       const r = await fetch(`/api/capas-indicador/${c.tipo_indicador}/${c.anio}/`, { method:'DELETE', credentials:'include' });
       if (!r.ok) throw new Error('No se pudo eliminar');
-      toast.success('Capa eliminada');
+      toast.success('Capa eliminada correctamente');
       await cargar();
-    } catch (e) { toast.error(e.message); }
+    } catch (e) { 
+      toast.error(e.message); 
+    }
   }
 </script>
 
@@ -135,7 +176,7 @@
       </div>
       <div class="fg wide">
         <label>Fuente</label>
-        <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC - Censo 2022" />
+        <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC - Censo de Población y Vivienda 2022" />
       </div>
       <div class="fg wide">
         <label>Archivo CSV <span class="hint">(columnas: <code>dpa_canton</code>, <code>valor</code>)</span></label>
@@ -157,9 +198,26 @@
       </div>
     {/if}
 
+    <!-- PROGRESS BAR ELEGANTE -->
+    {#if subiendo}
+      <div class="progress-wrap">
+        <div class="progress-header">
+          <span class="progress-label"><i class="bi bi-arrow-repeat spin"></i> Procesando e indexando capa en la base de datos...</span>
+          <span class="progress-pct">{progreso}%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: {progreso}%;"></div>
+        </div>
+      </div>
+    {/if}
+
     <div class="cap-actions">
       <button class="btn-primario" onclick={subir} disabled={subiendo || !preview?.length}>
-        {#if subiendo}<i class="bi bi-arrow-repeat spin"></i> Subiendo...{:else}<i class="bi bi-check-lg"></i> Guardar capa{/if}
+        {#if subiendo}
+          <i class="bi bi-arrow-repeat spin"></i> Subiendo...
+        {:else}
+          <i class="bi bi-check-lg"></i> Guardar capa
+        {/if}
       </button>
     </div>
   </section>
@@ -236,6 +294,54 @@
 .alert.warn { background:#fff8e6;border:1px solid #f5d97a;color:#7a5b00; }
 .alert.ok   { background:#e8f5e0;border:1px solid #c3e6b0;color:#1b5c02; }
 .alert ul { margin:6px 0 0 20px;font-weight:500; }
+
+/* ── PROGRESS BAR ── */
+.progress-wrap {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.progress-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1b7a2b;
+}
+
+.progress-pct {
+  color: #1b7a2b;
+  font-weight: 800;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1b7a2b 0%, #22c55e 100%);
+  border-radius: 20px;
+  transition: width 0.25s ease-in-out;
+}
 
 .cap-actions { display:flex;justify-content:flex-end;margin-top:14px; }
 .btn-primario {
