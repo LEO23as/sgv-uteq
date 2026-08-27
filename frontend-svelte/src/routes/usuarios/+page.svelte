@@ -969,4 +969,49 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin 0.7s linear infinite; }
+
+/* ── RESPONSIVIDAD PARA PANTALLAS PEQUEÑAS Y MÓVILES ── */
+@media (max-width: 768px) {
+  .subbar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-body {
+    padding: 14px 16px;
+  }
+  .main-card {
+    padding: 16px;
+  }
+  .card-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .filters-wrap {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .select-box select {
+    width: 100%;
+  }
+  .sga-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  .sga-fg.wide {
+    grid-column: auto !important;
+  }
+  .sga-modal-body {
+    padding: 16px;
+  }
+  .sga-modal-header {
+    padding: 14px 16px;
+  }
+}
 </style>
