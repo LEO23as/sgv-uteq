@@ -10,14 +10,12 @@
   let buscar = $state('');
   let filtroRol = $state('');
 
-  // Modales
+  // Modal de Crear / Editar
   let modalUsuario = $state(false);
-  let modalCredenciales = $state(false);
   let modoEdicion = $state(false);
   let guardando = $state(false);
-  let copiado = $state(false);
 
-  // Formulario de Usuario (Limpio y 100% Automático)
+  // Formulario de Usuario (Automático)
   let form = $state({
     id_usuario: null,
     nombres: '',
@@ -26,16 +24,6 @@
     id_rol: '',
     id_facultad: '',
     activo: true,
-  });
-
-  // Credenciales generadas
-  let credenciales = $state({
-    username: '',
-    nombres: '',
-    password_temporal: '',
-    correo: '',
-    rol: '',
-    correo_enviado: false,
   });
 
   // Filtrado reactivo
@@ -104,7 +92,11 @@
       return;
     }
     if (!modoEdicion && !form.apellidos.trim()) {
-      toast.error('Ingresa los apellidos para generar el usuario institucional');
+      toast.error('Ingresa los apellidos para generar el usuario');
+      return;
+    }
+    if (!form.correo.trim()) {
+      toast.error('Ingresa el correo electrónico para enviar las credenciales');
       return;
     }
     if (!form.id_rol) {
@@ -134,7 +126,7 @@
         modalUsuario = false;
         await cargarDatos();
       } else {
-        // Crear automáticamente con regla pecastrol + contraseña segura
+        // Crear automáticamente y enviar por correo
         const res = await fetch('/api/usuarios/crear/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -151,16 +143,7 @@
         if (!res.ok) throw new Error(data.error || 'Error al crear usuario');
 
         modalUsuario = false;
-        credenciales = {
-          username: data.username,
-          nombres: data.nombres,
-          password_temporal: data.password_temporal,
-          correo: data.correo,
-          rol: data.rol,
-          correo_enviado: data.correo_enviado,
-        };
-        copiado = false;
-        modalCredenciales = true;
+        toast.success(`Usuario "${data.username}" creado exitosamente. Se enviaron las credenciales a ${data.correo}.`);
         await cargarDatos();
       }
     } catch (e) {
@@ -181,17 +164,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al restablecer contraseña');
 
-      credenciales = {
-        username: data.username,
-        nombres: data.nombres,
-        password_temporal: data.password_temporal,
-        correo: data.correo,
-        rol: u.rol,
-        correo_enviado: data.correo_enviado,
-      };
-      copiado = false;
-      modalCredenciales = true;
-      toast.success('Nueva contraseña temporal generada');
+      toast.success(`Contraseña restablecida. Se envió la nueva clave temporal al correo institucional.`);
     } catch (e) {
       toast.error(e.message || 'Error al restablecer contraseña');
     }
@@ -213,14 +186,6 @@
     } catch (e) {
       toast.error(e.message || 'Error al cambiar estado');
     }
-  }
-
-  function copiarAlPortapapeles() {
-    const texto = `CREDENCIALES DE ACCESO - SGV UTEQ\n\nUsuario: ${credenciales.username}\nContraseña temporal: ${credenciales.password_temporal}\nRol: ${getRolFriendlyName(credenciales.rol)}\n\nIngresa en: http://18.227.201.40:5174/`;
-    navigator.clipboard.writeText(texto);
-    copiado = true;
-    toast.success('¡Credenciales copiadas al portapapeles!');
-    setTimeout(() => { copiado = false; }, 3000);
   }
 
   function getRolBadgeClass(rol) {
@@ -313,7 +278,7 @@
             <tr>
               <th>USUARIO</th>
               <th>NOMBRES Y APELLIDOS</th>
-              <th>CORREO INSTITUCIONAL</th>
+              <th>CORREO ELECTRÓNICO</th>
               <th>ROL / PERFIL</th>
               <th>ÚLTIMO ACCESO</th>
               <th>ESTADO</th>
@@ -356,7 +321,7 @@
                 </td>
                 <td class="text-center">
                   <div class="actions-wrap">
-                    <button class="btn-tbl reset" onclick={() => resetPassword(u)} title="Restablecer contraseña">
+                    <button class="btn-tbl reset" onclick={() => resetPassword(u)} title="Restablecer contraseña y enviar por correo">
                       <i class="bi bi-key-fill"></i>
                     </button>
                     <button class="btn-tbl edit" onclick={() => abrirEditarUsuario(u)} title="Editar usuario">
@@ -381,7 +346,7 @@
   </div>
 </div>
 
-<!-- MODAL: CREAR / EDITAR USUARIO (ESTILO INSTITUCIONAL LIMPIO) -->
+<!-- MODAL: CREAR / EDITAR USUARIO -->
 {#if modalUsuario}
   <div class="modal-backdrop" onclick={() => { modalUsuario = false; }}>
     <div class="sga-modal-window" onclick={(e) => e.stopPropagation()}>
@@ -398,7 +363,7 @@
       </div>
 
       <div class="sga-modal-subtitle">
-        • INGRESA LA INFORMACIÓN PARA GENERAR ACCESOS Y ENVIAR CREDENCIALES
+        • INGRESA LA INFORMACIÓN PARA GENERAR LA CUENTA Y ENVIAR CREDENCIALES AL CORREO
       </div>
 
       <!-- FORMULARIO LIMPIO -->
@@ -406,20 +371,20 @@
         <div class="sga-form-grid">
           <div class="sga-fg">
             <label>NOMBRES *</label>
-            <input type="text" bind:value={form.nombres} placeholder="Ej: Pedro Vicente" required />
+            <input type="text" bind:value={form.nombres} placeholder="Ej: Juan Carlos" required />
           </div>
 
           {#if !modoEdicion}
             <div class="sga-fg">
               <label>APELLIDOS *</label>
-              <input type="text" bind:value={form.apellidos} placeholder="Ej: Castro López" required />
+              <input type="text" bind:value={form.apellidos} placeholder="Ej: Mendoza Morales" required />
             </div>
           {/if}
 
           <div class="sga-fg wide">
-            <label>CORREO INSTITUCIONAL *</label>
-            <input type="email" bind:value={form.correo} placeholder="ejemplo@uteq.edu.ec" required />
-            <span class="sga-hint">Se utilizará para notificaciones de seguridad y entrega de accesos.</span>
+            <label>CORREO ELECTRÓNICO *</label>
+            <input type="email" bind:value={form.correo} placeholder="usuario@uteq.edu.ec" required />
+            <span class="sga-hint">Las credenciales de acceso se enviarán directamente a este correo.</span>
           </div>
 
           <div class="sga-fg {modoEdicion ? 'wide' : ''}">
@@ -448,77 +413,13 @@
           </button>
           <button type="submit" class="sga-btn-submit" disabled={guardando}>
             {#if guardando}
-              <i class="bi bi-arrow-repeat spin"></i> Procesando...
+              <i class="bi bi-arrow-repeat spin"></i> Creando y enviando correo...
             {:else}
-              <i class="bi bi-check2-circle"></i> {modoEdicion ? 'Guardar cambios' : 'Crear usuario'}
+              <i class="bi bi-check2-circle"></i> {modoEdicion ? 'Guardar cambios' : 'Crear usuario y enviar correo'}
             {/if}
           </button>
         </div>
       </form>
-    </div>
-  </div>
-{/if}
-
-<!-- MODAL: CREDENCIALES GENERADAS -->
-{#if modalCredenciales}
-  <div class="modal-backdrop" onclick={() => { modalCredenciales = false; }}>
-    <div class="sga-modal-window creds-window" onclick={(e) => e.stopPropagation()}>
-      
-      <div class="sga-modal-header">
-        <div class="sga-modal-title">
-          <i class="bi bi-shield-check green-icon"></i>
-          <span>CREDENCIALES DE ACCESO GENERADAS</span>
-        </div>
-        <button class="sga-modal-close" onclick={() => { modalCredenciales = false; }}>
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-
-      <div class="sga-modal-subtitle">
-        • COMPARTE ESTOS ACCESOS DE FORMA SEGURA CON EL USUARIO
-      </div>
-
-      <div class="creds-content-box">
-        <div class="creds-alert-box">
-          <i class="bi bi-info-circle-fill"></i>
-          <span>Por política de seguridad de la UTEQ, el usuario deberá actualizar obligatoriamente su contraseña al iniciar sesión por primera vez.</span>
-        </div>
-
-        <div class="cred-details-card">
-          <div class="cred-item">
-            <span class="c-label">NOMBRE:</span>
-            <span class="c-val fw-bold">{credenciales.nombres}</span>
-          </div>
-          <div class="cred-item">
-            <span class="c-label">USUARIO GENERADO:</span>
-            <span class="c-val code-badge">{credenciales.username}</span>
-          </div>
-          <div class="cred-item">
-            <span class="c-label">CONTRASEÑA TEMPORAL:</span>
-            <span class="c-val pass-badge">{credenciales.password_temporal}</span>
-          </div>
-          <div class="cred-item">
-            <span class="c-label">ROL ASIGNADO:</span>
-            <span class="c-val fw-semibold">{getRolFriendlyName(credenciales.rol)}</span>
-          </div>
-          {#if credenciales.correo}
-            <div class="cred-item">
-              <span class="c-label">CORREO DESTINO:</span>
-              <span class="c-val">{credenciales.correo}</span>
-            </div>
-          {/if}
-        </div>
-
-        <div class="creds-footer-actions">
-          <button class="sga-btn-copy {copiado ? 'copied' : ''}" onclick={copiarAlPortapapeles}>
-            <i class="bi {copiado ? 'bi-clipboard-check-fill' : 'bi-clipboard'}"></i>
-            {copiado ? '¡Credenciales copiadas al portapapeles!' : 'Copiar credenciales'}
-          </button>
-          <button class="sga-btn-done" onclick={() => { modalCredenciales = false; }}>
-            Entendido y cerrar
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 {/if}
@@ -864,7 +765,6 @@
 .btn-tbl.toggle-on:hover { background: #f0fdf4; }
 
 .fw-bold { font-weight: 700; }
-.fw-semibold { font-weight: 600; }
 .text-dark { color: #0f172a; }
 .text-muted { color: #94a3b8; }
 .text-center { text-align: center; }
@@ -1065,122 +965,6 @@
 .sga-btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-/* ── MODAL CREDENCIALES DETALLES ── */
-.creds-window {
-  width: 500px;
-}
-
-.creds-content-box {
-  padding: 20px 24px;
-}
-
-.creds-alert-box {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.cred-details-card {
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.cred-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.84rem;
-}
-
-.c-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #64748b;
-  letter-spacing: 0.05em;
-}
-
-.c-val {
-  color: #0f172a;
-}
-
-.code-badge {
-  font-family: monospace;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #1b7a2b;
-  background: #e8f5e9;
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px solid #c8e6c9;
-}
-
-.pass-badge {
-  font-family: monospace;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #7c3aed;
-  background: #f5f3ff;
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px dashed #c4b5fd;
-}
-
-.creds-footer-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sga-btn-copy {
-  background: #1b7a2b;
-  color: #ffffff;
-  border: none;
-  border-radius: 20px;
-  padding: 10px 20px;
-  font-size: 0.86rem;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.25);
-}
-
-.sga-btn-copy:hover {
-  background: #155e04;
-}
-
-.sga-btn-copy.copied {
-  background: #0f766e !important;
-}
-
-.sga-btn-done {
-  background: #f1f5f9;
-  color: #334155;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 8px 18px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
