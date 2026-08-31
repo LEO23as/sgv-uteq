@@ -92,6 +92,7 @@
     try { documentos = await fetchAPI(`/api/proyectos/${id}/documentos/`); } catch { documentos = []; }
   }
   const docsPorTipo = (codigo) => documentos.filter(d => d.codigo_tipo === codigo || d.tipo === codigo);
+  const docPorTipo = (codigo) => documentos.find(d => d.codigo_tipo === codigo || d.tipo === codigo);
 
   async function onPeriodoChange() {
     form.id_facultad = ''; form.id_carrera = ''; facultades = []; carrerasFil = [];
