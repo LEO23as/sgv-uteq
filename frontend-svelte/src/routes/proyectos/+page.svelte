@@ -6,6 +6,7 @@
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
   import Pagination from '$lib/Pagination.svelte';
+  import ProyectoDetalleModal from '$lib/ProyectoDetalleModal.svelte';
 
   let items     = $state([]);
   let facultades = $state([]);
@@ -14,6 +15,10 @@
   let q         = $state('');
   let filtEst   = $state('');
   let filtFac   = $state('');
+
+  // Modal de Detalle
+  let modalProyectoId = $state(null);
+  let modalProyectoOpen = $state(false);
 
   // Paginación
   let page = $state(1);
@@ -100,6 +105,11 @@
   );
 
   function limpiar() { q = ''; filtEst = ''; filtFac = ''; page = 1; }
+
+  function abrirDetalle(id) {
+    modalProyectoId = id;
+    modalProyectoOpen = true;
+  }
 
   async function eliminarProyecto(p) {
     const nombre = p.nombre_corto || p.nombre;
@@ -224,9 +234,9 @@
               </td>
               <td>
                 <div class="acciones center">
-                  <a href="/proyectos/{p.id_proyecto}" class="btn-accion" title="Ver detalle">
+                  <button type="button" class="btn-accion" title="Ver detalle del proyecto" onclick={() => abrirDetalle(p.id_proyecto)}>
                     <i class="bi bi-eye"></i>
-                  </a>
+                  </button>
                   <a href="/proyectos/{p.id_proyecto}/editar" class="btn-accion editar" title="Editar">
                     <i class="bi bi-pencil"></i>
                   </a>
@@ -249,6 +259,13 @@
     </div>
   {/if}
 </div>
+
+<!-- MODAL DE DETALLE DEL PROYECTO -->
+<ProyectoDetalleModal
+  idProyecto={modalProyectoId}
+  isOpen={modalProyectoOpen}
+  onClose={() => modalProyectoOpen = false}
+/>
 
 <style>
 .subbar { display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#fff;border-bottom:1px solid #e2e8f0; }

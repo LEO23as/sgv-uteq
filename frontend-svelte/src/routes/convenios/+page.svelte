@@ -5,6 +5,7 @@
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
   import Pagination from '$lib/Pagination.svelte';
+  import ConvenioDetalleModal from '$lib/ConvenioDetalleModal.svelte';
 
   let items = $state([]);
   let periodos = $state([]);
@@ -12,6 +13,10 @@
   let q = $state('');
   let filtEst = $state('');
   let filtPer = $state('');
+
+  // Modal de Detalle
+  let modalDetalleId = $state(null);
+  let modalDetalleOpen = $state(false);
 
   // Paginación
   let page = $state(1);
@@ -110,6 +115,11 @@
   });
 
   function limpiar() { q = ''; filtEst = ''; filtPer = ''; cargar(); }
+
+  function abrirDetalle(id) {
+    modalDetalleId = id;
+    modalDetalleOpen = true;
+  }
 
   // Elementos paginados
   const paginatedItems = $derived(
@@ -231,9 +241,9 @@
               </td>
               <td>
                 <div class="acciones center">
-                  <a href="/convenios/{c.id_convenio}" class="btn-accion" title="Ver detalle del convenio">
+                  <button type="button" class="btn-accion" title="Ver detalle del convenio" onclick={() => abrirDetalle(c.id_convenio)}>
                     <i class="bi bi-eye"></i>
-                  </a>
+                  </button>
                   <a href="/convenios/{c.id_convenio}/editar" class="btn-accion editar" title="Editar convenio">
                     <i class="bi bi-pencil"></i>
                   </a>
@@ -257,6 +267,13 @@
   {/if}
 </div>
 
+<!-- MODAL DE DETALLE DEL CONVENIO -->
+<ConvenioDetalleModal
+  idConvenio={modalDetalleId}
+  isOpen={modalDetalleOpen}
+  onClose={() => { modalDetalleOpen = false; cargar(); }}
+/>
+
 <style>
 .subbar { display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#fff;border-bottom:1px solid #e2e8f0; }
 .btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
@@ -273,8 +290,8 @@
 
 .filtros-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
 .filtros-row select { border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: .84rem; background: #fff; color: #334155; }
-.btn-filtrar { background:#1b7505; color:#fff; border:none; border-radius:9px; padding:8px 18px; font-weight:700; font-size:.84rem; cursor:pointer; }
-.btn-filtrar:hover { background:#145c04; }
-.btn-limpiar { background:#f1f5f9; color:#475569; border:1.5px solid #cbd5e1; border-radius:9px; padding:8px 16px; font-weight:600; font-size:.84rem; cursor:pointer; }
-.btn-limpiar:hover { background:#e2e8f0; }
+.btn-filtrar { background: #1b7505; color: #fff; border: none; border-radius: 9px; padding: 8px 18px; font-weight: 700; font-size: .84rem; cursor: pointer; }
+.btn-filtrar:hover { background: #145c04; }
+.btn-limpiar { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 8px 16px; font-weight: 600; font-size: .84rem; cursor: pointer; }
+.btn-limpiar:hover { background: #e2e8f0; }
 </style>
