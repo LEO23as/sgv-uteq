@@ -6,6 +6,8 @@
   import { get } from 'svelte/store';
   import { user, checkAuth, logout, capaNBIActiva, fetchAPI } from '$lib/stores';
   import Toasts from '$lib/Toasts.svelte';
+  import ConfirmDialog from '$lib/ConfirmDialog.svelte';
+  import TopBarProgress from '$lib/TopBarProgress.svelte';
 
   let { children } = $props();
 
@@ -160,7 +162,9 @@
 
 <svelte:window onclick={closeAllDropdowns} />
 
+<TopBarProgress />
 <Toasts />
+<ConfirmDialog />
 
 {#if PUBLIC.includes($page.url.pathname)}
   {#if authChecked}

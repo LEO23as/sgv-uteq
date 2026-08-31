@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
+  import { confirmDialog } from '$lib/confirm';
 
   let usuarios = $state([]);
   let roles = $state([]);
@@ -154,7 +155,16 @@
   }
 
   async function resetPassword(u) {
-    if (!confirm(`¿Deseas restablecer la contraseña del usuario "${u.username}" (${u.nombres})?`)) return;
+    const ok = await confirmDialog({
+      title: '¿Restablecer contraseña institucional?',
+      message: `Se generará una nueva contraseña temporal para "${u.username}" (${u.nombres} ${u.apellidos}) y se le notificará a ${u.correo}.`,
+      confirmText: 'Sí, restablecer clave',
+      type: 'warning',
+      icon: 'bi-key-fill'
+    });
+    if (!ok) return;
+
+    toast.info('Generando credenciales y enviando correo institucional...');
 
     try {
       const res = await fetch(`/api/usuarios/${u.id_usuario}/reset-password/`, {
@@ -164,7 +174,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al restablecer contraseña');
 
-      toast.success(`Contraseña restablecida. Se envió la nueva clave temporal al correo institucional.`);
+      toast.success(`Contraseña restablecida y enviada exitosamente a ${u.correo}.`);
     } catch (e) {
       toast.error(e.message || 'Error al restablecer contraseña');
     }
@@ -172,7 +182,14 @@
 
   async function toggleActivo(u) {
     const accion = u.activo ? 'inactivar' : 'activar';
-    if (!confirm(`¿Confirmas que deseas ${accion} al usuario "${u.username}"?`)) return;
+    const ok = await confirmDialog({
+      title: `¿Confirmas ${accion} la cuenta?`,
+      message: `El usuario "${u.username}" (${u.nombres}) ${u.activo ? 'perderá acceso temporal al sistema' : 'recuperará acceso normal al sistema'}.`,
+      confirmText: `Sí, ${accion}`,
+      type: u.activo ? 'danger' : 'primary',
+      icon: u.activo ? 'bi-person-x-fill' : 'bi-person-check-fill'
+    });
+    if (!ok) return;
 
     try {
       const res = await fetch(`/api/usuarios/${u.id_usuario}/toggle-activo/`, {

@@ -1,5 +1,7 @@
 <script>
   import { onMount } from 'svelte';
+  import { toast } from '$lib/toast';
+  import { confirmDialog } from '$lib/confirm';
 
   let { periodoId, periodoNombre = '', onConfirmado, onCancelar } = $props();
 
@@ -99,15 +101,27 @@
     for (const f of facultades) {
       if (f.vigente && !f.nombre_sugerido.trim()) {
         error = `La facultad "${f.nombre_actual || f.nombre_referencia}" no puede quedar sin nombre.`;
+        toast.error(error);
         return;
       }
       for (const c of f.carreras) {
         if (c.vigente && !c.nombre_sugerido.trim()) {
           error = `Una carrera de "${f.nombre_sugerido}" no puede quedar sin nombre.`;
+          toast.error(error);
           return;
         }
       }
     }
+
+    const ok = await confirmDialog({
+      title: '¿Confirmar y aplicar estructura académica?',
+      message: `Se sincronizarán ${resumen.fac} facultades y ${resumen.car} carreras (${resumen.cambios} cambio(s) detectado(s)) para el período ${periodoNombre}.`,
+      confirmText: 'Sí, aplicar estructura',
+      type: 'primary',
+      icon: 'bi-check2-circle'
+    });
+    if (!ok) return;
+
     saving = true; error = '';
     try {
       const payload = {
@@ -135,9 +149,17 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) { error = data.error || 'No se pudo guardar la estructura'; return; }
+      if (!res.ok) { 
+        error = data.error || 'No se pudo guardar la estructura'; 
+        toast.error(error);
+        return; 
+      }
+      toast.success(`Estructura del período ${periodoNombre} confirmada exitosamente`);
       onConfirmado?.(data.resumen);
-    } catch { error = 'Error de conexión'; }
+    } catch { 
+      error = 'Error de conexión'; 
+      toast.error(error);
+    }
     finally { saving = false; }
   }
 </script>

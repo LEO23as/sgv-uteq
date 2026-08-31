@@ -1,6 +1,7 @@
 <script>
   import { goto } from '$app/navigation';
   import { user } from '$lib/stores';
+  import { toast } from '$lib/toast';
   import { onMount } from 'svelte';
 
   let username = $state('');
@@ -181,7 +182,7 @@
             <p class="sga-support">
               En caso de problemas, contactar a <a href="mailto:soportevinculacion@uteq.edu.ec">soportevinculacion@uteq.edu.ec</a>
             </p>
-            <a href="#forgot" onclick={(e) => { e.preventDefault(); alert('Por favor contacte a la Unidad de Vinculación.'); }} class="sga-forgot">
+            <a href="#forgot" onclick={(e) => { e.preventDefault(); toast.info('Por favor comuníquese con la Unidad de Vinculación (soportevinculacion@uteq.edu.ec) para recuperar el acceso a su cuenta.'); }} class="sga-forgot">
               ¿Has olvidado los datos de la cuenta? Clic aquí!
             </a>
           </div>

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
+  import { confirmDialog } from '$lib/confirm';
 
   let capas = $state([]);
   let cargando = $state(true);
@@ -125,11 +126,14 @@
   }
 
   async function eliminar(c) {
-    const confirmacion = confirm(
-      `⚠️ ¿Confirmas que deseas eliminar la capa "${c.tipo_indicador} ${c.anio}"?\n\n` +
-      `Se eliminarán ${c.total} registros de cantones de la base de datos.`
-    );
-    if (!confirmacion) return;
+    const ok = await confirmDialog({
+      title: '¿Eliminar capa de indicadores territorial?',
+      message: `Se eliminará la capa "${c.tipo_indicador} ${c.anio}" y sus ${c.total} registros de cantones asociados en la base de datos.`,
+      confirmText: 'Sí, eliminar capa',
+      type: 'danger',
+      icon: 'bi-map-fill'
+    });
+    if (!ok) return;
 
     try {
       const r = await fetch(`/api/capas-indicador/${c.tipo_indicador}/${c.anio}/`, { 
@@ -137,7 +141,7 @@
         credentials: 'include' 
       });
       if (!r.ok) throw new Error('No se pudo eliminar la capa');
-      toast.success('Capa eliminada correctamente');
+      toast.success('Capa territorial eliminada correctamente');
       await cargar();
     } catch (e) { 
       toast.error(e.message); 

@@ -3,6 +3,8 @@
   import { goto } from '$app/navigation';
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
+  import { confirmDialog } from '$lib/confirm';
+  import ProgressBar from '$lib/ProgressBar.svelte';
 
   let items     = $state([]);
   let facultades = $state([]);
@@ -21,6 +23,25 @@
     FINALIZADO:   { label:'Finalizado',   cls:'finalizado' },
     RECHAZADO:    { label:'Rechazado',    cls:'rechazado'  },
   };
+
+  function calcularAvance(fechaInicio, fechaFin, estado) {
+    if (estado === 'FINALIZADO') return { pct: 100, label: '100% Completado', variant: 'success' };
+    if (!fechaInicio || !fechaFin) return { pct: 0, label: 'Sin fechas', variant: 'info' };
+    
+    const ini = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    const hoy = new Date();
+    
+    const total = fin.getTime() - ini.getTime();
+    if (total <= 0) return { pct: 100, label: 'Plazo culminado', variant: 'warning' };
+    
+    const transcurrido = hoy.getTime() - ini.getTime();
+    const pct = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
+    
+    if (hoy > fin) return { pct: 100, label: 'Plazo culminado', variant: 'danger' };
+    if (hoy < ini) return { pct: 0, label: 'Por iniciar', variant: 'info' };
+    return { pct, label: `${pct}% ejecutado`, variant: 'auto' };
+  }
 
   onMount(async () => {
     try {
@@ -44,26 +65,31 @@
 
   function limpiar() { q = ''; filtEst = ''; filtFac = ''; }
 
-  // ── Eliminar proyecto ──────────────────────────────────
-  let porEliminar = $state(null);   // proyecto seleccionado para borrar
-  let eliminando  = $state(false);
+  async function eliminarProyecto(p) {
+    const nombre = p.nombre_corto || p.nombre;
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar proyecto de vinculación?',
+      message: `Se eliminará "${nombre}" (${p.codigo}). Se borrarán también sus ubicaciones, convenios vinculados y evidencias. Esta acción no se puede deshacer.`,
+      confirmText: 'Sí, eliminar proyecto',
+      type: 'danger'
+    });
 
-  async function confirmarEliminar() {
-    if (!porEliminar) return;
-    const nombre = porEliminar.nombre_corto || porEliminar.nombre;
-    eliminando = true;
+    if (!confirmed) return;
+
     try {
-      const res = await fetch(`/api/proyectos/${porEliminar.id_proyecto}/eliminar/`, {
+      const res = await fetch(`/api/proyectos/${p.id_proyecto}/eliminar/`, {
         method: 'DELETE', credentials: 'include',
       });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error || 'No se pudo eliminar'); }
-      else {
-        items = items.filter(p => p.id_proyecto !== porEliminar.id_proyecto);
-        toast.success(`Proyecto "${nombre}" eliminado`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || 'No se pudo eliminar el proyecto');
+      } else {
+        items = items.filter(x => x.id_proyecto !== p.id_proyecto);
+        toast.success(`Proyecto "${nombre}" eliminado correctamente`);
       }
-    } catch { toast.error('Error de conexión'); }
-    finally { eliminando = false; porEliminar = null; }
+    } catch {
+      toast.error('Error de conexión al eliminar');
+    }
   }
 </script>
 
@@ -86,7 +112,7 @@
   <div class="page-top">
     <div>
       <h2 class="page-title"><i class="bi bi-folder2-open"></i> Proyectos de Vinculación</h2>
-      <p class="page-sub">Registro y seguimiento de proyectos</p>
+      <p class="page-sub">Registro, seguimiento y avance de proyectos con la sociedad</p>
     </div>
   </div>
 
@@ -112,18 +138,24 @@
   </div>
 
   {#if loading}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando...</div>
+    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando proyectos...</div>
   {:else}
     <div class="table-card">
       <table>
         <thead>
           <tr>
-            <th>Código</th><th>Nombre</th><th>Facultad / Carrera</th>
-            <th>Período</th><th>Ubicación</th><th>Estado</th><th>Acciones</th>
+            <th>Código</th>
+            <th>Nombre del Proyecto</th>
+            <th>Facultad / Carrera</th>
+            <th>Período</th>
+            <th style="min-width: 130px;">Avance Temporal</th>
+            <th>Estado</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {#each filtered as p}
+            {@const av = calcularAvance(p.fecha_inicio, p.fecha_fin, p.estado)}
             <tr>
               <td><span class="code">{p.codigo}</span></td>
               <td class="nombre-cell">
@@ -137,7 +169,17 @@
                 <span class="carrera-sec">{p.carrera_nombre}</span>
               </td>
               <td class="txt-small">{p.periodo_inicio_nombre}</td>
-              <td class="txt-small">{p.canton || '—'}{p.provincia ? ', ' + p.provincia : ''}</td>
+              <td>
+                <div class="avance-col">
+                  <ProgressBar
+                    value={av.pct}
+                    max={100}
+                    sublabel={av.label}
+                    variant={av.variant}
+                    size="sm"
+                  />
+                </div>
+              </td>
               <td>
                 <span class="badge est-{(ESTADOS[p.estado]?.cls) || 'finalizado'}">
                   {ESTADOS[p.estado]?.label || p.estado}
@@ -150,7 +192,7 @@
                 <a href="/proyectos/{p.id_proyecto}/editar" class="btn-accion editar" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <button class="btn-accion eliminar" title="Eliminar" onclick={() => porEliminar = p}>
+                <button class="btn-accion eliminar" title="Eliminar" onclick={() => eliminarProyecto(p)}>
                   <i class="bi bi-trash"></i>
                 </button>
               </td>
@@ -166,26 +208,7 @@
   {/if}
 </div>
 
-<!-- MODAL CONFIRMAR ELIMINAR -->
-{#if porEliminar}
-  <div class="del-overlay" onclick={() => porEliminar = null}>
-    <div class="del-box" onclick={(e) => e.stopPropagation()}>
-      <div class="del-ico"><i class="bi bi-exclamation-triangle-fill"></i></div>
-      <h3>Eliminar proyecto</h3>
-      <p>¿Seguro que deseas eliminar <strong>{porEliminar.nombre_corto || porEliminar.nombre}</strong>
-      ({porEliminar.codigo})? Se borrarán también sus ubicaciones, fotos, convenios y documentos. Esta acción no se puede deshacer.</p>
-      <div class="del-actions">
-        <button class="del-cancel" onclick={() => porEliminar = null} disabled={eliminando}>Cancelar</button>
-        <button class="del-confirm" onclick={confirmarEliminar} disabled={eliminando}>
-          {#if eliminando}<i class="bi bi-arrow-repeat spin"></i> Eliminando…{:else}<i class="bi bi-trash"></i> Sí, eliminar{/if}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
 <style>
-/* Solo estilos específicos de esta página */
 .nombre-cell { max-width: 260px; }
 .nombre-principal { display:block;font-weight:700;color:#222; }
 .nombre-sec { display:block;font-size:.72rem;color:var(--gris); }
@@ -193,6 +216,7 @@
 .carrera-sec { display:block;font-size:.72rem;color:var(--gris);margin-top:2px; }
 .txt-small { font-size:.78rem; }
 .acciones { display:flex;gap:6px; }
+.avance-col { width: 100%; min-width: 120px; }
 
 /* Estado badges de proyecto */
 .est-ejecucion  { background:#e8f4e8;color:#1b7505; }
@@ -203,20 +227,5 @@
 .est-finalizado { background:#f4f4f4;color:#a8a8a7; }
 .est-rechazado  { background:#f4f4f4;color:#6c757d; }
 
-/* Botón eliminar */
 .btn-accion.eliminar:hover { background:#fdecec;color:#dc3545;border-color:#f5c6c6; }
-
-/* Modal eliminar */
-.del-overlay { position:fixed;inset:0;background:rgba(13,25,16,.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px; }
-.del-box { background:#fff;border-radius:16px;max-width:420px;width:100%;padding:24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3); }
-.del-ico { font-size:2.4rem;color:#dc3545;margin-bottom:8px; }
-.del-box h3 { font-size:1.15rem;font-weight:900;color:var(--negro);margin-bottom:8px; }
-.del-box p { font-size:.85rem;color:#555;line-height:1.5;margin-bottom:20px; }
-.del-actions { display:flex;gap:10px;justify-content:center; }
-.del-cancel { background:#fff;border:1.5px solid var(--borde);color:#555;font-weight:700;border-radius:10px;padding:9px 18px;font-size:.85rem; }
-.del-cancel:hover { border-color:#aaa; }
-.del-confirm { background:#dc3545;border:none;color:#fff;font-weight:800;border-radius:10px;padding:9px 20px;font-size:.85rem;display:flex;align-items:center;gap:7px; }
-.del-confirm:hover { background:#b02a37; }
-.del-confirm:disabled,.del-cancel:disabled { opacity:.6; }
-.toast-del { position:fixed;bottom:24px;right:24px;background:var(--negro);color:#fff;font-weight:700;font-size:.82rem;padding:11px 18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:700; }
 </style>

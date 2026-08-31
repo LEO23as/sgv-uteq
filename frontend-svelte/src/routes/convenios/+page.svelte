@@ -1,15 +1,16 @@
 <script>
   import { onMount } from 'svelte';
   import { fetchAPI } from '$lib/stores';
+  import { toast } from '$lib/toast';
+  import { confirmDialog } from '$lib/confirm';
+  import ProgressBar from '$lib/ProgressBar.svelte';
 
-    let items = $state([]);
+  let items = $state([]);
   let periodos = $state([]);
   let loading = $state(true);
   let q = $state('');
   let filtEst = $state('');
   let filtPer = $state('');
-  let confirmEliminar = $state(null);
-  let toast = $state('');
 
   const ESTADOS = {
     VIGENTE:   { label:'Vigente',   cls:'vigente'  },
@@ -18,13 +19,39 @@
     CANCELADO: { label:'Cancelado', cls:'cancelado'},
   };
 
+  function calcularVigencia(fechaInicio, fechaFin) {
+    if (!fechaFin) return { pct: 100, label: 'Sin fecha fin', variant: 'info' };
+    const fin = new Date(fechaFin);
+    const ini = fechaInicio ? new Date(fechaInicio) : new Date(fin.getFullYear() - 1, fin.getMonth(), fin.getDate());
+    const hoy = new Date();
+    
+    const total = fin.getTime() - ini.getTime();
+    if (total <= 0) return { pct: 100, label: 'Vencido', variant: 'danger' };
+    
+    const rest = Math.ceil((fin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const transcurrido = hoy.getTime() - ini.getTime();
+    const pct = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
+    
+    if (rest <= 0) {
+      return { pct: 100, label: 'Vencido', variant: 'danger' };
+    } else if (rest <= 90) {
+      return { pct, label: `${rest}d restantes`, variant: 'warning' };
+    } else {
+      return { pct, label: `${rest}d restantes`, variant: 'success' };
+    }
+  }
+
   async function cargar() {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (filtEst) params.set('estado', filtEst);
     if (filtPer) params.set('periodo', filtPer);
-    const data = await fetch('/api/convenios/list/?' + params, { credentials:'include' }).then(r => r.json());
-    items = data.results || [];
+    try {
+      const data = await fetch('/api/convenios/list/?' + params, { credentials:'include' }).then(r => r.json());
+      items = data.results || [];
+    } catch {
+      toast.error('Error al cargar convenios');
+    }
   }
 
   onMount(async () => {
@@ -38,12 +65,27 @@
 
   function limpiar() { q = ''; filtEst = ''; filtPer = ''; cargar(); }
 
-  async function eliminar(id) {
-    await fetch(`/api/convenios/${id}/`, { method:'DELETE', credentials:'include' });
-    items = items.filter(c => c.id_convenio !== id);
-    confirmEliminar = null;
-    toast = 'Convenio eliminado';
-    setTimeout(() => toast = '', 3000);
+  async function eliminar(c) {
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar convenio?',
+      message: `Se eliminará el convenio "${c.numero_memorando || 'sin número'}" con ${c.entidad_nombre}. Esta acción no se puede deshacer.`,
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/convenios/${c.id_convenio}/`, { method:'DELETE', credentials:'include' });
+      if (res.ok) {
+        items = items.filter(x => x.id_convenio !== c.id_convenio);
+        toast.success(`Convenio "${c.numero_memorando || 'seleccionado'}" eliminado correctamente`);
+      } else {
+        toast.error('No se pudo eliminar el convenio');
+      }
+    } catch {
+      toast.error('Error de conexión al eliminar');
+    }
   }
 </script>
 
@@ -62,7 +104,7 @@
   <div class="page-top">
     <div>
       <h2 class="page-title"><i class="bi bi-file-earmark-text"></i> Gestión de Convenios</h2>
-      <p class="page-sub">Acuerdos con entidades cooperantes</p>
+      <p class="page-sub">Acuerdos con entidades cooperantes y seguimiento de vigencia</p>
     </div>
   </div>
 
@@ -88,21 +130,41 @@
   </div>
 
   {#if loading}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando...</div>
+    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando convenios...</div>
   {:else}
     <div class="table-card">
       <table>
         <thead>
-          <tr><th>N° Memorando</th><th>Entidad</th><th>Proyecto</th><th>Período</th><th>Firma</th><th>Estudiantes</th><th>Estado</th><th>Acciones</th></tr>
+          <tr>
+            <th>N° Memorando</th>
+            <th>Entidad</th>
+            <th>Proyecto</th>
+            <th>Período</th>
+            <th style="min-width: 140px;">Vigencia / Avance</th>
+            <th>Estudiantes</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
         </thead>
         <tbody>
           {#each items as c}
+            {@const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin)}
             <tr>
               <td><strong class="code">{c.numero_memorando || 'Sin Nro.'}</strong></td>
-              <td class="td-truncate">{c.entidad_nombre}</td>
-              <td class="td-truncate">{c.proyecto_nombre}</td>
+              <td class="td-truncate" title={c.entidad_nombre}>{c.entidad_nombre}</td>
+              <td class="td-truncate" title={c.proyecto_nombre || '—'}>{c.proyecto_nombre || '—'}</td>
               <td class="txt-sm">{c.periodo_nombre}</td>
-              <td class="txt-sm">{c.fecha_firma || '—'}</td>
+              <td>
+                <div class="vigencia-col">
+                  <ProgressBar
+                    value={vig.pct}
+                    max={100}
+                    sublabel={vig.label}
+                    variant={vig.variant}
+                    size="sm"
+                  />
+                </div>
+              </td>
               <td class="txt-sm center">{c.estudiantes_asignados || 0}</td>
               <td>
                 <span class="badge {ESTADOS[c.estado]?.cls || 'cancelado'}">
@@ -116,7 +178,7 @@
                 <a href="/convenios/{c.id_convenio}/editar" class="btn-accion" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <button class="btn-accion danger" onclick={() => confirmEliminar = c} title="Eliminar">
+                <button class="btn-accion danger" onclick={() => eliminar(c)} title="Eliminar">
                   <i class="bi bi-trash"></i>
                 </button>
               </td>
@@ -132,38 +194,11 @@
   {/if}
 </div>
 
-<!-- Modal confirmar eliminar -->
-{#if confirmEliminar}
-  <div class="modal-overlay" onclick={() => confirmEliminar = null}>
-    <div class="modal-confirm" onclick={(e) => e.stopPropagation()}>
-      <i class="bi bi-exclamation-triangle modal-icon"></i>
-      <h3>¿Eliminar convenio?</h3>
-      <p>Se eliminará el convenio <strong>{confirmEliminar.numero_memorando || 'sin número'}</strong> con <em>{confirmEliminar.entidad_nombre}</em>. Esta acción no se puede deshacer.</p>
-      <div class="modal-btns">
-        <button class="btn-cancel-modal" onclick={() => confirmEliminar = null}>Cancelar</button>
-        <button class="btn-delete-modal" onclick={() => eliminar(confirmEliminar.id_convenio)}>Eliminar</button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-{#if toast}<div class="toast">{toast}</div>{/if}
-
 <style>
 .subbar { display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:#fff;border-bottom:1px solid var(--borde); }
-
 .td-truncate { max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .txt-sm { font-size:.78rem; }
 .center { text-align:center; }
 .acciones { display:flex;gap:6px; }
-
-/* Modal */
-.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999; }
-.modal-confirm { background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18); }
-.modal-icon { font-size:2.4rem;color:#dc3545;margin-bottom:12px;display:block; }
-.modal-confirm h3 { font-size:1.1rem;font-weight:900;margin-bottom:10px; }
-.modal-confirm p { font-size:.85rem;color:#555;line-height:1.5;margin-bottom:20px; }
-.modal-btns { display:flex;gap:10px;justify-content:center; }
-.btn-cancel-modal { background:#fff;border:1.5px solid var(--borde);border-radius:9px;padding:9px 22px;font-size:.85rem;font-weight:700;cursor:pointer; }
-.btn-delete-modal { background:#dc3545;color:#fff;border:none;border-radius:9px;padding:9px 22px;font-size:.85rem;font-weight:800;cursor:pointer; }
+.vigencia-col { width: 100%; min-width: 120px; }
 </style>
