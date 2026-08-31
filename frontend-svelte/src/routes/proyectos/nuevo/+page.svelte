@@ -44,6 +44,20 @@
 
   onMount(async () => {
     periodos = await fetchAPI('/api/periodos/');
+    const urlParams = new URLSearchParams(window.location.search);
+    const pFac = urlParams.get('facultad');
+    const pCar = urlParams.get('carrera');
+    const pPer = urlParams.get('periodo') || (periodos.find(p => p.activo)?.id_periodo || periodos[0]?.id_periodo);
+
+    if (pPer) {
+      form.id_periodo_inicio = String(pPer);
+      facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+      if (pFac) {
+        form.id_facultad = String(pFac);
+        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+        if (pCar) form.id_carrera = String(pCar);
+      }
+    }
   });
 
   async function onPeriodoChange() {
