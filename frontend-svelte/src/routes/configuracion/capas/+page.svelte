@@ -3,12 +3,17 @@
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
+  import Pagination from '$lib/Pagination.svelte';
 
   let capas = $state([]);
   let cargando = $state(true);
   let subiendo = $state(false);
   let progreso = $state(0);
   let progresoInterval;
+
+  // Paginación
+  let page = $state(1);
+  let pageSize = $state(10);
 
   let form = $state({
     tipo_indicador: 'NBI',
@@ -280,7 +285,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each capas as c}
+            {#each capas.slice((page - 1) * pageSize, page * pageSize) as c}
               <tr>
                 <td>
                   <span class="indicador-badge">{c.tipo_indicador}</span>
@@ -307,6 +312,10 @@
             {/each}
           </tbody>
         </table>
+
+        {#if capas.length > 0}
+          <Pagination totalItems={capas.length} bind:page bind:pageSize itemLabel="capas" />
+        {/if}
       </div>
     {/if}
   </section>

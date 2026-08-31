@@ -5,6 +5,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
+  import Pagination from '$lib/Pagination.svelte';
 
   let items     = $state([]);
   let facultades = $state([]);
@@ -13,6 +14,10 @@
   let q         = $state('');
   let filtEst   = $state('');
   let filtFac   = $state('');
+
+  // Paginación
+  let page = $state(1);
+  let pageSize = $state(10);
 
   const ESTADOS = {
     EN_EJECUCION: { label:'En ejecución', cls:'ejecucion' },
@@ -90,7 +95,11 @@
     return matchQ && matchE && matchF;
   }));
 
-  function limpiar() { q = ''; filtEst = ''; filtFac = ''; }
+  const paginatedProjects = $derived(
+    filtered.slice((page - 1) * pageSize, page * pageSize)
+  );
+
+  function limpiar() { q = ''; filtEst = ''; filtFac = ''; page = 1; }
 
   async function eliminarProyecto(p) {
     const nombre = p.nombre_corto || p.nombre;
@@ -147,15 +156,15 @@
   <div class="filtros-row">
     <div class="search-wrap">
       <i class="bi bi-search"></i>
-      <input bind:value={q} placeholder="Buscar por nombre o código…" />
+      <input bind:value={q} placeholder="Buscar por nombre o código…" oninput={() => page = 1} />
     </div>
-    <select bind:value={filtFac}>
+    <select bind:value={filtFac} onchange={() => page = 1}>
       <option value="">Todas las facultades</option>
       {#each facultades as f}
         <option value={f.id_facultad}>{f.nombre_corto || f.nombre}</option>
       {/each}
     </select>
-    <select bind:value={filtEst}>
+    <select bind:value={filtEst} onchange={() => page = 1}>
       <option value="">Todos los estados</option>
       {#each Object.entries(ESTADOS) as [val, info]}
         <option value={val}>{info.label}</option>
@@ -181,7 +190,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each filtered as p}
+          {#each paginatedProjects as p}
             {@const av = calcularAvance(p.fecha_inicio, p.fecha_fin_planificada || p.fecha_fin_real, p.estado)}
             <tr>
               <td><span class="code">{p.codigo}</span></td>
@@ -233,8 +242,11 @@
           {/if}
         </tbody>
       </table>
+
+      {#if filtered.length > 0}
+        <Pagination totalItems={filtered.length} bind:page bind:pageSize itemLabel="proyectos" />
+      {/if}
     </div>
-    <div class="total">Total: <strong>{filtered.length}</strong> proyecto(s) encontrado(s)</div>
   {/if}
 </div>
 
@@ -243,7 +255,6 @@
 .btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
 .btn-nuevo:hover { background:#145c04; }
 
-.page-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 .nombre-cell { max-width: 260px; }
 .nombre-principal { display:block;font-weight:700;color:#1e293b; }
 .nombre-sec { display:block;font-size:.72rem;color:#64748b;margin-top:2px; }

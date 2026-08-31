@@ -3,6 +3,7 @@
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
+  import Pagination from '$lib/Pagination.svelte';
 
   let usuarios = $state([]);
   let roles = $state([]);
@@ -10,6 +11,10 @@
   let cargando = $state(true);
   let buscar = $state('');
   let filtroRol = $state('');
+
+  // Paginación
+  let page = $state(1);
+  let pageSize = $state(10);
 
   // Modal de Crear / Editar
   let modalUsuario = $state(false);
@@ -303,7 +308,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each usuariosFiltrados as u}
+            {#each paginatedUsuarios as u}
               <tr class={!u.activo ? 'row-inactiva' : ''}>
                 <td>
                   <div class="user-cell">
@@ -357,6 +362,10 @@
             {/each}
           </tbody>
         </table>
+
+        {#if usuariosFiltrados.length > 0}
+          <Pagination totalItems={usuariosFiltrados.length} bind:page bind:pageSize itemLabel="usuarios" />
+        {/if}
       </div>
     {/if}
 

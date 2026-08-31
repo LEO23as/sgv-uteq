@@ -4,6 +4,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
+  import Pagination from '$lib/Pagination.svelte';
 
   let items = $state([]);
   let periodos = $state([]);
@@ -11,6 +12,10 @@
   let q = $state('');
   let filtEst = $state('');
   let filtPer = $state('');
+
+  // Paginación
+  let page = $state(1);
+  let pageSize = $state(10);
 
   const ESTADOS = {
     VIGENTE:   { label:'Vigente',   cls:'vigente'  },
@@ -22,12 +27,10 @@
   function parsearFecha(f) {
     if (!f) return null;
     if (typeof f !== 'string') return new Date(f);
-    // YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(f)) {
       const [y, m, d] = f.split('T')[0].split('-').map(Number);
       return new Date(y, m - 1, d);
     }
-    // DD/MM/YYYY
     if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(f)) {
       const [d, m, y] = f.split('/').map(Number);
       return new Date(y, m - 1, d);
@@ -46,7 +49,6 @@
     let fin = parsearFecha(fechaFin);
     let ini = parsearFecha(fechaInicio);
 
-    // Si no tiene fecha fin pero tiene fecha inicio y duración en años
     if (!fin && ini && duracionAnios) {
       fin = new Date(ini);
       fin.setFullYear(fin.getFullYear() + Number(duracionAnios));
@@ -85,6 +87,7 @@
   }
 
   async function cargar() {
+    page = 1;
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (filtEst) params.set('estado', filtEst);
@@ -107,6 +110,11 @@
   });
 
   function limpiar() { q = ''; filtEst = ''; filtPer = ''; cargar(); }
+
+  // Elementos paginados
+  const paginatedItems = $derived(
+    items.slice((page - 1) * pageSize, page * pageSize)
+  );
 
   async function eliminar(c) {
     const confirmed = await confirmDialog({
@@ -156,13 +164,13 @@
       <i class="bi bi-search"></i>
       <input bind:value={q} placeholder="Buscar entidad, proyecto o memorando..." onkeydown={(e) => e.key === 'Enter' && cargar()} />
     </div>
-    <select bind:value={filtEst}>
+    <select bind:value={filtEst} onchange={cargar}>
       <option value="">Todos los estados</option>
       {#each Object.entries(ESTADOS) as [val, info]}
         <option value={val}>{info.label}</option>
       {/each}
     </select>
-    <select bind:value={filtPer}>
+    <select bind:value={filtPer} onchange={cargar}>
       <option value="">Todos los períodos</option>
       {#each periodos as p}
         <option value={p.id_periodo}>{p.nombre}</option>
@@ -190,7 +198,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each items as c}
+          {#each paginatedItems as c}
             {@const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin, c.duracion_anios)}
             <tr>
               <td>
@@ -241,8 +249,11 @@
           {/if}
         </tbody>
       </table>
+
+      {#if items.length > 0}
+        <Pagination totalItems={items.length} bind:page bind:pageSize itemLabel="convenios" />
+      {/if}
     </div>
-    <div class="total">Total: <strong>{items.length}</strong> convenio(s) registrado(s)</div>
   {/if}
 </div>
 
@@ -251,7 +262,6 @@
 .btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
 .btn-nuevo:hover { background:#145c04; }
 
-.page-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 .td-truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .font-semibold { font-weight: 600; color: #1e293b; }
 .font-bold { font-weight: 700; }
@@ -263,8 +273,8 @@
 
 .filtros-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
 .filtros-row select { border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: .84rem; background: #fff; color: #334155; }
-.btn-filtrar { background: #1b7505; color: #fff; border: none; border-radius: 9px; padding: 8px 18px; font-weight: 700; font-size: .84rem; cursor: pointer; }
-.btn-filtrar:hover { background: #145c04; }
-.btn-limpiar { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 8px 16px; font-weight: 600; font-size: .84rem; cursor: pointer; }
-.btn-limpiar:hover { background: #e2e8f0; }
+.btn-filtrar { background:#1b7505; color:#fff; border:none; border-radius:9px; padding:8px 18px; font-weight:700; font-size:.84rem; cursor:pointer; }
+.btn-filtrar:hover { background:#145c04; }
+.btn-limpiar { background:#f1f5f9; color:#475569; border:1.5px solid #cbd5e1; border-radius:9px; padding:8px 16px; font-weight:600; font-size:.84rem; cursor:pointer; }
+.btn-limpiar:hover { background:#e2e8f0; }
 </style>
