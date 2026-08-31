@@ -60,32 +60,37 @@
     try {
       const [pers, data] = await Promise.all([
         fetchAPI('/api/periodos/'),
-        fetchAPI(`/api/proyectos/${id}/detalle/`),
+        fetchAPI(`/api/proyectos/${id}/edit/`),
       ]);
       periodos = pers;
       proyecto = data;
-      Object.keys(form).forEach(k => {
-        if (data[k] !== undefined && data[k] !== null) form[k] = data[k];
-      });
-      if (data.ods) {
-        odsSeleccionados = data.ods.split(',').map(s => {
-          const m = s.trim().match(/\d+/);
-          return m ? parseInt(m[0]) : null;
-        }).filter(Boolean);
+      for (const k of Object.keys(form)) {
+        if (data[k] !== undefined && data[k] !== null) form[k] = String(data[k] ?? '');
       }
-      ubicaciones = data.ubicaciones || [];
+      form.id_facultad = String(data.id_facultad || '');
+      form.id_carrera = String(data.id_carrera || '');
+      form.id_periodo_inicio = String(data.id_periodo_inicio || '');
       fotosExist = data.fotos || [];
+      ubicaciones = data.ubicaciones || [];
+      if (data.ods) {
+        odsSeleccionados = (String(data.ods || '').match(/\d+/g) || []).map(Number);
+      }
       if (data.resolucion_aprobacion) resolForm.resolucion_aprobacion = data.resolucion_aprobacion;
       if (data.fecha_aprobacion) resolForm.fecha_aprobacion = data.fecha_aprobacion;
 
       if (form.id_periodo_inicio) {
         facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
-        if (form.id_facultad)
+        if (form.id_facultad) {
           carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+        }
       }
       await cargarDocumentos();
-    } catch { toast.error('No se pudo cargar el proyecto'); }
-    finally { loading = false; }
+    } catch (e) {
+      console.error(e);
+      toast.error('No se pudo cargar el proyecto');
+    } finally {
+      loading = false;
+    }
   });
 
   async function cargarDocumentos() {
