@@ -11,6 +11,8 @@
   let filtros = $state({ facultad:'', carrera:'', periodo:'', estado:'', anio:'', buscar:'' });
   let total   = $state(0);
   let proySeleccionado = $state(null);
+  let ubiSeleccionadaId = $state(null);
+  let proyectoRedExtendidaId = $state(null);
   let modalTab = $state('general');
   let fotoActiva = $state(0);
   let lightboxAbierto = $state(false);
@@ -114,6 +116,7 @@
       );
       pinMarker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
+        ubiSeleccionadaId = u.id_ubicacion ?? idx;
         proySeleccionado = p;
         modalTab = 'ubicacion';
         fotoActiva = 0;
@@ -162,13 +165,23 @@
 
       const marker = L.marker([lat, lng], { icon, zIndexOffset: tieneMulti ? 500 : 100 });
       marker.on('click', () => {
+        if (tieneMulti) {
+          // Si aún no se ha extendido la red en el mapa, extenderla primero sin abrir modal
+          if (proyectoRedExtendidaId !== p.id) {
+            proyectoRedExtendidaId = p.id;
+            desplegarRedNodos(p, L);
+            return;
+          }
+        }
+
+        // Si ya está extendida o es un proyecto de 1 sola ubicación, abrir el modal
+        ubiSeleccionadaId = p.ubicaciones?.[0]?.id_ubicacion ?? null;
         proySeleccionado = p;
         modalTab = 'general';
         fotoActiva = 0;
         lightboxAbierto = false;
         docAbierto = null;
         modalDocs = [];
-        desplegarRedNodos(p, L);
       });
 
       marker.bindTooltip(
@@ -593,11 +606,16 @@
                 <h5 class="msp-h5">Sedes y Nodos de Ejecución ({p.ubicaciones.length})</h5>
                 <div class="ubis-cards-grid">
                   {#each p.ubicaciones as u, idx}
-                    <div class="ubi-card" class:es-principal={u.es_principal}>
+                    {@const esSeleccionada = (ubiSeleccionadaId !== null && (u.id_ubicacion === ubiSeleccionadaId || (u.id_ubicacion == null && idx === ubiSeleccionadaId)))}
+                    <div class="ubi-card" class:es-principal={u.es_principal} class:nodo-activo={esSeleccionada}>
                       <div class="uc-head">
-                        <span class="uc-badge" class:principal={u.es_principal}>
-                          <i class="bi bi-{u.es_principal ? 'star-fill' : 'pin-fill'}"></i>
-                          {u.es_principal ? 'Sede Principal' : `Sede Alterna #${idx + 1}`}
+                        <span class="uc-badge" class:principal={u.es_principal} class:seleccionada={esSeleccionada}>
+                          <i class="bi bi-{esSeleccionada ? 'check-circle-fill' : (u.es_principal ? 'star-fill' : 'pin-fill')}"></i>
+                          {#if esSeleccionada}
+                            Nodo Seleccionado {u.es_principal ? '(Principal)' : `(#${idx + 1})`}
+                          {:else}
+                            {u.es_principal ? 'Sede Principal' : `Sede Alterna #${idx + 1}`}
+                          {/if}
                         </span>
                         <button class="btn-flyto" onclick={() => {
                           if (map) { map.flyTo([u.latitud, u.longitud], 15); proySeleccionado = null; }
@@ -1287,6 +1305,12 @@
   border-color: #86efac;
 }
 
+.ubi-card.nodo-activo {
+  background: #dcfce7 !important;
+  border: 2px solid #16a34a !important;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.22);
+}
+
 .uc-head {
   display: flex;
   align-items: center;
@@ -1304,6 +1328,15 @@
 
 .uc-badge.principal {
   color: #15803d;
+}
+
+.uc-badge.seleccionada {
+  color: #15803d !important;
+  font-weight: 900;
+  background: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #86efac;
 }
 
 .btn-flyto {
