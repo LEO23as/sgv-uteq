@@ -113,7 +113,7 @@
               <i class="bi bi-pin-angle-fill"></i>
               <span class="pin-num">${idx + 2}</span>
             </div>
-            <div class="pin-tag">${u.nombre_lugar || u.sector || u.canton || `Sede ${idx + 2}`}</div>
+            <div class="pin-tag">${u.nombre_lugar || u.sector || u.canton || `Punto ${idx + 2}`}</div>
           </div>
         `,
         iconSize: [32, 42],
@@ -122,7 +122,7 @@
 
       const pinMarker = L.marker([u.latitud, u.longitud], { icon: pinIcon, zIndexOffset: 950 });
       pinMarker.bindTooltip(
-        `<b>${p.nombre_corto}</b><br><span style="color:#0284c7;font-weight:700;">📍 Sede alterna:</span> ${u.nombre_lugar || u.canton}`,
+        `<b>${p.nombre_corto}</b><br><span style="color:#0284c7;font-weight:700;">📍 Ubicación alterna:</span> ${u.nombre_lugar || u.canton}`,
         { direction: 'top', offset: [0, -34] }
       );
       pinMarker.on('click', (e) => {
@@ -625,7 +625,7 @@
           {:else if modalTab === 'ubicacion'}
             {#if p.ubicaciones && p.ubicaciones.length > 0}
               <div class="ubicaciones-list-tab">
-                <h5 class="msp-h5">Sedes y Nodos de Ejecución ({p.ubicaciones.length})</h5>
+                <h5 class="msp-h5">Puntos y Ubicaciones de Ejecución ({p.ubicaciones.length})</h5>
                 <div class="ubis-cards-grid">
                   {#each p.ubicaciones as u, idx}
                     {@const esSeleccionada = (ubiSeleccionadaId !== null && (u.id_ubicacion === ubiSeleccionadaId || (u.id_ubicacion == null && idx === ubiSeleccionadaId)))}
@@ -634,9 +634,9 @@
                         <span class="uc-badge" class:principal={u.es_principal} class:seleccionada={esSeleccionada}>
                           <i class="bi bi-{esSeleccionada ? 'check-circle-fill' : (u.es_principal ? 'star-fill' : 'pin-fill')}"></i>
                           {#if esSeleccionada}
-                            Nodo Seleccionado {u.es_principal ? '(Principal)' : `(#${idx + 1})`}
+                            Ubicación Seleccionada {u.es_principal ? '(Principal)' : `(#${idx + 1})`}
                           {:else}
-                            {u.es_principal ? 'Sede Principal' : `Sede Alterna #${idx + 1}`}
+                            {u.es_principal ? 'Ubicación Principal' : `Ubicación Alterna #${idx + 1}`}
                           {/if}
                         </span>
                         <button class="btn-flyto" onclick={() => {
@@ -645,7 +645,7 @@
                           <i class="bi bi-crosshair"></i> Ver en mapa
                         </button>
                       </div>
-                      <div class="uc-title">{u.nombre_lugar || 'Sede sin nombre'}</div>
+                      <div class="uc-title">{u.nombre_lugar || 'Ubicación de ejecución'}</div>
                       <div class="uc-meta">
                         <span><i class="bi bi-geo-alt"></i> {u.canton || p.canton || '—'}, {u.provincia || p.provincia || '—'}</span>
                         {#if u.sector}<span><i class="bi bi-house"></i> {u.sector}</span>{/if}
