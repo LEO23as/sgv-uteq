@@ -51,28 +51,139 @@ button { cursor: pointer; font-family: inherit; }
   font-family: inherit; background: transparent; width: 100%;
 }
 
-.table-card { background: #fff; border-radius: 14px; border: 1px solid var(--borde); overflow: hidden; box-shadow: var(--sombra); }
-table { width: 100%; border-collapse: collapse; }
-thead { background: var(--verde); }
-thead th { color: #fff; font-size: .78rem; font-weight: 700; padding: 12px 16px; text-align: left; text-transform: uppercase; letter-spacing: .04em; }
-tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .15s; }
-tbody tr:hover { background: var(--verde-claro); }
-tbody td { padding: 11px 16px; font-size: .85rem; color: #333; }
+.table-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
 
-.code { background: var(--verde-claro); color: var(--verde); font-weight: 700; font-size: .78rem; padding: 3px 8px; border-radius: 6px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
 
-.badge { padding: 3px 10px; border-radius: 20px; font-size: .72rem; font-weight: 700; }
-.badge.activo { background: #e8f5e0; color: var(--verde); }
-.badge.inactivo { background: #f5f5f5; color: var(--gris); }
-.badge.vigente { background: #e8f5e0; color: var(--verde); }
-.badge.vencido { background: #fff0f0; color: #c0392b; }
-.badge.renovado { background: #e8f0ff; color: #2563eb; }
-.badge.cancelado { background: #f5f5f5; color: var(--gris); }
+thead {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
 
-.empty { text-align: center; color: var(--gris); padding: 32px !important; font-weight: 600; }
-.loading { display: flex; align-items: center; gap: 10px; color: var(--gris); font-weight: 600; padding: 40px; justify-content: center; }
-.total { margin-top: 10px; font-size: .8rem; color: var(--gris); text-align: right; }
-.total strong { color: var(--negro); }
+thead th {
+  color: #475569;
+  font-size: .74rem;
+  font-weight: 750;
+  padding: 13px 16px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background .15s ease;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+tbody td {
+  padding: 12px 16px;
+  font-size: .84rem;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.code {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: .76rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge.activo, .badge.vigente, .badge.ejecucion {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge.inactivo, .badge.cancelado, .badge.finalizado, .badge.rechazado {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.badge.vencido, .badge.detenido {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.badge.renovado, .badge.aprobado {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.badge.propuesto, .badge.cierre {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.btn-accion {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: .85rem;
+  transition: all .15s ease;
+}
+
+.btn-accion:hover {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.btn-accion.editar:hover {
+  background: #fef3c7;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.btn-accion.eliminar:hover, .btn-accion.danger:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.empty { text-align: center; color: #94a3b8; padding: 36px !important; font-weight: 600; font-size: .9rem; }
+.loading { display: flex; align-items: center; gap: 10px; color: #64748b; font-weight: 600; padding: 40px; justify-content: center; }
+.total { margin-top: 10px; font-size: .8rem; color: #64748b; text-align: right; }
+.total strong { color: #1e293b; }
 
 /* ============================================================
    FORM STYLES (global)

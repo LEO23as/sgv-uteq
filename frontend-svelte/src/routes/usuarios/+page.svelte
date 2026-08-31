@@ -629,16 +629,17 @@
 }
 
 .sga-table thead {
-  background: #1b7a2b;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .sga-table th {
-  color: #ffffff;
+  color: #475569;
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 12px 14px;
+  padding: 13px 14px;
   text-align: left;
   border: none;
   white-space: nowrap;

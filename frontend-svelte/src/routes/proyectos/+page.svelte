@@ -24,23 +24,50 @@
     RECHAZADO:    { label:'Rechazado',    cls:'rechazado'  },
   };
 
+  function parsearFecha(f) {
+    if (!f) return null;
+    if (typeof f !== 'string') return new Date(f);
+    if (/^\d{4}-\d{2}-\d{2}/.test(f)) {
+      const [y, m, d] = f.split('T')[0].split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(f)) {
+      const [d, m, y] = f.split('/').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    const dt = new Date(f);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function formatFechaLocal(f) {
+    const dt = parsearFecha(f);
+    if (!dt) return '—';
+    return dt.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
   function calcularAvance(fechaInicio, fechaFin, estado) {
-    if (estado === 'FINALIZADO') return { pct: 100, label: '100% Completado', variant: 'success' };
-    if (!fechaInicio || !fechaFin) return { pct: 0, label: 'Sin fechas', variant: 'info' };
+    if (estado === 'FINALIZADO') return { pct: 100, label: '100% Finalizado', sub: 'Culminado', variant: 'success' };
     
-    const ini = new Date(fechaInicio);
-    const fin = new Date(fechaFin);
+    const ini = parsearFecha(fechaInicio);
+    const fin = parsearFecha(fechaFin);
+    
+    if (!ini || !fin) return { pct: 0, label: '0%', sub: 'Sin fechas', variant: 'info' };
+    
     const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const iniN = new Date(ini); iniN.setHours(0, 0, 0, 0);
+    const finN = new Date(fin); finN.setHours(0, 0, 0, 0);
     
-    const total = fin.getTime() - ini.getTime();
-    if (total <= 0) return { pct: 100, label: 'Plazo culminado', variant: 'warning' };
+    const totalMs = finN.getTime() - iniN.getTime();
+    if (totalMs <= 0) return { pct: 100, label: '100%', sub: 'Plazo culminado', variant: 'warning' };
     
-    const transcurrido = hoy.getTime() - ini.getTime();
-    const pct = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
+    const restDias = Math.ceil((finN.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const transcurrido = hoy.getTime() - iniN.getTime();
+    const pct = Math.min(100, Math.max(0, Math.round((transcurrido / totalMs) * 100)));
     
-    if (hoy > fin) return { pct: 100, label: 'Plazo culminado', variant: 'danger' };
-    if (hoy < ini) return { pct: 0, label: 'Por iniciar', variant: 'info' };
-    return { pct, label: `${pct}% ejecutado`, variant: 'auto' };
+    if (restDias < 0) return { pct: 100, label: '100%', sub: `Venció ${formatFechaLocal(fin)}`, variant: 'danger' };
+    if (transcurrido < 0) return { pct: 0, label: '0%', sub: `Inicia ${formatFechaLocal(ini)}`, variant: 'info' };
+    return { pct, label: `${pct}% avance`, sub: `${restDias}d restantes`, variant: 'auto' };
   }
 
   onMount(async () => {
@@ -112,7 +139,7 @@
   <div class="page-top">
     <div>
       <h2 class="page-title"><i class="bi bi-folder2-open"></i> Proyectos de Vinculación</h2>
-      <p class="page-sub">Registro, seguimiento y avance de proyectos con la sociedad</p>
+      <p class="page-sub">Registro, seguimiento y avance cronológico de proyectos con la sociedad</p>
     </div>
   </div>
 
@@ -148,14 +175,14 @@
             <th>Nombre del Proyecto</th>
             <th>Facultad / Carrera</th>
             <th>Período</th>
-            <th style="min-width: 130px;">Avance Temporal</th>
+            <th style="min-width: 170px;">Avance Temporal</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <th style="text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {#each filtered as p}
-            {@const av = calcularAvance(p.fecha_inicio, p.fecha_fin, p.estado)}
+            {@const av = calcularAvance(p.fecha_inicio, p.fecha_fin_planificada || p.fecha_fin_real, p.estado)}
             <tr>
               <td><span class="code">{p.codigo}</span></td>
               <td class="nombre-cell">
@@ -168,13 +195,14 @@
                 <span class="fac-badge">{p.facultad_nombre}</span>
                 <span class="carrera-sec">{p.carrera_nombre}</span>
               </td>
-              <td class="txt-small">{p.periodo_inicio_nombre}</td>
+              <td class="txt-small">{p.periodo_inicio_nombre || '—'}</td>
               <td>
                 <div class="avance-col">
                   <ProgressBar
                     value={av.pct}
                     max={100}
-                    sublabel={av.label}
+                    label={av.label}
+                    sublabel={av.sub}
                     variant={av.variant}
                     size="sm"
                   />
@@ -185,16 +213,18 @@
                   {ESTADOS[p.estado]?.label || p.estado}
                 </span>
               </td>
-              <td class="acciones">
-                <a href="/proyectos/{p.id_proyecto}" class="btn-accion" title="Ver detalle">
-                  <i class="bi bi-eye"></i>
-                </a>
-                <a href="/proyectos/{p.id_proyecto}/editar" class="btn-accion editar" title="Editar">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                <button class="btn-accion eliminar" title="Eliminar" onclick={() => eliminarProyecto(p)}>
-                  <i class="bi bi-trash"></i>
-                </button>
+              <td>
+                <div class="acciones center">
+                  <a href="/proyectos/{p.id_proyecto}" class="btn-accion" title="Ver detalle">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="/proyectos/{p.id_proyecto}/editar" class="btn-accion editar" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <button class="btn-accion eliminar" title="Eliminar" onclick={() => eliminarProyecto(p)}>
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           {/each}
@@ -204,28 +234,28 @@
         </tbody>
       </table>
     </div>
-    <div class="total">{filtered.length} proyecto(s) encontrado(s)</div>
+    <div class="total">Total: <strong>{filtered.length}</strong> proyecto(s) encontrado(s)</div>
   {/if}
 </div>
 
 <style>
+.subbar { display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#fff;border-bottom:1px solid #e2e8f0; }
+.btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
+.btn-nuevo:hover { background:#145c04; }
+
+.page-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
 .nombre-cell { max-width: 260px; }
-.nombre-principal { display:block;font-weight:700;color:#222; }
-.nombre-sec { display:block;font-size:.72rem;color:var(--gris); }
-.fac-badge { display:block;background:var(--verde-claro);color:var(--verde);font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:6px;width:fit-content; }
-.carrera-sec { display:block;font-size:.72rem;color:var(--gris);margin-top:2px; }
-.txt-small { font-size:.78rem; }
-.acciones { display:flex;gap:6px; }
-.avance-col { width: 100%; min-width: 120px; }
+.nombre-principal { display:block;font-weight:700;color:#1e293b; }
+.nombre-sec { display:block;font-size:.72rem;color:#64748b;margin-top:2px; }
+.fac-badge { display:inline-block;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:6px;width:fit-content; }
+.carrera-sec { display:block;font-size:.72rem;color:#64748b;margin-top:3px; }
+.txt-small { font-size:.78rem; color:#475569; }
+.center { text-align:center; justify-content:center; }
+.acciones { display:flex;gap:6px;align-items:center; }
+.avance-col { width: 100%; min-width: 150px; }
 
-/* Estado badges de proyecto */
-.est-ejecucion  { background:#e8f4e8;color:#1b7505; }
-.est-propuesto  { background:#fff8e1;color:#dba112; }
-.est-aprobado   { background:#e8f0ff;color:#0d6efd; }
-.est-cierre     { background:#fff3e0;color:#fd7e14; }
-.est-detenido   { background:#fff0f0;color:#dc3545; }
-.est-finalizado { background:#f4f4f4;color:#a8a8a7; }
-.est-rechazado  { background:#f4f4f4;color:#6c757d; }
-
-.btn-accion.eliminar:hover { background:#fdecec;color:#dc3545;border-color:#f5c6c6; }
+.filtros-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.filtros-row select { border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: .84rem; background: #fff; color: #334155; }
+.btn-limpiar { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 8px 16px; font-weight: 600; font-size: .84rem; cursor: pointer; }
+.btn-limpiar:hover { background: #e2e8f0; }
 </style>

@@ -19,26 +19,69 @@
     CANCELADO: { label:'Cancelado', cls:'cancelado'},
   };
 
-  function calcularVigencia(fechaInicio, fechaFin) {
-    if (!fechaFin) return { pct: 100, label: 'Sin fecha fin', variant: 'info' };
-    const fin = new Date(fechaFin);
-    const ini = fechaInicio ? new Date(fechaInicio) : new Date(fin.getFullYear() - 1, fin.getMonth(), fin.getDate());
-    const hoy = new Date();
-    
-    const total = fin.getTime() - ini.getTime();
-    if (total <= 0) return { pct: 100, label: 'Vencido', variant: 'danger' };
-    
-    const rest = Math.ceil((fin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    const transcurrido = hoy.getTime() - ini.getTime();
-    const pct = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
-    
-    if (rest <= 0) {
-      return { pct: 100, label: 'Vencido', variant: 'danger' };
-    } else if (rest <= 90) {
-      return { pct, label: `${rest}d restantes`, variant: 'warning' };
-    } else {
-      return { pct, label: `${rest}d restantes`, variant: 'success' };
+  function parsearFecha(f) {
+    if (!f) return null;
+    if (typeof f !== 'string') return new Date(f);
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(f)) {
+      const [y, m, d] = f.split('T')[0].split('-').map(Number);
+      return new Date(y, m - 1, d);
     }
+    // DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(f)) {
+      const [d, m, y] = f.split('/').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    const dt = new Date(f);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function formatFechaLocal(f) {
+    const dt = parsearFecha(f);
+    if (!dt) return '—';
+    return dt.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function calcularVigencia(fechaInicio, fechaFin, duracionAnios = 1) {
+    let fin = parsearFecha(fechaFin);
+    let ini = parsearFecha(fechaInicio);
+
+    // Si no tiene fecha fin pero tiene fecha inicio y duración en años
+    if (!fin && ini && duracionAnios) {
+      fin = new Date(ini);
+      fin.setFullYear(fin.getFullYear() + Number(duracionAnios));
+    }
+
+    if (!fin) {
+      return { pct: 100, label: 'Indefinido', sub: 'Sin fecha fin', variant: 'info', dias: null };
+    }
+
+    if (!ini) {
+      ini = new Date(fin);
+      ini.setFullYear(ini.getFullYear() - (duracionAnios || 1));
+    }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const finN = new Date(fin); finN.setHours(0, 0, 0, 0);
+    const iniN = new Date(ini); iniN.setHours(0, 0, 0, 0);
+
+    const totalMs = finN.getTime() - iniN.getTime();
+    const restMs = finN.getTime() - hoy.getTime();
+    const restDias = Math.ceil(restMs / (1000 * 60 * 60 * 24));
+
+    if (totalMs <= 0 || restDias <= 0) {
+      return { pct: 100, label: 'Vencido', sub: `Finalizó ${formatFechaLocal(fin)}`, variant: 'danger', dias: restDias };
+    }
+
+    const transcurridoMs = hoy.getTime() - iniN.getTime();
+    const pct = Math.min(100, Math.max(0, Math.round((transcurridoMs / totalMs) * 100)));
+
+    if (restDias <= 60) {
+      return { pct, label: `${restDias}d rest.`, sub: `Vence ${formatFechaLocal(fin)}`, variant: 'warning', dias: restDias };
+    }
+
+    return { pct, label: `${restDias}d rest.`, sub: `Hasta ${formatFechaLocal(fin)}`, variant: 'success', dias: restDias };
   }
 
   async function cargar() {
@@ -104,7 +147,7 @@
   <div class="page-top">
     <div>
       <h2 class="page-title"><i class="bi bi-file-earmark-text"></i> Gestión de Convenios</h2>
-      <p class="page-sub">Acuerdos con entidades cooperantes y seguimiento de vigencia</p>
+      <p class="page-sub">Acuerdos interinstitucionales y monitoreo de plazos de vigencia</p>
     </div>
   </div>
 
@@ -137,50 +180,59 @@
         <thead>
           <tr>
             <th>N° Memorando</th>
-            <th>Entidad</th>
+            <th>Entidad Cooperante</th>
             <th>Proyecto</th>
             <th>Período</th>
-            <th style="min-width: 140px;">Vigencia / Avance</th>
-            <th>Estudiantes</th>
+            <th style="min-width: 170px;">Vigencia / Plazo</th>
+            <th style="text-align: center;">Estudiantes</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <th style="text-align: center;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {#each items as c}
-            {@const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin)}
+            {@const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin, c.duracion_anios)}
             <tr>
-              <td><strong class="code">{c.numero_memorando || 'Sin Nro.'}</strong></td>
-              <td class="td-truncate" title={c.entidad_nombre}>{c.entidad_nombre}</td>
-              <td class="td-truncate" title={c.proyecto_nombre || '—'}>{c.proyecto_nombre || '—'}</td>
-              <td class="txt-sm">{c.periodo_nombre}</td>
+              <td>
+                <span class="code">{c.numero_memorando || 'Sin Nro.'}</span>
+              </td>
+              <td class="td-truncate font-semibold" title={c.entidad_nombre}>
+                {c.entidad_nombre}
+              </td>
+              <td class="td-truncate text-muted" title={c.proyecto_nombre || '—'}>
+                {c.proyecto_nombre || '—'}
+              </td>
+              <td class="txt-sm">{c.periodo_nombre || '—'}</td>
               <td>
                 <div class="vigencia-col">
                   <ProgressBar
                     value={vig.pct}
                     max={100}
-                    sublabel={vig.label}
+                    label={vig.label}
+                    sublabel={vig.sub}
                     variant={vig.variant}
                     size="sm"
                   />
                 </div>
               </td>
-              <td class="txt-sm center">{c.estudiantes_asignados || 0}</td>
+              <td class="txt-sm center font-bold">{c.estudiantes_asignados || 0}</td>
               <td>
                 <span class="badge {ESTADOS[c.estado]?.cls || 'cancelado'}">
                   {ESTADOS[c.estado]?.label || c.estado}
                 </span>
               </td>
-              <td class="acciones">
-                <a href="/convenios/{c.id_convenio}" class="btn-accion" title="Ver detalle">
-                  <i class="bi bi-eye"></i>
-                </a>
-                <a href="/convenios/{c.id_convenio}/editar" class="btn-accion" title="Editar">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                <button class="btn-accion danger" onclick={() => eliminar(c)} title="Eliminar">
-                  <i class="bi bi-trash"></i>
-                </button>
+              <td>
+                <div class="acciones center">
+                  <a href="/convenios/{c.id_convenio}" class="btn-accion" title="Ver detalle del convenio">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="/convenios/{c.id_convenio}/editar" class="btn-accion editar" title="Editar convenio">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <button class="btn-accion eliminar" onclick={() => eliminar(c)} title="Eliminar convenio">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           {/each}
@@ -190,15 +242,29 @@
         </tbody>
       </table>
     </div>
-    <div class="total">{items.length} convenio(s) encontrado(s)</div>
+    <div class="total">Total: <strong>{items.length}</strong> convenio(s) registrado(s)</div>
   {/if}
 </div>
 
 <style>
-.subbar { display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:#fff;border-bottom:1px solid var(--borde); }
-.td-truncate { max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.txt-sm { font-size:.78rem; }
-.center { text-align:center; }
-.acciones { display:flex;gap:6px; }
-.vigencia-col { width: 100%; min-width: 120px; }
+.subbar { display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#fff;border-bottom:1px solid #e2e8f0; }
+.btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
+.btn-nuevo:hover { background:#145c04; }
+
+.page-wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px; }
+.td-truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.font-semibold { font-weight: 600; color: #1e293b; }
+.font-bold { font-weight: 700; }
+.text-muted { color: #64748b; font-size: .82rem; }
+.txt-sm { font-size: .78rem; color: #475569; }
+.center { text-align: center; justify-content: center; }
+.acciones { display: flex; gap: 6px; align-items: center; }
+.vigencia-col { width: 100%; min-width: 150px; }
+
+.filtros-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.filtros-row select { border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; font-size: .84rem; background: #fff; color: #334155; }
+.btn-filtrar { background: #1b7505; color: #fff; border: none; border-radius: 9px; padding: 8px 18px; font-weight: 700; font-size: .84rem; cursor: pointer; }
+.btn-filtrar:hover { background: #145c04; }
+.btn-limpiar { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 9px; padding: 8px 16px; font-weight: 600; font-size: .84rem; cursor: pointer; }
+.btn-limpiar:hover { background: #e2e8f0; }
 </style>
