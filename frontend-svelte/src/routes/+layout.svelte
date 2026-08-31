@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import { get } from 'svelte/store';
   import { user, checkAuth, logout, capaNBIActiva, fetchAPI } from '$lib/stores';
+  import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida } from '$lib/notifications';
   import Toasts from '$lib/Toasts.svelte';
   import ConfirmDialog from '$lib/ConfirmDialog.svelte';
 
@@ -17,6 +18,7 @@
   // Dropdown & Modal states
   let showPeriodModal = $state(false);
   let showProfileDropdown = $state(false);
+  let showNotificacionesDropdown = $state(false);
   let searchPeriod = $state('');
   
   // Períodos cargados exclusivamente desde la Base de Datos
@@ -67,7 +69,10 @@
     if (!u && !PUBLIC.includes(path)) goto('/');
 
     if (u) {
-      await cargarPeriodosDB();
+      await Promise.all([
+        cargarPeriodosDB(),
+        cargarNotificaciones()
+      ]);
     }
 
     updateClock();
@@ -94,17 +99,27 @@
     e.stopPropagation();
     showPeriodModal = !showPeriodModal;
     showProfileDropdown = false;
+    showNotificacionesDropdown = false;
   }
 
   function toggleProfileDropdown(e) {
     e.stopPropagation();
     showProfileDropdown = !showProfileDropdown;
     showPeriodModal = false;
+    showNotificacionesDropdown = false;
+  }
+
+  function toggleNotificaciones(e) {
+    e.stopPropagation();
+    showNotificacionesDropdown = !showNotificacionesDropdown;
+    showPeriodModal = false;
+    showProfileDropdown = false;
   }
 
   function closeAllDropdowns() {
     showPeriodModal = false;
     showProfileDropdown = false;
+    showNotificacionesDropdown = false;
   }
 
   let filteredPeriods = $derived(
@@ -191,10 +206,66 @@
 
       <div class="navbar-right">
         <!-- Notificaciones -->
-        <button class="icon-btn" title="Notificaciones" onclick={(e) => e.stopPropagation()}>
-          <i class="bi bi-bell-fill"></i>
-          <span class="badge-dot">1</span>
-        </button>
+        <div class="notif-btn-wrap">
+          <button class="icon-btn" class:active={showNotificacionesDropdown} title="Notificaciones y Alertas" onclick={toggleNotificaciones}>
+            <i class="bi bi-bell-fill"></i>
+            {#if $totalNoLeidas > 0}
+              <span class="badge-dot">{$totalNoLeidas}</span>
+            {/if}
+          </button>
+
+          {#if showNotificacionesDropdown}
+            <div class="notif-dropdown" onclick={(e) => e.stopPropagation()}>
+              <div class="notif-dropdown-header">
+                <div class="nd-title">
+                  <i class="bi bi-bell-fill green-icon"></i>
+                  <span>NOTIFICACIONES</span>
+                  {#if $totalNoLeidas > 0}
+                    <span class="nd-badge">{$totalNoLeidas}</span>
+                  {/if}
+                </div>
+                {#if $totalNoLeidas > 0}
+                  <button class="btn-mark-all" onclick={marcarTodasLeidas}>
+                    <i class="bi bi-check2-all"></i> Marcar leídas
+                  </button>
+                {/if}
+              </div>
+
+              <div class="notif-items-list">
+                {#if $notificaciones.length === 0}
+                  <div class="notif-empty-msg">
+                    <i class="bi bi-check-circle"></i>
+                    <span>No hay notificaciones pendientes</span>
+                  </div>
+                {:else}
+                  {#each $notificaciones as n}
+                    <a
+                      href={n.link}
+                      class="notif-item-row"
+                      class:unread={!n.leida}
+                      onclick={() => { marcarLeida(n.id); showNotificacionesDropdown = false; }}
+                    >
+                      <div class="notif-icon-col {n.prioridad}">
+                        <i class="bi {n.icono}"></i>
+                      </div>
+                      <div class="notif-content-col">
+                        <div class="notif-item-title">{n.titulo}</div>
+                        <div class="notif-item-desc">{n.mensaje}</div>
+                      </div>
+                      <i class="bi bi-chevron-right notif-arrow"></i>
+                    </a>
+                  {/each}
+                {/if}
+              </div>
+
+              <div class="notif-dropdown-footer">
+                <a href="/dashboard" onclick={() => showNotificacionesDropdown = false} class="nd-footer-link">
+                  Ver resumen de avisos
+                </a>
+              </div>
+            </div>
+          {/if}
+        </div>
 
         <!-- Selector de Período Académico (Botón) -->
         <div class="period-btn-wrap">
@@ -471,24 +542,175 @@
   transition: background 0.2s;
 }
 
-.icon-btn:hover { background: rgba(255, 255, 255, 0.25); }
+.icon-btn:hover, .icon-btn.active { background: rgba(255, 255, 255, 0.25); }
 
 .badge-dot {
   position: absolute;
   top: 1px;
   right: 1px;
-  background: #e67e22;
+  background: #dc2626;
   color: #ffffff;
-  font-size: 0.55rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid #1b7a2b;
 }
+
+/* ── NOTIFICACIONES DROPDOWN ── */
+.notif-btn-wrap { position: relative; }
+
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -50px;
+  width: 360px;
+  max-width: 90vw;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn .18s ease-out;
+}
+
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.nd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: 0.3px;
+}
+
+.nd-badge {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.btn-mark-all {
+  background: none;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #0284c7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.btn-mark-all:hover { background: #e0f2fe; }
+
+.notif-items-list {
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-empty-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 20px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.notif-empty-msg i { font-size: 1.8rem; color: #22c55e; }
+
+.notif-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.notif-item-row:hover { background: #f8fafc; }
+.notif-item-row.unread { background: #f0fdf4; }
+.notif-item-row.unread:hover { background: #e8f8e8; }
+
+.notif-icon-col {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.notif-icon-col.danger { background: #fee2e2; color: #dc2626; }
+.notif-icon-col.warning { background: #fef3c7; color: #d97706; }
+.notif-icon-col.info { background: #e0f2fe; color: #0284c7; }
+.notif-icon-col.success { background: #dcfce7; color: #15803d; }
+
+.notif-content-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notif-item-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.notif-item-desc {
+  font-size: 0.73rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.notif-arrow {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  align-self: center;
+}
+
+.notif-dropdown-footer {
+  padding: 10px;
+  text-align: center;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+.nd-footer-link {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #1b7505;
+  text-decoration: none;
+}
+.nd-footer-link:hover { text-decoration: underline; }
 
 /* ── PERÍODO BUTTON & DROPDOWN ── */
 .period-btn-wrap { position: relative; }

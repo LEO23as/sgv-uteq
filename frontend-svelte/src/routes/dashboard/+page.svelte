@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { fetchAPI } from '$lib/stores';
+  import { notificaciones, cargarNotificaciones, marcarLeida } from '$lib/notifications';
 
   let stats      = $state(null);
   let cargando   = $state(true);
@@ -106,7 +107,12 @@
   );
 
   onMount(async () => {
-    try { stats = await fetchAPI('/api/dashboard/stats/'); } catch {}
+    try {
+      await Promise.all([
+        fetchAPI('/api/dashboard/stats/').then(res => stats = res),
+        cargarNotificaciones()
+      ]);
+    } catch {}
     cargando = false;
   });
 </script>
@@ -130,11 +136,13 @@
 <!-- CUERPO PRINCIPAL DEL DASHBOARD -->
 <div class="dash-body">
 
-  <!-- PANEL IZQUIERDO: DEPARTAMENTO DE VINCULACIÓN -->
+  <!-- PANEL IZQUIERDO: DEPARTAMENTO DE VINCULACIÓN Y AVISOS -->
   <aside class="info-panel">
-    <div class="info-card">
+    
+    <!-- CARD INSTITUCIONAL COMPACTA CON LOGO ORIGINAL UTEQ -->
+    <div class="info-card inst-card">
       <div class="info-img-wrap">
-        <img src="/logo-uteq.png" alt="UTEQ" class="info-logo" />
+        <img src="/logo-uteq.png" alt="Logo UTEQ" class="info-logo" />
       </div>
       <div class="info-text">
         <h3>Departamento de Vinculación</h3>
@@ -143,16 +151,47 @@
       </div>
     </div>
 
-    <div class="info-card notice">
-      <div class="notice-icon"><i class="bi bi-megaphone-fill"></i></div>
-      <div class="notice-body">
-        <strong>Avisos</strong>
-        <p>No hay avisos por el momento.</p>
+    <!-- CARD DINÁMICA DE AVISOS Y ALERTAS -->
+    <div class="info-card notice-panel">
+      <div class="notice-head">
+        <div class="nh-title">
+          <i class="bi bi-megaphone-fill"></i>
+          <span>Avisos del Sistema</span>
+        </div>
+        {#if $notificaciones.length > 0}
+          <span class="nh-badge">{$notificaciones.length}</span>
+        {/if}
+      </div>
+
+      <div class="notice-body-list">
+        {#if $notificaciones.length === 0}
+          <div class="notice-empty">
+            <i class="bi bi-check-circle text-green"></i>
+            <span>No hay avisos pendientes en este momento.</span>
+          </div>
+        {:else}
+          {#each $notificaciones.slice(0, 5) as n}
+            <a
+              href={n.link}
+              class="notice-item {n.prioridad}"
+              onclick={() => marcarLeida(n.id)}
+            >
+              <div class="ni-icon">
+                <i class="bi {n.icono}"></i>
+              </div>
+              <div class="ni-content">
+                <span class="ni-title">{n.titulo}</span>
+                <span class="ni-desc">{n.mensaje}</span>
+              </div>
+              <i class="bi bi-chevron-right ni-arrow"></i>
+            </a>
+          {/each}
+        {/if}
       </div>
     </div>
   </aside>
 
-  <!-- SECCIÓN DE CARDS DE MÓDULOS (DISEÑO MODERNO Y ELEGANTE) -->
+  <!-- SECCIÓN DE CARDS DE MÓDULOS -->
   <section class="modulos-wrap">
     <div class="modulos-grid">
       {#each filtered as m}
@@ -251,131 +290,220 @@
 .dash-body {
   display: flex;
   align-items: flex-start;
-  padding: 24px 28px;
-  gap: 24px;
+  padding: 20px 24px;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── PANEL IZQUIERDO ── */
 .info-panel {
-  width: 240px;
+  width: 260px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 @media (max-width: 900px) { .info-panel { display: none; } }
 
 .info-card {
   background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid #eef2f6;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.inst-card {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .info-img-wrap {
-  background: #1b7a2b;
-  padding: 26px 20px;
+  padding: 8px 0 6px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .info-logo {
-  width: 135px;
-  filter: brightness(0) invert(1);
+  max-width: 130px;
+  height: auto;
+  object-fit: contain;
 }
 .info-text {
-  padding: 16px 16px 20px;
+  padding: 4px 6px 0;
   text-align: center;
 }
 .info-text h3 {
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 8px;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
 }
 .info-sep {
-  width: 36px;
+  width: 32px;
   height: 3px;
   background: #d97706;
   border-radius: 2px;
-  margin: 0 auto 8px;
+  margin: 0 auto 6px;
 }
 .info-text p {
-  font-size: 0.76rem;
-  color: #d97706;
+  font-size: 0.72rem;
   font-weight: 700;
+  color: #d97706;
   margin: 0;
 }
 
-.notice {
+/* ── CARD DE AVISOS ── */
+.notice-panel {
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 10px;
-}
-.notice-icon {
-  width: 36px; 
-  height: 36px;
-  background: #f0fdf4;
-  border-radius: 10px;
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  color: #1b7a2b;
-  font-size: 1.05rem;
-}
-.notice-body strong {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #1e293b;
-  display: block;
-  margin-bottom: 2px;
-}
-.notice-body p {
-  font-size: 0.74rem;
-  color: #64748b;
-  margin: 0;
 }
 
-/* ── CARDS MÓDULOS (ESTILO MODERNO ELEGANTE) ── */
-.modulos-wrap { flex: 1; min-width: 0; }
+.notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nh-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+.nh-title i { color: #d97706; font-size: 0.85rem; }
+
+.nh-badge {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.notice-body-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.notice-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 14px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.text-green { color: #16a34a; }
+
+.notice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.notice-item:last-child { border-bottom: none; }
+.notice-item:hover { background: #f8fafc; }
+
+.ni-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.notice-item.danger .ni-icon { background: #fee2e2; color: #dc2626; }
+.notice-item.warning .ni-icon { background: #fef3c7; color: #d97706; }
+.notice-item.info .ni-icon { background: #e0f2fe; color: #0284c7; }
+.notice-item.success .ni-icon { background: #dcfce7; color: #15803d; }
+
+.ni-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ni-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ni-desc {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ni-arrow {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  align-self: center;
+}
+
+/* ── WRAPPER DE MÓDULOS ── */
+.modulos-wrap {
+  flex: 1;
+}
 
 .modulos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
 }
 
 .mod-card {
+  position: relative;
   background: #ffffff;
-  border: 1px solid #eef2f6;
-  border-radius: 20px;
-  padding: 24px 14px 20px;
+  border-radius: 14px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
   text-decoration: none;
-  position: relative;
-  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 185px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
-  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
 }
 
 .mod-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.06);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
   border-color: #cbd5e1;
-  background: #ffffff;
 }
 
-.mod-card.disabled { 
-  opacity: 0.55; 
-  cursor: not-allowed; 
-  pointer-events: none; 
+.mod-card.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .mod-card-badge {
@@ -384,52 +512,38 @@
   right: 12px;
   background: #1b7a2b;
   color: #ffffff;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 20px;
-  line-height: 1.2;
-  box-shadow: 0 2px 6px rgba(27, 122, 43, 0.25);
+  padding: 2px 7px;
+  border-radius: 12px;
 }
 
-/* Squircle Icon Container */
 .mod-icon-container {
-  width: 58px;
-  height: 58px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
-  transition: transform 0.2s ease;
+  font-size: 1.35rem;
+  margin-bottom: 12px;
+  transition: transform 0.2s;
 }
 
 .mod-card:hover .mod-icon-container {
   transform: scale(1.08);
 }
 
-.mod-icon-container i {
-  font-size: 1.65rem;
-  line-height: 1;
-}
-
 .mod-title {
-  font-size: 0.94rem;
-  font-weight: 700;
+  font-size: 0.92rem;
+  font-weight: 800;
   color: #1e293b;
-  margin-bottom: 4px;
-  line-height: 1.25;
-  transition: color 0.18s;
+  margin-bottom: 3px;
 }
 
-.mod-card:hover .mod-title { 
-  color: #0f172a; 
-}
-
-.mod-desc { 
-  font-size: 0.73rem; 
-  color: #64748b; 
-  font-weight: 400; 
-  line-height: 1.25; 
+.mod-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.3;
 }
 </style>

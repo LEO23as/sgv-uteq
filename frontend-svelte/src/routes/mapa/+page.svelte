@@ -64,7 +64,72 @@
     { val:'RECHAZADO',    label:'Rechazado',    color:'#6c757d' },
   ];
 
-  let map, markersLayer;
+  let map, markersLayer, redesLayer;
+
+  function desplegarRedNodos(p, L) {
+    if (!redesLayer || !map) return;
+    redesLayer.clearLayers();
+
+    if (!p.ubicaciones || p.ubicaciones.length <= 1) return;
+
+    const principal = p.ubicaciones.find(u => u.es_principal) || p.ubicaciones[0];
+    const secundarias = p.ubicaciones.filter(u => u !== principal);
+
+    const latLngs = [[principal.latitud, principal.longitud]];
+
+    secundarias.forEach((u, idx) => {
+      latLngs.push([u.latitud, u.longitud]);
+
+      // 1. Línea conectora animada/punteada desde el nodo principal a la sub-ubicación
+      const poly = L.polyline([[principal.latitud, principal.longitud], [u.latitud, u.longitud]], {
+        color: p.color || '#1b7505',
+        weight: 3.5,
+        dashArray: '6, 8',
+        opacity: 0.9,
+        lineCap: 'round',
+        className: 'red-line-anim'
+      });
+      redesLayer.addLayer(poly);
+
+      // 2. Marcador estilo chincheta / pin satélite (Google Earth style)
+      const pinIcon = L.divIcon({
+        className: 'custom-pin-wrap',
+        html: `
+          <div class="satellite-pin-node" style="--pin-color: ${p.color};">
+            <div class="pin-head">
+              <i class="bi bi-pin-fill"></i>
+              <span class="pin-num">${idx + 2}</span>
+            </div>
+            <div class="pin-tag">${u.nombre_lugar || u.sector || u.canton || `Sede ${idx + 2}`}</div>
+          </div>
+        `,
+        iconSize: [32, 42],
+        iconAnchor: [16, 38],
+      });
+
+      const pinMarker = L.marker([u.latitud, u.longitud], { icon: pinIcon, zIndexOffset: 850 });
+      pinMarker.bindTooltip(
+        `<b>${p.nombre_corto}</b><br><span style="color:#64748b;">📍 Sede alterna:</span> ${u.nombre_lugar || u.canton}`,
+        { direction: 'top', offset: [0, -34] }
+      );
+      pinMarker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        proySeleccionado = p;
+        modalTab = 'ubicacion';
+        fotoActiva = 0;
+        lightboxAbierto = false;
+        docAbierto = null;
+        modalDocs = [];
+      });
+      redesLayer.addLayer(pinMarker);
+    });
+
+    // Ajustar zoom suavemente para abarcar toda la red de nodos
+    if (latLngs.length > 1) {
+      const bounds = L.latLngBounds(latLngs);
+      map.flyToBounds(bounds, { padding: [60, 60], maxZoom: 14, duration: 1.2 });
+    }
+  }
 
   // ── Proyectos ────────────────────────────────────────────────
   async function cargarProyectos() {
@@ -74,21 +139,42 @@
     total = data.features?.length ?? 0;
 
     markersLayer.clearLayers();
+    if (redesLayer) redesLayer.clearLayers();
+
     (data.features || []).forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
       const p = f.properties;
       const L = window._L;
+      const numUbis = p.ubicaciones?.length || 1;
+      const tieneMulti = numUbis > 1;
+
       const icon = L.divIcon({
         className: '',
-        html: `<div style="width:18px;height:18px;border-radius:50%;background:${p.color};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer;"></div>`,
-        iconSize: [18,18], iconAnchor: [9,9],
+        html: `
+          <div class="main-marker-hub" style="--c:${p.color};">
+            <div class="marker-dot"></div>
+            ${tieneMulti ? `<span class="hub-multi-badge" title="${numUbis} sedes de ejecución">${numUbis}</span>` : ''}
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       });
-      const marker = L.marker([lat, lng], { icon });
+
+      const marker = L.marker([lat, lng], { icon, zIndexOffset: tieneMulti ? 500 : 100 });
       marker.on('click', () => {
-        proySeleccionado = p; modalTab = 'general'; fotoActiva = 0;
-        lightboxAbierto = false; docAbierto = null; modalDocs = [];
+        proySeleccionado = p;
+        modalTab = 'general';
+        fotoActiva = 0;
+        lightboxAbierto = false;
+        docAbierto = null;
+        modalDocs = [];
+        desplegarRedNodos(p, L);
       });
-      marker.bindTooltip(p.nombre_corto, { direction:'top', offset:[0,-10] });
+
+      marker.bindTooltip(
+        `<b>${p.nombre_corto}</b>${tieneMulti ? `<br><span style="color:#15803d;font-weight:700;">🌐 Red de ${numUbis} ubicaciones</span>` : ''}`,
+        { direction: 'top', offset: [0, -14] }
+      );
       markersLayer.addLayer(marker);
     });
   }
@@ -250,6 +336,7 @@
     }).addTo(map);
     L.control.zoom({ position: 'topleft' }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
+    redesLayer = L.layerGroup().addTo(map);
 
     // Re-renderizar capa NBI en modo "solo vista" al mover/zoom
     let mvTimer;
@@ -501,12 +588,41 @@
             {/if}
 
           {:else if modalTab === 'ubicacion'}
-            <div class="msp-grid">
-              <div class="mi"><i class="bi bi-pin-map"></i><div><span class="mi-l">Provincia</span><span class="mi-v">{p.provincia || '—'}</span></div></div>
-              <div class="mi"><i class="bi bi-pin-map-fill"></i><div><span class="mi-l">Cantón</span><span class="mi-v">{p.canton || '—'}</span></div></div>
-              {#if p.parroquia}<div class="mi"><i class="bi bi-signpost"></i><div><span class="mi-l">Parroquia</span><span class="mi-v">{p.parroquia}</span></div></div>{/if}
-              {#if p.sector}<div class="mi"><i class="bi bi-house"></i><div><span class="mi-l">Sector</span><span class="mi-v">{p.sector}</span></div></div>{/if}
-            </div>
+            {#if p.ubicaciones && p.ubicaciones.length > 0}
+              <div class="ubicaciones-list-tab">
+                <h5 class="msp-h5">Sedes y Nodos de Ejecución ({p.ubicaciones.length})</h5>
+                <div class="ubis-cards-grid">
+                  {#each p.ubicaciones as u, idx}
+                    <div class="ubi-card" class:es-principal={u.es_principal}>
+                      <div class="uc-head">
+                        <span class="uc-badge" class:principal={u.es_principal}>
+                          <i class="bi bi-{u.es_principal ? 'star-fill' : 'pin-fill'}"></i>
+                          {u.es_principal ? 'Sede Principal' : `Sede Alterna #${idx + 1}`}
+                        </span>
+                        <button class="btn-flyto" onclick={() => {
+                          if (map) { map.flyTo([u.latitud, u.longitud], 15); proySeleccionado = null; }
+                        }} title="Centrar en el mapa">
+                          <i class="bi bi-crosshair"></i> Ver en mapa
+                        </button>
+                      </div>
+                      <div class="uc-title">{u.nombre_lugar || 'Sede sin nombre'}</div>
+                      <div class="uc-meta">
+                        <span><i class="bi bi-geo-alt"></i> {u.canton || p.canton || '—'}, {u.provincia || p.provincia || '—'}</span>
+                        {#if u.sector}<span><i class="bi bi-house"></i> {u.sector}</span>{/if}
+                        <span class="uc-coords">{u.latitud?.toFixed(5)}, {u.longitud?.toFixed(5)}</span>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {:else}
+              <div class="msp-grid">
+                <div class="mi"><i class="bi bi-pin-map"></i><div><span class="mi-l">Provincia</span><span class="mi-v">{p.provincia || '—'}</span></div></div>
+                <div class="mi"><i class="bi bi-pin-map-fill"></i><div><span class="mi-l">Cantón</span><span class="mi-v">{p.canton || '—'}</span></div></div>
+                {#if p.parroquia}<div class="mi"><i class="bi bi-signpost"></i><div><span class="mi-l">Parroquia</span><span class="mi-v">{p.parroquia}</span></div></div>{/if}
+                {#if p.sector}<div class="mi"><i class="bi bi-house"></i><div><span class="mi-l">Sector</span><span class="mi-v">{p.sector}</span></div></div>{/if}
+              </div>
+            {/if}
 
           {:else if modalTab === 'cronograma'}
             <div class="msp-grid">
@@ -1022,8 +1138,211 @@
   font-size: .72rem;
   font-weight: 700;
   color: var(--gris);
-  display: block;
-  margin-bottom: 14px;
+}
+
+/* ── MARCADOR PRINCIPAL (HUB) ── */
+:global(.main-marker-hub) {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(.marker-dot) {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--c, #1b7505);
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.18s ease;
+}
+
+:global(.main-marker-hub:hover .marker-dot) {
+  transform: scale(1.2);
+}
+
+:global(.hub-multi-badge) {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #1b7505;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ── CHINCHETAS SATÉLITE (GOOGLE EARTH PIN STYLE) ── */
+:global(.custom-pin-wrap) {
+  background: transparent;
+  border: none;
+}
+
+:global(.satellite-pin-node) {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  animation: bounceIn .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+:global(.pin-head) {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #facc15;
+  color: #854d0e;
+  border: 2px solid #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  position: relative;
+}
+
+:global(.pin-num) {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--pin-color, #1b7505);
+  color: #ffffff;
+  font-size: 0.55rem;
+  font-weight: 800;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ffffff;
+}
+
+:global(.pin-tag) {
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-top: 3px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+:global(.red-line-anim) {
+  animation: dashAnimation 1.5s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes dashAnimation {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes bounceIn {
+  from { opacity: 0; transform: translateY(-15px) scale(0.5); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── TAB DE UBICACIONES MÚLTIPLES EN EL MODAL ── */
+.ubicaciones-list-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ubis-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ubi-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.ubi-card.es-principal {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.uc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.uc-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.uc-badge.principal {
+  color: #15803d;
+}
+
+.btn-flyto {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0284c7;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+.btn-flyto:hover {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+}
+
+.uc-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.uc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.uc-coords {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
 }
 
 .modal-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px 14px; }

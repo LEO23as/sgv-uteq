@@ -831,7 +831,7 @@ def api_inec_sectores(request):
 def api_mapa_proyectos(request):
     qs = Proyecto.objects.select_related(
         'id_facultad', 'id_carrera', 'id_periodo_inicio'
-    ).prefetch_related('fotoproyecto_set').filter(
+    ).prefetch_related('fotoproyecto_set', 'proyectoubicacion_set').filter(
         latitud__isnull=False,
         longitud__isnull=False,
     )
@@ -869,11 +869,47 @@ def api_mapa_proyectos(request):
     features = []
     for p in qs:
         fotos = ['/media/' + str(f.ruta_foto) for f in p.fotoproyecto_set.all()]
+        
+        # Obtener todas las ubicaciones registradas del proyecto
+        ubicaciones = []
+        for u in p.proyectoubicacion_set.all().order_by('-es_principal', 'id_ubicacion'):
+            if u.latitud is not None and u.longitud is not None:
+                ubicaciones.append({
+                    'id_ubicacion': u.id_ubicacion,
+                    'nombre_lugar': u.nombre_lugar or f"{u.canton or ''} {u.sector or ''}".strip() or 'Sede de ejecución',
+                    'provincia': u.provincia or '',
+                    'canton': u.canton or '',
+                    'parroquia': u.parroquia or '',
+                    'sector': u.sector or '',
+                    'latitud': float(u.latitud),
+                    'longitud': float(u.longitud),
+                    'es_principal': bool(u.es_principal),
+                })
+        
+        # Si no tiene filas en ProyectoUbicacion, usar lat/long principal del modelo Proyecto
+        if not ubicaciones and p.latitud is not None and p.longitud is not None:
+            ubicaciones.append({
+                'id_ubicacion': None,
+                'nombre_lugar': p.sector or p.canton or 'Ubicación Principal',
+                'provincia': p.provincia or '',
+                'canton': p.canton or '',
+                'parroquia': p.parroquia or '',
+                'sector': p.sector or '',
+                'latitud': float(p.latitud),
+                'longitud': float(p.longitud),
+                'es_principal': True,
+            })
+
+        # Coordenada principal (la primera o la que tenga es_principal)
+        coord_principal = [float(p.longitud), float(p.latitud)]
+        if ubicaciones:
+            coord_principal = [ubicaciones[0]['longitud'], ubicaciones[0]['latitud']]
+
         features.append({
             'type': 'Feature',
             'geometry': {
                 'type': 'Point',
-                'coordinates': [float(p.longitud), float(p.latitud)],
+                'coordinates': coord_principal,
             },
             'properties': {
                 'id':                       p.id_proyecto,
@@ -910,7 +946,8 @@ def api_mapa_proyectos(request):
                 'observaciones':            p.observaciones or '',
                 'motivo_detencion':         p.motivo_detencion or '',
                 'fotos':                    fotos,
-                'foto_url':                 fotos[0] if fotos else None,  # compat
+                'foto_url':                 fotos[0] if fotos else None,
+                'ubicaciones':              ubicaciones,
                 'url_editar':               f'/proyectos/{p.id_proyecto}/editar/',
                 'url_detalle':              f'/proyectos/{p.id_proyecto}/',
             }
