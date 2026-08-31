@@ -75,36 +75,40 @@
 
   // ── Documentos del portafolio ────────────────────────────────────
   let resolForm = $state({ resolucion_aprobacion:'', fecha_aprobacion:'' });
-  let resolFile = $state(null);
+  let resolFiles = $state([]);
   let planFile  = $state(null);
   let mostrarPlanificacion = $state(false);
   let subiendo  = $state(false);
 
-  function pickResol(e) { resolFile = e.target.files[0] || null; }
+  function pickResol(e) {
+    const files = Array.from(e.target.files);
+    resolFiles = [...resolFiles, ...files];
+    e.target.value = '';
+  }
+  function quitarResolFile(i) { resolFiles = resolFiles.filter((_, x) => x !== i); }
+
   function pickPlan(e)  { planFile  = e.target.files[0] || null; }
 
   // ── Paso 3: convenio (modal, sin salir del wizard) ───────────────
-  let convenioFile = $state(null);
+  let convenioFiles = $state([]);
   let modalConvenioOpen = $state(false);
   let convenioRegistrado = $state(false);
-  function pickConvenio(e) { convenioFile = e.target.files[0] || null; }
+  function pickConvenio(e) {
+    const files = Array.from(e.target.files);
+    convenioFiles = [...convenioFiles, ...files];
+    e.target.value = '';
+  }
+  function quitarConvenioFile(i) { convenioFiles = convenioFiles.filter((_, x) => x !== i); }
   function onConvenioCreado() { convenioRegistrado = true; }
 
-  async function guardarPaso3() {
-    error = '';
-    if (!convenioFile) { finalizar(); return; }
-    subiendo = true;
-    try {
-      await subirDoc('DOC_03', convenioFile);
-      toast.success('Convenio guardado en el portafolio');
-      finalizar();
-    } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
-  }
-
-  async function subirDoc(codigo_tipo, file, extra = {}) {
+  async function subirDocs(codigo_tipo, filesArray, extra = {}) {
     const fd = new FormData();
     fd.append('codigo_tipo', codigo_tipo);
-    if (file) fd.append('archivo', file);
+    if (Array.isArray(filesArray)) {
+      filesArray.forEach(f => fd.append('archivos', f));
+    } else if (filesArray) {
+      fd.append('archivos', filesArray);
+    }
     Object.entries(extra).forEach(([k, v]) => { if (v) fd.append(k, v); });
     const res = await fetch(`/api/proyectos/${proyectoId}/documentos/subir/`, {
       method:'POST', credentials:'include', body: fd,
@@ -115,15 +119,28 @@
 
   async function guardarPaso2() {
     error = '';
-    if (!resolFile && !resolForm.resolucion_aprobacion && !resolForm.fecha_aprobacion) { paso = 3; return; }
+    if (resolFiles.length === 0 && !resolForm.resolucion_aprobacion && !resolForm.fecha_aprobacion) { paso = 3; return; }
     subiendo = true;
     try {
-      await subirDoc('DOC_01', resolFile, {
+      await subirDocs('DOC_01', resolFiles, {
         resolucion_aprobacion: resolForm.resolucion_aprobacion,
         fecha_aprobacion: resolForm.fecha_aprobacion,
       });
+      resolFiles = [];
       toast.success('Resolución de aprobación guardada');
       paso = 3;
+    } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
+  }
+
+  async function guardarPaso3() {
+    error = '';
+    if (convenioFiles.length === 0) { finalizar(); return; }
+    subiendo = true;
+    try {
+      await subirDocs('DOC_03', convenioFiles);
+      convenioFiles = [];
+      toast.success('Documento(s) de convenio guardados en el portafolio');
+      finalizar();
     } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
   }
 
@@ -350,18 +367,31 @@
     <!-- ══════════ PASO 2: RESOLUCIÓN DE APROBACIÓN ══════════ -->
     {:else if paso === 2}
       <h2 class="form-title"><i class="bi bi-file-earmark-check"></i> Resolución de aprobación</h2>
-      <p class="paso-desc">Sube el PDF de la resolución con la que el Consejo Directivo aprobó el proyecto (DOC_01). Los datos clave se mostrarán en el detalle y el mapa.</p>
+      <p class="paso-desc">Sube los documentos o PDF(s) de la resolución con la que el Consejo Directivo aprobó el proyecto (DOC_01). Puedes subir uno o varios archivos.</p>
 
       <div class="sec">
         <div class="grid-row">
           <div class="field col-8"><label>Referencia de la resolución</label><input bind:value={resolForm.resolucion_aprobacion} placeholder="Consejo Directivo FCA — Sesión ordinaria 04/03/2021, Resolución OCTAVA" /></div>
           <div class="field col-4"><label>Fecha de aprobación</label><input type="date" bind:value={resolForm.fecha_aprobacion} /></div>
         </div>
+
+        {#if resolFiles.length}
+          <div class="pending-files-list">
+            <span class="pending-title"><i class="bi bi-cloud-arrow-up"></i> Archivos seleccionados para subir ({resolFiles.length}):</span>
+            {#each resolFiles as f, i}
+              <div class="pending-file-item">
+                <span><i class="bi bi-file-earmark"></i> {f.name} ({(f.size/1024).toFixed(1)} KB)</span>
+                <button type="button" class="btn-quitar-file" onclick={() => quitarResolFile(i)} title="Quitar archivo"><i class="bi bi-x-lg"></i></button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         <label class="drop-zone doc">
-          <input type="file" accept="application/pdf,image/*" onchange={pickResol} />
+          <input type="file" multiple accept="application/pdf,image/*,.doc,.docx" onchange={pickResol} />
           <i class="bi bi-file-earmark-arrow-up"></i>
-          <span>{resolFile ? resolFile.name : 'Clic para subir el PDF de la resolución'}</span>
-          <small>PDF o imagen</small>
+          <span>Subir documentos de resolución (permite varios)</span>
+          <small>Haz clic o arrastra para seleccionar archivos PDF, Word o imágenes</small>
         </label>
       </div>
 
@@ -377,7 +407,7 @@
       <h2 class="form-title"><i class="bi bi-people"></i> Convenios</h2>
       <p class="paso-desc">
         Registra el convenio con la entidad cooperante de este proyecto (buscar o crear la entidad,
-        fechas, memorando) y sube aquí el PDF del convenio firmado (DOC_03).
+        fechas, memorando) y sube aquí los documentos del convenio firmado (DOC_03). Puedes subir uno o varios archivos.
       </p>
 
       <div class="sec">
@@ -391,13 +421,25 @@
         {/if}
       </div>
 
+      {#if convenioFiles.length}
+        <div class="pending-files-list">
+          <span class="pending-title"><i class="bi bi-cloud-arrow-up"></i> Archivos seleccionados para subir ({convenioFiles.length}):</span>
+          {#each convenioFiles as f, i}
+            <div class="pending-file-item">
+              <span><i class="bi bi-file-earmark"></i> {f.name} ({(f.size/1024).toFixed(1)} KB)</span>
+              <button type="button" class="btn-quitar-file" onclick={() => quitarConvenioFile(i)} title="Quitar archivo"><i class="bi bi-x-lg"></i></button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <div class="sec">
-        <h4 class="sec-hdr">PDF del convenio (opcional aquí, puedes subirlo luego)</h4>
+        <h4 class="sec-hdr">Documentos del convenio (permite varios)</h4>
         <label class="drop-zone doc">
-          <input type="file" accept="application/pdf,image/*" onchange={pickConvenio} />
+          <input type="file" multiple accept="application/pdf,image/*,.doc,.docx" onchange={pickConvenio} />
           <i class="bi bi-file-earmark-arrow-up"></i>
-          <span>{convenioFile ? convenioFile.name : 'Clic para subir el PDF del convenio'}</span>
-          <small>PDF o imagen</small>
+          <span>Subir documentos del convenio (permite varios)</span>
+          <small>Haz clic o arrastra para seleccionar archivos PDF, Word o imágenes</small>
         </label>
       </div>
 
@@ -436,6 +478,22 @@
 
   .paso-desc { font-size:.86rem; color:#666; line-height:1.5; margin:-4px 0 16px; }
   .drop-zone.doc { margin-top:12px; }
+
+  .pending-files-list {
+    display: flex; flex-direction: column; gap: 6px; margin: 10px 0;
+    background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 12px;
+  }
+  .pending-title { font-size: 0.74rem; font-weight: 800; color: #15803d; }
+  .pending-file-item {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8rem; font-weight: 600; color: #1e293b;
+    background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px;
+  }
+  .btn-quitar-file {
+    background: none; border: none; color: #ef4444; cursor: pointer;
+    font-size: 0.8rem; padding: 2px 6px; border-radius: 4px;
+  }
+  .btn-quitar-file:hover { background: #fee2e2; }
 
   .btn-side-add-lg {
     display:flex; align-items:center; justify-content:center; gap:8px;

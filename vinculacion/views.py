@@ -1923,7 +1923,7 @@ from vinculacion.models import TipoDocumento
 @csrf_exempt
 def api_documento_subir(request, id):
     """
-    Sube un documento del portafolio a un proyecto (por código de tipo, ej DOC_01).
+    Sube uno o varios documentos del portafolio a un proyecto (por código de tipo, ej DOC_01, DOC_03).
     Opcional: si vienen datos de aprobación (paso 2), actualiza el proyecto.
     """
     if not _require_auth(request):
@@ -1936,16 +1936,18 @@ def api_documento_subir(request, id):
     if not tipo:
         return JsonResponse({'error': f'Tipo de documento {codigo_tipo} no existe'}, status=400)
 
-    archivo = request.FILES.get('archivo')
-    creado = None
-    if archivo:
+    archivos = request.FILES.getlist('archivos') or request.FILES.getlist('archivo')
+    creados = []
+
+    for archivo in archivos:
         error = _validar_archivo(archivo, EXTENSIONES_DOCUMENTO)
         if error:
             return JsonResponse({'error': error}, status=400)
         carpeta = f'proyectos/{proyecto.id_proyecto}/documentos/'
         ruta_completa = os.path.join(settings.MEDIA_ROOT, carpeta)
         os.makedirs(ruta_completa, exist_ok=True)
-        nombre_archivo = f'{codigo_tipo}_{archivo.name}'
+        ts = int(timezone.now().timestamp() * 1000)
+        nombre_archivo = f'{codigo_tipo}_{ts}_{archivo.name}'
         with open(os.path.join(ruta_completa, nombre_archivo), 'wb+') as f:
             for chunk in archivo.chunks():
                 f.write(chunk)
@@ -1962,6 +1964,13 @@ def api_documento_subir(request, id):
             subido_por_id=_require_auth(request),
             subido_en=timezone.now(),
         )
+        creados.append({
+            'id': creado.id_documento,
+            'nombre': creado.nombre_archivo,
+            'url': '/media/' + creado.ruta_archivo,
+            'tipo': tipo.nombre,
+            'tamanio_kb': creado.tamanio_kb,
+        })
 
     # Datos de aprobación (solo para DOC_01)
     if codigo_tipo == 'DOC_01':
@@ -1976,10 +1985,8 @@ def api_documento_subir(request, id):
 
     return JsonResponse({
         'ok': True,
-        'documento': None if not creado else {
-            'id': creado.id_documento, 'nombre': creado.nombre_archivo,
-            'url': '/media/' + creado.ruta_archivo, 'tipo': tipo.nombre,
-        }
+        'documentos': creados,
+        'documento': creados[0] if creados else None,
     }, status=201)
 
 

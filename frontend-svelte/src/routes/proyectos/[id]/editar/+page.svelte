@@ -38,13 +38,14 @@
     provincia:'', canton:'', parroquia:'', sector:'', latitud:'', longitud:'',
     descripcion:'', observaciones:'', presupuesto_planificado:'', terminos_negociacion:'',
   });
+  let proyecto = $state(null);
   let nuevasFotos = $state([]);
   let previews = $state([]);
   let resolForm = $state({ resolucion_aprobacion:'', fecha_aprobacion:'' });
-  let resolFile = $state(null);
+  let resolFiles = $state([]);
   let planFile  = $state(null);
   let mostrarPlanificacion = $state(false);
-  let convenioFile = $state(null);
+  let convenioFiles = $state([]);
   let modalConvenioOpen = $state(false);
   let convenioRegistrado = $state(false);
   function onConvenioCreado() { convenioRegistrado = true; }
@@ -59,18 +60,24 @@
     try {
       const [pers, data] = await Promise.all([
         fetchAPI('/api/periodos/'),
-        fetch(`/api/proyectos/${id}/edit/`, { credentials:'include' }).then(r => r.json()),
+        fetchAPI(`/api/proyectos/${id}/detalle/`),
       ]);
       periodos = pers;
-      for (const k of Object.keys(form)) if (data[k] != null) form[k] = String(data[k] ?? '');
-      form.id_facultad = String(data.id_facultad || '');
-      form.id_carrera = String(data.id_carrera || '');
-      form.id_periodo_inicio = String(data.id_periodo_inicio || '');
-      fotosExist = data.fotos || [];
+      proyecto = data;
+      Object.keys(form).forEach(k => {
+        if (data[k] !== undefined && data[k] !== null) form[k] = data[k];
+      });
+      if (data.ods) {
+        odsSeleccionados = data.ods.split(',').map(s => {
+          const m = s.trim().match(/\d+/);
+          return m ? parseInt(m[0]) : null;
+        }).filter(Boolean);
+      }
       ubicaciones = data.ubicaciones || [];
-      odsSeleccionados = (String(data.ods || '').match(/\d+/g) || []).map(Number);
-      resolForm.resolucion_aprobacion = data.resolucion_aprobacion || '';
-      resolForm.fecha_aprobacion = data.fecha_aprobacion || '';
+      fotosExist = data.fotos || [];
+      if (data.resolucion_aprobacion) resolForm.resolucion_aprobacion = data.resolucion_aprobacion;
+      if (data.fecha_aprobacion) resolForm.fecha_aprobacion = data.fecha_aprobacion;
+
       if (form.id_periodo_inicio) {
         facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
         if (form.id_facultad)
@@ -84,7 +91,7 @@
   async function cargarDocumentos() {
     try { documentos = await fetchAPI(`/api/proyectos/${id}/documentos/`); } catch { documentos = []; }
   }
-  const docPorTipo = (codigo) => documentos.find(d => d.codigo_tipo === codigo);
+  const docsPorTipo = (codigo) => documentos.filter(d => d.codigo_tipo === codigo || d.tipo === codigo);
 
   async function onPeriodoChange() {
     form.id_facultad = ''; form.id_carrera = ''; facultades = []; carrerasFil = [];
@@ -109,18 +116,56 @@
     } catch { toast.error('No se pudo eliminar la foto'); }
   }
 
-  function pickResol(e){ resolFile = e.target.files[0] || null; }
+  function pickResol(e){
+    const files = Array.from(e.target.files);
+    resolFiles = [...resolFiles, ...files];
+    e.target.value = '';
+  }
+  function quitarResolFile(i) { resolFiles = resolFiles.filter((_, x) => x !== i); }
+
   function pickPlan(e){ planFile = e.target.files[0] || null; }
-  function pickConvenio(e){ convenioFile = e.target.files[0] || null; }
+
+  function pickConvenio(e){
+    const files = Array.from(e.target.files);
+    convenioFiles = [...convenioFiles, ...files];
+    e.target.value = '';
+  }
+  function quitarConvenioFile(i) { convenioFiles = convenioFiles.filter((_, x) => x !== i); }
+
+  async function subirDocs(codigo_tipo, filesArray, extra = {}) {
+    const fd = new FormData();
+    fd.append('codigo_tipo', codigo_tipo);
+    if (Array.isArray(filesArray)) {
+      filesArray.forEach(f => fd.append('archivos', f));
+    } else if (filesArray) {
+      fd.append('archivos', filesArray);
+    }
+    Object.entries(extra).forEach(([k,v]) => { if (v) fd.append(k, v); });
+    const res = await fetch(`/api/proyectos/${id}/documentos/subir/`, { method:'POST', credentials:'include', body: fd });
+    if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error al subir'); }
+    return res.json();
+  }
+
+  async function guardarPaso2() {
+    error = '';
+    if (resolFiles.length === 0 && !resolForm.resolucion_aprobacion && !resolForm.fecha_aprobacion) { paso = 3; return; }
+    subiendo = true;
+    try {
+      await subirDocs('DOC_01', resolFiles, { resolucion_aprobacion: resolForm.resolucion_aprobacion, fecha_aprobacion: resolForm.fecha_aprobacion });
+      resolFiles = []; await cargarDocumentos();
+      toast.success('Resolución y documento(s) guardados');
+      paso = 3;
+    } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
+  }
 
   async function guardarPaso3() {
     error = '';
-    if (!convenioFile) { finalizar(); return; }
+    if (convenioFiles.length === 0) { finalizar(); return; }
     subiendo = true;
     try {
-      await subirDoc('DOC_03', convenioFile);
-      convenioFile = null; await cargarDocumentos();
-      toast.success('Convenio guardado en el portafolio');
+      await subirDocs('DOC_03', convenioFiles);
+      convenioFiles = []; await cargarDocumentos();
+      toast.success('Documento(s) de convenio guardados');
       finalizar();
     } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
   }
@@ -152,35 +197,13 @@
       if (!res.ok) { error = data.error || 'Error al guardar'; toast.error(error); return; }
       nuevasFotos = []; previews = [];
       if (planFile) {
-        try { await subirDoc('DOC_02', planFile); planFile = null; await cargarDocumentos(); }
+        try { await subirDocs('DOC_02', [planFile]); planFile = null; await cargarDocumentos(); }
         catch (e) { toast.error('Guardado, pero falló la planificación: ' + e.message); }
       }
       toast.success('Datos del proyecto guardados');
       paso = 2;
     } catch { error = 'Error de conexión'; toast.error(error); }
     finally { saving = false; }
-  }
-
-  async function subirDoc(codigo_tipo, file, extra = {}) {
-    const fd = new FormData();
-    fd.append('codigo_tipo', codigo_tipo);
-    if (file) fd.append('archivo', file);
-    Object.entries(extra).forEach(([k,v]) => { if (v) fd.append(k, v); });
-    const res = await fetch(`/api/proyectos/${id}/documentos/subir/`, { method:'POST', credentials:'include', body: fd });
-    if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Error al subir'); }
-    return res.json();
-  }
-
-  async function guardarPaso2() {
-    error = '';
-    if (!resolFile && !resolForm.resolucion_aprobacion && !resolForm.fecha_aprobacion) { paso = 3; return; }
-    subiendo = true;
-    try {
-      await subirDoc('DOC_01', resolFile, { resolucion_aprobacion: resolForm.resolucion_aprobacion, fecha_aprobacion: resolForm.fecha_aprobacion });
-      resolFile = null; await cargarDocumentos();
-      toast.success('Resolución de aprobación guardada');
-      paso = 3;
-    } catch (e) { error = e.message; toast.error(e.message); } finally { subiendo = false; }
   }
 
   async function eliminarDoc(idDoc) {
@@ -365,27 +388,48 @@
     <!-- PASO 2: RESOLUCIÓN -->
     {:else if paso === 2}
       <h2 class="form-title"><i class="bi bi-file-earmark-check"></i> Resolución de aprobación</h2>
-      <p class="paso-desc">Datos y PDF de la resolución que aprobó el proyecto (DOC_01).</p>
-      {#if docPorTipo('DOC_01')}
-        <div class="doc-existe">
-          <i class="bi bi-file-earmark-pdf"></i>
-          <a href={docPorTipo('DOC_01').url} target="_blank">{docPorTipo('DOC_01').nombre}</a>
-          <span class="doc-kb">{docPorTipo('DOC_01').tamanio_kb} KB</span>
-          <button class="doc-del" onclick={() => eliminarDoc(docPorTipo('DOC_01').id)} title="Eliminar"><i class="bi bi-trash"></i></button>
+      <p class="paso-desc">Datos y documentos de la resolución que aprobó el proyecto (DOC_01). Puedes subir uno o varios archivos.</p>
+      
+      {#if docsPorTipo('DOC_01').length}
+        <div class="docs-list-box">
+          <span class="docs-list-title"><i class="bi bi-folder-check"></i> Documentos de resolución guardados ({docsPorTipo('DOC_01').length}):</span>
+          {#each docsPorTipo('DOC_01') as doc}
+            <div class="doc-existe">
+              <i class="bi bi-file-earmark-pdf"></i>
+              <a href={doc.url} target="_blank">{doc.nombre}</a>
+              <span class="doc-kb">{doc.tamanio_kb} KB</span>
+              <button type="button" class="doc-del" onclick={() => eliminarDoc(doc.id)} title="Eliminar"><i class="bi bi-trash"></i></button>
+            </div>
+          {/each}
         </div>
       {/if}
+
       <div class="sec">
         <div class="grid-row">
           <div class="field col-8"><label>Referencia de la resolución</label><input bind:value={resolForm.resolucion_aprobacion} placeholder="Consejo Directivo FCA — Sesión 04/03/2021, Res. OCTAVA" /></div>
           <div class="field col-4"><label>Fecha de aprobación</label><input type="date" bind:value={resolForm.fecha_aprobacion} /></div>
         </div>
+
+        {#if resolFiles.length}
+          <div class="pending-files-list">
+            <span class="pending-title"><i class="bi bi-cloud-arrow-up"></i> Archivos seleccionados para subir ({resolFiles.length}):</span>
+            {#each resolFiles as f, i}
+              <div class="pending-file-item">
+                <span><i class="bi bi-file-earmark"></i> {f.name} ({(f.size/1024).toFixed(1)} KB)</span>
+                <button type="button" class="btn-quitar-file" onclick={() => quitarResolFile(i)} title="Quitar archivo"><i class="bi bi-x-lg"></i></button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         <label class="drop-zone doc">
-          <input type="file" accept="application/pdf,image/*" onchange={pickResol} />
+          <input type="file" multiple accept="application/pdf,image/*,.doc,.docx" onchange={pickResol} />
           <i class="bi bi-file-earmark-arrow-up"></i>
-          <span>{resolFile ? resolFile.name : (docPorTipo('DOC_01') ? 'Reemplazar el PDF' : 'Subir el PDF de la resolución')}</span>
-          <small>PDF o imagen</small>
+          <span>Subir documentos de la resolución (permite varios)</span>
+          <small>Haz clic o arrastra para seleccionar archivos PDF, Word o imágenes</small>
         </label>
       </div>
+
       <div class="form-actions between">
         <button class="btn-cancel" onclick={() => paso = 1}><i class="bi bi-arrow-left"></i> Atrás</button>
         <button class="btn-save" onclick={guardarPaso2} disabled={subiendo}>
@@ -396,7 +440,7 @@
     <!-- PASO 3: CONVENIOS -->
     {:else}
       <h2 class="form-title"><i class="bi bi-people"></i> Convenios</h2>
-      <p class="paso-desc">Registra el convenio con la entidad cooperante y sube aquí el PDF del convenio (DOC_03).</p>
+      <p class="paso-desc">Registra el convenio con la entidad cooperante y sube aquí los documentos del convenio (DOC_03). Puedes subir uno o varios archivos.</p>
 
       <div class="sec">
         {#if convenioRegistrado}
@@ -409,20 +453,38 @@
         {/if}
       </div>
 
-      {#if docPorTipo('DOC_03')}
-        <div class="doc-existe">
-          <i class="bi bi-file-earmark-pdf"></i>
-          <a href={docPorTipo('DOC_03').url} target="_blank">{docPorTipo('DOC_03').nombre}</a>
-          <span class="doc-kb">{docPorTipo('DOC_03').tamanio_kb} KB</span>
-          <button class="doc-del" onclick={() => eliminarDoc(docPorTipo('DOC_03').id)} title="Eliminar"><i class="bi bi-trash"></i></button>
+      {#if docsPorTipo('DOC_03').length}
+        <div class="docs-list-box">
+          <span class="docs-list-title"><i class="bi bi-folder-check"></i> Documentos de convenio guardados ({docsPorTipo('DOC_03').length}):</span>
+          {#each docsPorTipo('DOC_03') as doc}
+            <div class="doc-existe">
+              <i class="bi bi-file-earmark-pdf"></i>
+              <a href={doc.url} target="_blank">{doc.nombre}</a>
+              <span class="doc-kb">{doc.tamanio_kb} KB</span>
+              <button type="button" class="doc-del" onclick={() => eliminarDoc(doc.id)} title="Eliminar"><i class="bi bi-trash"></i></button>
+            </div>
+          {/each}
         </div>
       {/if}
+
+      {#if convenioFiles.length}
+        <div class="pending-files-list">
+          <span class="pending-title"><i class="bi bi-cloud-arrow-up"></i> Archivos seleccionados para subir ({convenioFiles.length}):</span>
+          {#each convenioFiles as f, i}
+            <div class="pending-file-item">
+              <span><i class="bi bi-file-earmark"></i> {f.name} ({(f.size/1024).toFixed(1)} KB)</span>
+              <button type="button" class="btn-quitar-file" onclick={() => quitarConvenioFile(i)} title="Quitar archivo"><i class="bi bi-x-lg"></i></button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <div class="sec">
         <label class="drop-zone doc">
-          <input type="file" accept="application/pdf,image/*" onchange={pickConvenio} />
+          <input type="file" multiple accept="application/pdf,image/*,.doc,.docx" onchange={pickConvenio} />
           <i class="bi bi-file-earmark-arrow-up"></i>
-          <span>{convenioFile ? convenioFile.name : (docPorTipo('DOC_03') ? 'Reemplazar el PDF' : 'Subir el PDF del convenio')}</span>
-          <small>PDF o imagen</small>
+          <span>Subir documentos del convenio (permite varios)</span>
+          <small>Haz clic o arrastra para seleccionar archivos PDF, Word o imágenes</small>
         </label>
       </div>
 
@@ -462,13 +524,38 @@
   .paso-desc { font-size:.86rem; color:#666; line-height:1.5; margin:-4px 0 14px; }
   .drop-zone.doc { margin-top:12px; }
 
-  .doc-existe { display:flex; align-items:center; gap:10px; background:#f6fbf2; border:1px solid #cfe6c2; border-radius:10px; padding:10px 14px; margin-bottom:6px; }
+  .docs-list-box {
+    display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;
+  }
+  .docs-list-title {
+    font-size: 0.76rem; font-weight: 800; color: #475569; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .doc-existe { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #cfe6c2; border-radius:8px; padding:8px 12px; margin-bottom:4px; }
   .doc-existe > i { color:#c0392b; font-size:1.2rem; }
   .doc-existe a { flex:1; font-size:.84rem; font-weight:700; color:var(--verde); text-decoration:none; word-break:break-all; }
   .doc-existe a:hover { text-decoration:underline; }
   .doc-kb { font-size:.7rem; color:var(--gris); font-weight:700; }
   .doc-del { background:none; border:none; color:#bbb; font-size:.9rem; cursor:pointer; padding:4px; border-radius:6px; }
   .doc-del:hover { background:#fdecec; color:#dc3545; }
+
+  .pending-files-list {
+    display: flex; flex-direction: column; gap: 6px; margin: 10px 0;
+    background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 12px;
+  }
+  .pending-title { font-size: 0.74rem; font-weight: 800; color: #15803d; }
+  .pending-file-item {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8rem; font-weight: 600; color: #1e293b;
+    background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 10px;
+  }
+  .btn-quitar-file {
+    background: none; border: none; color: #ef4444; cursor: pointer;
+    font-size: 0.8rem; padding: 2px 6px; border-radius: 4px;
+  }
+  .btn-quitar-file:hover { background: #fee2e2; }
 
   .btn-side-add-lg {
     display:flex; align-items:center; justify-content:center; gap:8px;
