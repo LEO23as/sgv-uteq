@@ -82,24 +82,35 @@
     secundarias.forEach((u, idx) => {
       latLngs.push([u.latitud, u.longitud]);
 
-      // 1. Línea conectora animada/punteada desde el nodo principal a la sub-ubicación
-      const poly = L.polyline([[principal.latitud, principal.longitud], [u.latitud, u.longitud]], {
-        color: p.color || '#1b7505',
-        weight: 3.5,
-        dashArray: '6, 8',
-        opacity: 0.9,
+      // 1. Halo base blanco/luminoso para garantizar contraste sobre capas NBI o mapa satelital
+      const polyHalo = L.polyline([[principal.latitud, principal.longitud], [u.latitud, u.longitud]], {
+        color: '#ffffff',
+        weight: 5,
+        opacity: 0.85,
         lineCap: 'round',
-        className: 'red-line-anim'
+        pane: 'markerPane'
+      });
+      redesLayer.addLayer(polyHalo);
+
+      // 2. Línea conectora estilizada en azul zafiro/dorado institucional con trazo nítido
+      const poly = L.polyline([[principal.latitud, principal.longitud], [u.latitud, u.longitud]], {
+        color: '#0284c7',
+        weight: 2.5,
+        dashArray: '5, 7',
+        opacity: 1,
+        lineCap: 'round',
+        className: 'red-line-vector',
+        pane: 'markerPane'
       });
       redesLayer.addLayer(poly);
 
-      // 2. Marcador estilo chincheta / pin satélite (Google Earth style)
+      // 3. Marcador estilo chincheta / pin satélite (Google Earth style)
       const pinIcon = L.divIcon({
         className: 'custom-pin-wrap',
         html: `
           <div class="satellite-pin-node" style="--pin-color: ${p.color};">
             <div class="pin-head">
-              <i class="bi bi-pin-fill"></i>
+              <i class="bi bi-pin-angle-fill"></i>
               <span class="pin-num">${idx + 2}</span>
             </div>
             <div class="pin-tag">${u.nombre_lugar || u.sector || u.canton || `Sede ${idx + 2}`}</div>
@@ -109,9 +120,9 @@
         iconAnchor: [16, 38],
       });
 
-      const pinMarker = L.marker([u.latitud, u.longitud], { icon: pinIcon, zIndexOffset: 850 });
+      const pinMarker = L.marker([u.latitud, u.longitud], { icon: pinIcon, zIndexOffset: 950 });
       pinMarker.bindTooltip(
-        `<b>${p.nombre_corto}</b><br><span style="color:#64748b;">📍 Sede alterna:</span> ${u.nombre_lugar || u.canton}`,
+        `<b>${p.nombre_corto}</b><br><span style="color:#0284c7;font-weight:700;">📍 Sede alterna:</span> ${u.nombre_lugar || u.canton}`,
         { direction: 'top', offset: [0, -34] }
       );
       pinMarker.on('click', (e) => {
@@ -143,6 +154,7 @@
 
     markersLayer.clearLayers();
     if (redesLayer) redesLayer.clearLayers();
+    proyectoRedExtendidaId = null;
 
     (data.features || []).forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
@@ -172,6 +184,10 @@
             desplegarRedNodos(p, L);
             return;
           }
+        } else {
+          // Si es un proyecto de 1 sola ubicación, limpiar cualquier red previa abierta
+          if (redesLayer) redesLayer.clearLayers();
+          proyectoRedExtendidaId = null;
         }
 
         // Si ya está extendida o es un proyecto de 1 sola ubicación, abrir el modal
@@ -350,6 +366,12 @@
     L.control.zoom({ position: 'topleft' }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     redesLayer = L.layerGroup().addTo(map);
+
+    // Al hacer clic en el fondo del mapa, ocultar la red de nodos
+    map.on('click', () => {
+      if (redesLayer) redesLayer.clearLayers();
+      proyectoRedExtendidaId = null;
+    });
 
     // Re-renderizar capa NBI en modo "solo vista" al mover/zoom
     let mvTimer;
@@ -1249,21 +1271,23 @@
 }
 
 :global(.pin-tag) {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(4px);
   color: #ffffff;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
-  margin-top: 3px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  margin-top: 2px;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   pointer-events: none;
 }
 
-:global(.red-line-anim) {
-  animation: dashAnimation 1.5s linear infinite;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+:global(.red-line-vector) {
+  animation: dashAnimation 1.2s linear infinite;
+  filter: drop-shadow(0 2px 5px rgba(2, 132, 199, 0.4));
 }
 
 @keyframes dashAnimation {
