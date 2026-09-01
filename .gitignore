@@ -39,3 +39,6 @@ htmlcov/
 
 # Migraciones generadas (opcional — comenta si quieres versionar migraciones)
 # */migrations/0*.py
+
+# Overrides locales de Docker (no versionar)
+docker-compose.override.yml
