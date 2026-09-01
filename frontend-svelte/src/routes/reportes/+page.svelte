@@ -105,20 +105,51 @@
   }
 
   function chartAction(node, config) {
-    if (!ChartModule || !config) return;
-    let chart = new ChartModule(node, config);
+    let chart = null;
+    let cfg = config;
+    let poll = null;
+
+    function build() {
+      if (!ChartModule || !cfg || chart) return;
+      const previo = ChartModule.getChart ? ChartModule.getChart(node) : null;
+      if (previo) previo.destroy();
+      chart = new ChartModule(node, cfg);
+    }
+
+    build();
+    // Chart.js puede no estar listo cuando el canvas se monta: reintentar
+    if (!chart) {
+      let intentos = 0;
+      poll = setInterval(() => {
+        if (chart || ++intentos > 40) { clearInterval(poll); poll = null; return; }
+        build();
+      }, 120);
+    }
+
     return {
       update(newConfig) {
-        if (chart && newConfig) {
-          chart.data = newConfig.data;
-          chart.options = newConfig.options;
-          chart.update();
-        }
+        cfg = newConfig;
+        if (!chart) { build(); return; }
+        chart.data = newConfig.data;
+        chart.options = newConfig.options;
+        chart.update('none');
       },
       destroy() {
+        if (poll) clearInterval(poll);
         if (chart) chart.destroy();
       }
     };
+  }
+
+  // Formato compacto para montos grandes (evita que el numero desborde la tarjeta)
+  function fmtDinero(n) {
+    n = Number(n) || 0;
+    if (n >= 1_000_000) return '$' + (n / 1_000_000).toLocaleString('es-EC', { maximumFractionDigits: 2 }) + ' M';
+    if (n >= 100_000)   return '$' + (n / 1_000).toLocaleString('es-EC', { maximumFractionDigits: 0 }) + ' K';
+    return '$' + n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtDineroFull(n) {
+    return '$' + (Number(n) || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function abrirModalRiesgo(tipo) {
@@ -170,17 +201,6 @@
 <svelte:head>
   <title>Reportes y Estadísticas — SGV UTEQ</title>
 </svelte:head>
-
-{#snippet grafico(hayDatos, config)}
-  {#if hayDatos}
-    <canvas use:chartAction={config}></canvas>
-  {:else}
-    <div class="chart-empty">
-      <i class="bi bi-clipboard-x"></i>
-      <span>Sin datos para este período</span>
-    </div>
-  {/if}
-{/snippet}
 
 <!-- SUBBAR SUPERIOR -->
 <div class="subbar">
@@ -282,7 +302,7 @@
         <div class="kpi-card esmeralda">
           <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
           <div class="kpi-body">
-            <span class="kpi-num">${(stats.kpis.presupuesto_total || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+            <span class="kpi-num" title={fmtDineroFull(stats.kpis.presupuesto_total)}>{fmtDinero(stats.kpis.presupuesto_total)}</span>
             <span class="kpi-label">Presupuesto Acumulado</span>
             <span class="kpi-sub">Inversión planificada</span>
           </div>
@@ -356,24 +376,24 @@
           <h4 class="chart-title"><i class="bi bi-calculator-fill text-verde"></i> Análisis Estadístico Descriptivo de Inversión (USD)</h4>
           <div class="stats-metric-grid">
             <div class="smg-item">
-              <span class="smg-val">${stats.estadisticas_presupuesto.mediana.toLocaleString('es-EC')}</span>
+              <span class="smg-val" title={fmtDineroFull(stats.estadisticas_presupuesto.mediana)}>{fmtDinero(stats.estadisticas_presupuesto.mediana)}</span>
               <span class="smg-label">Mediana (Q2)</span>
               <span class="smg-sub">Valor central robusto</span>
             </div>
             <div class="smg-item">
-              <span class="smg-val">${stats.estadisticas_presupuesto.media.toLocaleString('es-EC')}</span>
+              <span class="smg-val" title={fmtDineroFull(stats.estadisticas_presupuesto.media)}>{fmtDinero(stats.estadisticas_presupuesto.media)}</span>
               <span class="smg-label">Media Aritmética (μ)</span>
               <span class="smg-sub">Promedio presupuestario</span>
             </div>
             <div class="smg-item">
-              <span class="smg-val">${stats.estadisticas_presupuesto.desviacion.toLocaleString('es-EC')}</span>
+              <span class="smg-val" title={fmtDineroFull(stats.estadisticas_presupuesto.desviacion)}>{fmtDinero(stats.estadisticas_presupuesto.desviacion)}</span>
               <span class="smg-label">Desviación Estándar (σ)</span>
               <span class="smg-sub">Dispersión de montos</span>
             </div>
             <div class="smg-item">
-              <span class="smg-val">${stats.estadisticas_presupuesto.iqr.toLocaleString('es-EC')}</span>
+              <span class="smg-val" title={fmtDineroFull(stats.estadisticas_presupuesto.iqr)}>{fmtDinero(stats.estadisticas_presupuesto.iqr)}</span>
               <span class="smg-label">Rango Intercuartílico (IQR)</span>
-              <span class="smg-sub">Q1: ${stats.estadisticas_presupuesto.q1} | Q3: ${stats.estadisticas_presupuesto.q3}</span>
+              <span class="smg-sub">Q1: {fmtDinero(stats.estadisticas_presupuesto.q1)} | Q3: {fmtDinero(stats.estadisticas_presupuesto.q3)}</span>
             </div>
             <div class="smg-item">
               <span class="smg-val">{stats.kpis.duracion_mediana_meses} meses</span>
@@ -391,7 +411,8 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-pie-chart-fill text-verde"></i> Proyectos por estado</h4>
           <div class="chart-wrap h220">
-            {@render grafico(Object.keys(stats.estados || {}).length > 0, {
+            {#if Object.keys(stats.estados || {}).length > 0}
+              <canvas use:chartAction={{
               type: 'doughnut',
               data: {
                 labels: Object.keys(stats.estados || {}).map(k => ESTADO_LABEL[k] || k),
@@ -409,7 +430,10 @@
                 cutout: '72%',
                 plugins: { legend: { display: false }, tooltip: commonTooltip }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
           <div class="estado-bars">
             {#each Object.entries(stats.estados || {}) as [k, v]}
@@ -427,7 +451,8 @@
         <div class="chart-card lg">
           <h4 class="chart-title"><i class="bi bi-bar-chart-line-fill text-verde"></i> Proyectos por facultad UTEQ</h4>
           <div class="chart-wrap h320">
-            {@render grafico((stats.por_facultad?.values?.length || 0) > 0, {
+            {#if (stats.por_facultad?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_facultad?.labels || [],
@@ -449,7 +474,10 @@
                   y: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
       </div>
@@ -461,7 +489,8 @@
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-map-fill text-verde"></i> Cobertura por provincia</h4>
           <div class="chart-wrap h260">
-            {@render grafico((stats.por_provincia?.values?.length || 0) > 0, {
+            {#if (stats.por_provincia?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_provincia?.labels || [],
@@ -483,14 +512,18 @@
                   y: { grid: { display: false } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
 
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-geo-fill text-dorado"></i> Cantones impactados</h4>
           <div class="chart-wrap h260">
-            {@render grafico((stats.por_canton?.values?.length || 0) > 0, {
+            {#if (stats.por_canton?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_canton?.labels || [],
@@ -512,7 +545,10 @@
                   y: { grid: { display: false } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
       </div>
@@ -522,7 +558,8 @@
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-globe-americas text-azul"></i> Alineación con Objetivos ODS</h4>
           <div class="chart-wrap h260">
-            {@render grafico((stats.por_ods?.values?.length || 0) > 0, {
+            {#if (stats.por_ods?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_ods?.labels || [],
@@ -544,14 +581,18 @@
                   y: { grid: { display: false } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
 
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-mortarboard-fill text-verde"></i> Proyectos por carrera académica</h4>
           <div class="chart-wrap h260">
-            {@render grafico((stats.por_carrera?.values?.length || 0) > 0, {
+            {#if (stats.por_carrera?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_carrera?.labels || [],
@@ -573,7 +614,10 @@
                   y: { grid: { display: false } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
       </div>
@@ -585,7 +629,8 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-file-earmark-check-fill text-verde"></i> Convenios por estado</h4>
           <div class="chart-wrap h200">
-            {@render grafico(Object.keys(stats.convenios_estados || {}).length > 0, {
+            {#if Object.keys(stats.convenios_estados || {}).length > 0}
+              <canvas use:chartAction={{
               type: 'doughnut',
               data: {
                 labels: Object.keys(stats.convenios_estados || {}),
@@ -602,7 +647,10 @@
                 cutout: '70%',
                 plugins: { legend: { display: false }, tooltip: commonTooltip }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
           <div class="estado-bars sm-bars">
             {#each Object.entries(stats.convenios_estados || {}) as [k, v]}
@@ -620,7 +668,8 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-buildings-fill text-dorado"></i> Entidades por tipo</h4>
           <div class="chart-wrap h240">
-            {@render grafico((stats.entidades_tipos?.values?.length || 0) > 0, {
+            {#if (stats.entidades_tipos?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'doughnut',
               data: {
                 labels: stats.entidades_tipos?.labels || [],
@@ -640,14 +689,18 @@
                   tooltip: commonTooltip
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
 
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-calendar-week-fill text-azul"></i> Proyectos por período</h4>
           <div class="chart-wrap h240">
-            {@render grafico((stats.por_periodo?.values?.length || 0) > 0, {
+            {#if (stats.por_periodo?.values?.length || 0) > 0}
+              <canvas use:chartAction={{
               type: 'bar',
               data: {
                 labels: stats.por_periodo?.labels || [],
@@ -668,7 +721,10 @@
                   y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
                 }
               }
-            })}
+              }}></canvas>
+            {:else}
+              <div class="chart-empty"><i class="bi bi-clipboard-x"></i><span>Sin datos para este periodo</span></div>
+            {/if}
           </div>
         </div>
       </div>
@@ -1019,10 +1075,10 @@
   .rep-section:first-of-type { margin-top: 0; }
 
   /* KPIs Grid */
-  .kpis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .kpis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
   .kpi-card {
     background: #ffffff; border-radius: 14px; border: 1px solid var(--borde, #e0e0e0);
-    padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 14px; overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: transform 0.18s, box-shadow 0.18s;
   }
   .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
@@ -1036,10 +1092,16 @@
   .kpi-card.esmeralda .kpi-icon { background: #ecfdf5; color: #059669; }
   .kpi-card.naranja .kpi-icon { background: #fff7ed; color: #ea580c; }
 
-  .kpi-body { display: flex; flex-direction: column; gap: 2px; }
-  .kpi-num { font-size: 1.35rem; font-weight: 900; color: #0f172a; line-height: 1.1; }
-  .kpi-label { font-size: 0.68rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
-  .kpi-sub { font-size: 0.68rem; color: #64748b; font-weight: 600; }
+  .kpi-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .kpi-num {
+    font-size: clamp(1.05rem, 2.2vw, 1.35rem); font-weight: 800; color: #0f172a;
+    line-height: 1.1; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+  }
+  .kpi-label {
+    font-size: 0.68rem; font-weight: 800; color: #475569; text-transform: uppercase;
+    letter-spacing: 0.04em; overflow-wrap: anywhere;
+  }
+  .kpi-sub { font-size: 0.68rem; color: #64748b; font-weight: 600; overflow-wrap: anywhere; }
 
   /* BANNER ANALÍTICO DE RIESGO */
   .analytics-banner {
@@ -1074,9 +1136,12 @@
   }
   .smg-item {
     background: #f8fafc; border: 1px solid var(--borde, #e0e0e0); border-radius: 10px; padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 2px;
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
   }
-  .smg-val { font-size: 1.15rem; font-weight: 900; color: #0f172a; }
+  .smg-val {
+    font-size: clamp(1rem, 2vw, 1.15rem); font-weight: 800; color: #0f172a;
+    overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+  }
   .smg-label { font-size: 0.7rem; font-weight: 800; color: #475569; text-transform: uppercase; }
   .smg-sub { font-size: 0.68rem; color: #64748b; }
 
