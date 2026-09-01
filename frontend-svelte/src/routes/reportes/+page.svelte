@@ -10,7 +10,6 @@
   let periodoFiltro = $state('');
   let loading = $state(true);
   let ChartModule = $state(null);
-  let activeTab = $state('estadisticas'); // 'estadisticas' | 'proyectos' | 'convenios'
 
   // Modales
   let modalProyectoId = $state(null);
@@ -191,702 +190,525 @@
   </div>
 </div>
 
-<div class="page-wrap">
-  <div class="layout-grid">
-    
-    <!-- MENÚ LATERAL FLOTANTE (ESTILO INSTITUCIONAL UNIFICADO) -->
-    <aside class="sidebar-col">
-      <div class="sidebar-card">
-        <div class="sb-header-title">MÓDULO</div>
-        <button
-          type="button"
-          class="nav-item"
-          class:active={activeTab === 'estadisticas'}
-          onclick={() => activeTab = 'estadisticas'}
-        >
-          <i class="bi bi-graph-up-arrow"></i>
-          <span>Estadísticas & Gráficos</span>
-        </button>
+<div class="rep-container">
+  {#if loading || !ChartModule}
+    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Generando análisis estadístico e inferencial...</div>
+  {:else if stats}
+    <div class="rep-wrap">
 
-        <button
-          type="button"
-          class="nav-item"
-          class:active={activeTab === 'proyectos'}
-          onclick={() => activeTab = 'proyectos'}
-        >
-          <i class="bi bi-folder2-open"></i>
-          <span>Reporte de Proyectos</span>
-        </button>
+      <!-- KPIS PRINCIPALES -->
+      <div class="kpis-grid">
+        <div class="kpi-card verde">
+          <div class="kpi-icon"><i class="bi bi-folder2-open"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.total_proyectos}</span>
+            <span class="kpi-label">Total Proyectos</span>
+            <span class="kpi-sub">{stats.kpis.en_ejecucion} en ejecución</span>
+          </div>
+        </div>
 
-        <button
-          type="button"
-          class="nav-item"
-          class:active={activeTab === 'convenios'}
-          onclick={() => activeTab = 'convenios'}
-        >
-          <i class="bi bi-file-earmark-text"></i>
-          <span>Matriz de Convenios</span>
-        </button>
+        <div class="kpi-card dorado">
+          <div class="kpi-icon"><i class="bi bi-building"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.total_entidades}</span>
+            <span class="kpi-label">Entidades Cooperantes</span>
+            <span class="kpi-sub">Activas</span>
+          </div>
+        </div>
 
-        <hr class="sb-divider" />
+        <div class="kpi-card azul">
+          <div class="kpi-icon"><i class="bi bi-file-earmark-text"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.total_convenios}</span>
+            <span class="kpi-label">Convenios</span>
+            <span class="kpi-sub">Registrados</span>
+          </div>
+        </div>
 
-        <a href="/dashboard" class="nav-item">
-          <i class="bi bi-house"></i>
-          <span>Volver al inicio</span>
-        </a>
+        <div class="kpi-card esmeralda">
+          <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">${(stats.kpis.presupuesto_total || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+            <span class="kpi-label">Presupuesto Acumulado</span>
+            <span class="kpi-sub">Inversión planificada</span>
+          </div>
+        </div>
+
+        <div class="kpi-card verde">
+          <div class="kpi-icon"><i class="bi bi-geo-alt-fill"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.con_geo}</span>
+            <span class="kpi-label">Georreferenciados</span>
+            <span class="kpi-sub">{stats.kpis.cantones_cobertura || 0} cantones impactados</span>
+          </div>
+        </div>
+
+        <div class="kpi-card naranja">
+          <div class="kpi-icon"><i class="bi bi-speedometer2"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.prob_a_tiempo_pct}%</span>
+            <span class="kpi-label">P(Cumplimiento a Tiempo)</span>
+            <span class="kpi-sub">Modelo predictivo</span>
+          </div>
+        </div>
       </div>
-    </aside>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <div class="main-col">
-      {#if loading || !ChartModule}
-        <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Generando análisis estadístico e inferencial...</div>
-      {:else if stats}
-
-        <!-- ══════════════════════════════════════════════════════════════
-             PESTAÑA 1: ESTADÍSTICAS & GRÁFICOS ANALÍTICOS
-        ═══════════════════════════════════════════════════════════════ -->
-        {#if activeTab === 'estadisticas'}
-          <div class="rep-wrap">
-
-            <!-- KPIS PRINCIPALES -->
-            <div class="kpis-grid">
-              <div class="kpi-card verde">
-                <div class="kpi-icon"><i class="bi bi-folder2-open"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">{stats.kpis.total_proyectos}</span>
-                  <span class="kpi-label">Total Proyectos</span>
-                  <span class="kpi-sub">{stats.kpis.en_ejecucion} en ejecución</span>
-                </div>
-              </div>
-
-              <div class="kpi-card dorado">
-                <div class="kpi-icon"><i class="bi bi-building"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">{stats.kpis.total_entidades}</span>
-                  <span class="kpi-label">Entidades Cooperantes</span>
-                  <span class="kpi-sub">Activas</span>
-                </div>
-              </div>
-
-              <div class="kpi-card azul">
-                <div class="kpi-icon"><i class="bi bi-file-earmark-text"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">{stats.kpis.total_convenios}</span>
-                  <span class="kpi-label">Convenios</span>
-                  <span class="kpi-sub">Registrados</span>
-                </div>
-              </div>
-
-              <div class="kpi-card esmeralda">
-                <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">${(stats.kpis.presupuesto_total || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
-                  <span class="kpi-label">Presupuesto Acumulado</span>
-                  <span class="kpi-sub">Inversión planificada</span>
-                </div>
-              </div>
-
-              <div class="kpi-card verde">
-                <div class="kpi-icon"><i class="bi bi-geo-alt-fill"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">{stats.kpis.con_geo}</span>
-                  <span class="kpi-label">Georreferenciados</span>
-                  <span class="kpi-sub">{stats.kpis.cantones_cobertura || 0} cantones impactados</span>
-                </div>
-              </div>
-
-              <div class="kpi-card naranja">
-                <div class="kpi-icon"><i class="bi bi-speedometer2"></i></div>
-                <div class="kpi-body">
-                  <span class="kpi-num">{stats.kpis.prob_a_tiempo_pct}%</span>
-                  <span class="kpi-label">P(Cumplimiento a Tiempo)</span>
-                  <span class="kpi-sub">Modelo predictivo</span>
-                </div>
-              </div>
+      <!-- BLOQUE: MODELO DE MONITOREO DE RIESGO TEMPORAL -->
+      {#if stats.analisis_riesgo}
+        <div class="analytics-banner">
+          <div class="ab-header">
+            <div class="abh-title">
+              <i class="bi bi-shield-check text-verde"></i>
+              <h4>Modelo de Monitoreo de Riesgo Temporal</h4>
             </div>
-
-            <!-- BLOQUE: MODELO DE MONITOREO DE RIESGO TEMPORAL -->
-            {#if stats.analisis_riesgo}
-              <div class="analytics-banner">
-                <div class="ab-header">
-                  <div class="abh-title">
-                    <i class="bi bi-shield-check text-verde"></i>
-                    <h4>Modelo de Monitoreo de Riesgo Temporal</h4>
-                  </div>
-                  <span class="badge-prob">P(A tiempo): {stats.analisis_riesgo.probabilidad_cumplimiento}%</span>
-                </div>
-
-                <!-- BOTONES INTERACTIVOS DE SEMÁFORO -->
-                <div class="risk-breakdown">
-                  <button type="button" class="rb-card green" onclick={() => abrirModalRiesgo('bajo')}>
-                    <div class="rb-top">
-                      <span class="rb-num">{stats.analisis_riesgo.bajo}</span>
-                      <i class="bi bi-arrow-right-circle"></i>
-                    </div>
-                    <span class="rb-title">🟢 En Cronograma (>85%)</span>
-                    <span class="rb-sub">Clic para ver proyectos al día</span>
-                  </button>
-
-                  <button type="button" class="rb-card yellow" onclick={() => abrirModalRiesgo('medio')}>
-                    <div class="rb-top">
-                      <span class="rb-num">{stats.analisis_riesgo.medio}</span>
-                      <i class="bi bi-arrow-right-circle"></i>
-                    </div>
-                    <span class="rb-title">🟡 Alerta Preventiva (65-85%)</span>
-                    <span class="rb-sub">Clic para ver proyectos en seguimiento</span>
-                  </button>
-
-                  <button type="button" class="rb-card red" onclick={() => abrirModalRiesgo('alto')}>
-                    <div class="rb-top">
-                      <span class="rb-num">{stats.analisis_riesgo.alto}</span>
-                      <i class="bi bi-arrow-right-circle"></i>
-                    </div>
-                    <span class="rb-title">🔴 Riesgo Crítico / Vencidos</span>
-                    <span class="rb-sub">Clic para ver proyectos por vencer</span>
-                  </button>
-                </div>
-
-                <!-- LISTA DE PROYECTOS CRÍTICOS (AL DAR CLIC ABRE EL DETALLE) -->
-                {#if stats.analisis_riesgo.criticos && stats.analisis_riesgo.criticos.length > 0}
-                  <div class="criticos-box">
-                    <span class="criticos-title"><i class="bi bi-exclamation-triangle-fill"></i> Proyectos que requieren atención inmediata:</span>
-                    <div class="criticos-list">
-                      {#each stats.analisis_riesgo.criticos as cp}
-                        <button type="button" class="critico-item-btn" onclick={() => abrirDetalleProyecto(cp.id_proyecto)}>
-                          <div class="ci-main">
-                            <span class="ci-code">{cp.codigo}</span>
-                            <span class="ci-name" title={cp.nombre}>{cp.nombre}</span>
-                            <span class="ci-fac">{cp.facultad}</span>
-                          </div>
-                          <div class="ci-actions">
-                            <span class="ci-tag" class:vencido={cp.vencido}>
-                              {#if cp.vencido}
-                                <i class="bi bi-x-circle-fill"></i> Plazo vencido
-                              {:else}
-                                <i class="bi bi-clock-history"></i> {cp.dias_restantes} días ({cp.pct_tiempo}%)
-                              {/if}
-                            </span>
-                            <span class="btn-ci-open"><i class="bi bi-eye"></i> Ver Detalle</span>
-                          </div>
-                        </button>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-
-            <!-- ESTADÍSTICA DESCRIPTIVA DE PRESUPUESTOS -->
-            {#if stats.estadisticas_presupuesto}
-              <div class="chart-card full-card">
-                <h4 class="chart-title"><i class="bi bi-calculator-fill text-verde"></i> Análisis Estadístico Descriptivo de Inversión (USD)</h4>
-                <div class="stats-metric-grid">
-                  <div class="smg-item">
-                    <span class="smg-val">${stats.estadisticas_presupuesto.mediana.toLocaleString('es-EC')}</span>
-                    <span class="smg-label">Mediana (Q2)</span>
-                    <span class="smg-sub">Valor central robusto</span>
-                  </div>
-                  <div class="smg-item">
-                    <span class="smg-val">${stats.estadisticas_presupuesto.media.toLocaleString('es-EC')}</span>
-                    <span class="smg-label">Media Aritmética (μ)</span>
-                    <span class="smg-sub">Promedio presupuestario</span>
-                  </div>
-                  <div class="smg-item">
-                    <span class="smg-val">${stats.estadisticas_presupuesto.desviacion.toLocaleString('es-EC')}</span>
-                    <span class="smg-label">Desviación Estándar (σ)</span>
-                    <span class="smg-sub">Dispersión de montos</span>
-                  </div>
-                  <div class="smg-item">
-                    <span class="smg-val">${stats.estadisticas_presupuesto.iqr.toLocaleString('es-EC')}</span>
-                    <span class="smg-label">Rango Intercuartílico (IQR)</span>
-                    <span class="smg-sub">Q1: ${stats.estadisticas_presupuesto.q1} | Q3: ${stats.estadisticas_presupuesto.q3}</span>
-                  </div>
-                  <div class="smg-item">
-                    <span class="smg-val">{stats.kpis.duracion_mediana_meses} meses</span>
-                    <span class="smg-label">Duración Mediana</span>
-                    <span class="smg-sub">Promedio: {stats.kpis.duracion_promedio_meses}m</span>
-                  </div>
-                </div>
-              </div>
-            {/if}
-
-            <!-- FILA 1: ESTADOS + FACULTADES -->
-            <div class="charts-row">
-              <div class="chart-card sm">
-                <h4 class="chart-title"><i class="bi bi-pie-chart-fill text-verde"></i> Proyectos por estado</h4>
-                <div class="chart-wrap h220">
-                  <canvas use:chartAction={{
-                    type: 'doughnut',
-                    data: {
-                      labels: Object.keys(stats.estados || {}).map(k => ESTADO_LABEL[k] || k),
-                      datasets: [{
-                        data: Object.keys(stats.estados || {}).map(k => stats.estados[k]),
-                        backgroundColor: Object.keys(stats.estados || {}).map(k => ESTADO_COLORES[k] || '#888'),
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 6,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      cutout: '72%',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip }
-                    }
-                  }}></canvas>
-                </div>
-                <div class="estado-bars">
-                  {#each Object.entries(stats.estados || {}) as [k, v]}
-                    <div class="ebar">
-                      <span class="ebar-label">{ESTADO_LABEL[k] || k}</span>
-                      <div class="ebar-track">
-                        <div class="ebar-fill" style="width:{(v/(stats.kpis.total_proyectos||1)*100).toFixed(0)}%;background:{ESTADO_COLORES[k]}"></div>
-                      </div>
-                      <span class="ebar-val">{v} <small>({(v/(stats.kpis.total_proyectos||1)*100).toFixed(0)}%)</small></span>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-
-              <div class="chart-card lg">
-                <h4 class="chart-title"><i class="bi bi-bar-chart-line-fill text-verde"></i> Proyectos por facultad UTEQ</h4>
-                <div class="chart-wrap h320">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_facultad?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos',
-                        data: stats.por_facultad?.values || [],
-                        backgroundColor: PALETTE,
-                        borderRadius: 6,
-                        barThickness: 18,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: 'y',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        y: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- FILA 2: GEOGRAFÍA (PROVINCIAS + CANTONES) -->
-            <div class="charts-row">
-              <div class="chart-card">
-                <h4 class="chart-title"><i class="bi bi-map-fill text-verde"></i> Cobertura por provincia</h4>
-                <div class="chart-wrap h260">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_provincia?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos',
-                        data: stats.por_provincia?.values || [],
-                        backgroundColor: '#1b7505',
-                        borderRadius: 6,
-                        barThickness: 18,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: 'y',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        y: { grid: { display: false } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-
-              <div class="chart-card">
-                <h4 class="chart-title"><i class="bi bi-geo-fill text-dorado"></i> Cantones impactados</h4>
-                <div class="chart-wrap h260">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_canton?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos',
-                        data: stats.por_canton?.values || [],
-                        backgroundColor: '#dba112',
-                        borderRadius: 6,
-                        barThickness: 18,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: 'y',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        y: { grid: { display: false } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- FILA 3: ODS Y CARRERAS -->
-            <div class="charts-row">
-              <div class="chart-card">
-                <h4 class="chart-title"><i class="bi bi-globe-americas text-azul"></i> Alineación con Objetivos ODS</h4>
-                <div class="chart-wrap h260">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_ods?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos alineados',
-                        data: stats.por_ods?.values || [],
-                        backgroundColor: '#0284c7',
-                        borderRadius: 6,
-                        barThickness: 18,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: 'y',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        y: { grid: { display: false } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-
-              <div class="chart-card">
-                <h4 class="chart-title"><i class="bi bi-mortarboard-fill text-verde"></i> Proyectos por carrera académica</h4>
-                <div class="chart-wrap h260">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_carrera?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos',
-                        data: stats.por_carrera?.values || [],
-                        backgroundColor: '#2db80a',
-                        borderRadius: 6,
-                        barThickness: 18,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: 'y',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-                        y: { grid: { display: false } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- FILA 4: CONVENIOS + ENTIDADES + PERÍODOS -->
-            <div class="charts-row">
-              <div class="chart-card sm">
-                <h4 class="chart-title"><i class="bi bi-file-earmark-check-fill text-verde"></i> Convenios por estado</h4>
-                <div class="chart-wrap h200">
-                  <canvas use:chartAction={{
-                    type: 'doughnut',
-                    data: {
-                      labels: Object.keys(stats.convenios_estados || {}),
-                      datasets: [{
-                        data: Object.keys(stats.convenios_estados || {}).map(k => stats.convenios_estados[k]),
-                        backgroundColor: Object.keys(stats.convenios_estados || {}).map(k => CONV_COLORES[k] || '#888'),
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      cutout: '70%',
-                      plugins: { legend: { display: false }, tooltip: commonTooltip }
-                    }
-                  }}></canvas>
-                </div>
-                <div class="estado-bars sm-bars">
-                  {#each Object.entries(stats.convenios_estados || {}) as [k, v]}
-                    <div class="ebar">
-                      <span class="ebar-label">{k}</span>
-                      <div class="ebar-track">
-                        <div class="ebar-fill" style="width:{(v/(stats.kpis.total_convenios||1)*100).toFixed(0)}%;background:{CONV_COLORES[k]}"></div>
-                      </div>
-                      <span class="ebar-val">{v}</span>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-
-              <div class="chart-card sm">
-                <h4 class="chart-title"><i class="bi bi-buildings-fill text-dorado"></i> Entidades por tipo</h4>
-                <div class="chart-wrap h240">
-                  <canvas use:chartAction={{
-                    type: 'doughnut',
-                    data: {
-                      labels: stats.entidades_tipos?.labels || [],
-                      datasets: [{
-                        data: stats.entidades_tipos?.values || [],
-                        backgroundColor: PALETTE,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      cutout: '70%',
-                      plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
-                        tooltip: commonTooltip
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-
-              <div class="chart-card sm">
-                <h4 class="chart-title"><i class="bi bi-calendar-week-fill text-azul"></i> Proyectos por período</h4>
-                <div class="chart-wrap h240">
-                  <canvas use:chartAction={{
-                    type: 'bar',
-                    data: {
-                      labels: stats.por_periodo?.labels || [],
-                      datasets: [{
-                        label: 'Proyectos',
-                        data: stats.por_periodo?.values || [],
-                        backgroundColor: '#0284c7',
-                        borderRadius: 6,
-                        barThickness: 24,
-                      }]
-                    },
-                    options: {
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: { legend: { display: false }, tooltip: commonTooltip },
-                      scales: {
-                        x: { grid: { display: false } },
-                        y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
-                      }
-                    }
-                  }}></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- ÚLTIMOS PROYECTOS CON PAGINACIÓN -->
-            <div class="chart-card full-card">
-              <div class="card-hdr-flex">
-                <h4 class="chart-title"><i class="bi bi-clock-history text-verde"></i> ÚLTIMOS PROYECTOS REGISTRADOS</h4>
-                <a href="/proyectos" class="link-proys">Ir a lista completa de proyectos →</a>
-              </div>
-              
-              <div class="table-responsive">
-                <table class="mini-table">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Nombre del Proyecto</th>
-                      <th>Facultad & Carrera</th>
-                      <th>Fechas Planificadas</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {#each proyectosPaginados as p}
-                      <tr>
-                        <td><span class="code">{p.codigo}</span></td>
-                        <td class="td-trunc">
-                          <button type="button" class="btn-link-proy" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
-                            {p.nombre}
-                          </button>
-                        </td>
-                        <td class="txt-sm">
-                          <div><strong>{p.facultad}</strong></div>
-                          <div class="txt-muted">{p.carrera}</div>
-                        </td>
-                        <td class="txt-sm">{p.fecha_inicio} a {p.fecha_fin}</td>
-                        <td>
-                          <span class="badge-est" style="background:{ESTADO_COLORES[p.estado]}18;color:{ESTADO_COLORES[p.estado]};border:1px solid {ESTADO_COLORES[p.estado]}40">
-                            {ESTADO_LABEL[p.estado] || p.estado}
-                          </span>
-                        </td>
-                        <td>
-                          <div class="actions-cell">
-                            <button class="btn-action-sm" title="Ver Detalle" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
-                              <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn-action-sm edit" title="Editar Proyecto" onclick={() => goto(`/proyectos/${p.id_proyecto}/editar`)}>
-                              <i class="bi bi-pencil"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="pag-wrapper">
-                <Pagination
-                  bind:page={pageProy}
-                  bind:pageSize={pageSizeProy}
-                  totalItems={stats.ultimos_proyectos?.length || 0}
-                  itemLabel="proyectos"
-                />
-              </div>
-            </div>
-
+            <span class="badge-prob">P(A tiempo): {stats.analisis_riesgo.probabilidad_cumplimiento}%</span>
           </div>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             PESTAÑA 2: REPORTE EJECUTIVO DE PROYECTOS (OFICIAL)
-        ═══════════════════════════════════════════════════════════════ -->
-        {:else if activeTab === 'proyectos'}
-          <div class="report-document-card">
-            <div class="doc-header">
-              <div class="doc-logo-box">
-                <img src="/logo-uteq.png" alt="UTEQ" class="doc-logo" />
+          <!-- BOTONES INTERACTIVOS DE SEMÁFORO (ABREN EL MODAL CORRESPONDIENTE) -->
+          <div class="risk-breakdown">
+            <button type="button" class="rb-card green" onclick={() => abrirModalRiesgo('bajo')}>
+              <div class="rb-top">
+                <span class="rb-num">{stats.analisis_riesgo.bajo}</span>
+                <i class="bi bi-arrow-right-circle"></i>
               </div>
-              <div class="doc-title-box">
-                <h3>UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO</h3>
-                <h4>DIRECCIÓN DE VINCULACIÓN CON LA SOCIEDAD</h4>
-                <p class="doc-subtitle">MATRIZ GENERAL DE PROYECTOS DE VINCULACIÓN</p>
-                <div class="doc-meta-row">
-                  <span><strong>Período:</strong> {nombrePeriodoSeleccionado}</span>
-                  <span><strong>Fecha de emisión:</strong> {fechaActualFormateada}</span>
-                </div>
-              </div>
-            </div>
+              <span class="rb-title">🟢 En Cronograma (&gt;85%)</span>
+              <span class="rb-sub">Clic para ver proyectos al día</span>
+            </button>
 
-            <div class="doc-body">
-              <table class="doc-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Código</th>
-                    <th>Proyecto de Vinculación</th>
-                    <th>Facultad</th>
-                    <th>Carrera</th>
-                    <th>Vigencia</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each stats.ultimos_proyectos || [] as p, i}
-                    <tr>
-                      <td>{i + 1}</td>
-                      <td><strong>{p.codigo}</strong></td>
-                      <td>{p.nombre}</td>
-                      <td>{p.facultad}</td>
-                      <td>{p.carrera}</td>
-                      <td>{p.fecha_inicio} a {p.fecha_fin}</td>
-                      <td>
-                        <span class="badge-est" style="background:{ESTADO_COLORES[p.estado]}18;color:{ESTADO_COLORES[p.estado]}">
-                          {ESTADO_LABEL[p.estado] || p.estado}
-                        </span>
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
+            <button type="button" class="rb-card yellow" onclick={() => abrirModalRiesgo('medio')}>
+              <div class="rb-top">
+                <span class="rb-num">{stats.analisis_riesgo.medio}</span>
+                <i class="bi bi-arrow-right-circle"></i>
+              </div>
+              <span class="rb-title">🟡 Alerta Preventiva (65-85%)</span>
+              <span class="rb-sub">Clic para ver proyectos en seguimiento</span>
+            </button>
 
-            <div class="doc-firmas">
-              <div class="firma-col">
-                <div class="firma-linea"></div>
-                <span>DIRECTOR(A) DE VINCULACIÓN</span>
-                <small>Universidad Técnica Estatal de Quevedo</small>
+            <button type="button" class="rb-card red" onclick={() => abrirModalRiesgo('alto')}>
+              <div class="rb-top">
+                <span class="rb-num">{stats.analisis_riesgo.alto}</span>
+                <i class="bi bi-arrow-right-circle"></i>
               </div>
-              <div class="firma-col">
-                <div class="firma-linea"></div>
-                <span>RESPONSABLE DE PROYECTOS</span>
-                <small>Comisión de Vinculación con la Sociedad</small>
-              </div>
-            </div>
+              <span class="rb-title">🔴 Riesgo Crítico / Vencidos</span>
+              <span class="rb-sub">Clic para ver proyectos por vencer</span>
+            </button>
           </div>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             PESTAÑA 3: MATRIZ DE CONVENIOS (OFICIAL)
-        ═══════════════════════════════════════════════════════════════ -->
-        {:else if activeTab === 'convenios'}
-          <div class="report-document-card">
-            <div class="doc-header">
-              <div class="doc-logo-box">
-                <img src="/logo-uteq.png" alt="UTEQ" class="doc-logo" />
-              </div>
-              <div class="doc-title-box">
-                <h3>UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO</h3>
-                <h4>DIRECCIÓN DE VINCULACIÓN CON LA SOCIEDAD</h4>
-                <p class="doc-subtitle">MATRIZ INSTITUCIONAL DE CONVENIOS DE VINCULACIÓN</p>
-                <div class="doc-meta-row">
-                  <span><strong>Período:</strong> {nombrePeriodoSeleccionado}</span>
-                  <span><strong>Fecha de emisión:</strong> {fechaActualFormateada}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="doc-body">
-              <div class="kpis-grid mb-16">
-                <div class="kpi-card verde">
-                  <div class="kpi-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
-                  <div class="kpi-body">
-                    <span class="kpi-num">{stats.kpis.total_convenios}</span>
-                    <span class="kpi-label">Convenios Totales</span>
-                  </div>
-                </div>
-                <div class="kpi-card dorado">
-                  <div class="kpi-icon"><i class="bi bi-building"></i></div>
-                  <div class="kpi-body">
-                    <span class="kpi-num">{stats.kpis.total_entidades}</span>
-                    <span class="kpi-label">Entidades Vinculadas</span>
-                  </div>
-                </div>
-              </div>
-              <p class="txt-sub">Utiliza el botón superior "Imprimir Reporte" para generar el informe oficial con firmas institucionales.</p>
-            </div>
-
-            <div class="doc-firmas">
-              <div class="firma-col">
-                <div class="firma-linea"></div>
-                <span>DIRECTOR(A) DE VINCULACIÓN</span>
-                <small>Universidad Técnica Estatal de Quevedo</small>
-              </div>
-              <div class="firma-col">
-                <div class="firma-linea"></div>
-                <span>COORDINADOR(A) DE CONVENIOS</span>
-                <small>Comisión de Vinculación con la Sociedad</small>
+          <!-- LISTA DE PROYECTOS CRÍTICOS (AL DAR CLIC ABRE EL DETALLE) -->
+          {#if stats.analisis_riesgo.criticos && stats.analisis_riesgo.criticos.length > 0}
+            <div class="criticos-box">
+              <span class="criticos-title"><i class="bi bi-exclamation-triangle-fill"></i> Proyectos que requieren atención inmediata:</span>
+              <div class="criticos-list">
+                {#each stats.analisis_riesgo.criticos as cp}
+                  <button type="button" class="critico-item-btn" onclick={() => abrirDetalleProyecto(cp.id_proyecto)}>
+                    <div class="ci-main">
+                      <span class="ci-code">{cp.codigo}</span>
+                      <span class="ci-name" title={cp.nombre}>{cp.nombre}</span>
+                      <span class="ci-fac">{cp.facultad}</span>
+                    </div>
+                    <div class="ci-actions">
+                      <span class="ci-tag" class:vencido={cp.vencido}>
+                        {#if cp.vencido}
+                          <i class="bi bi-x-circle-fill"></i> Plazo vencido
+                        {:else}
+                          <i class="bi bi-clock-history"></i> {cp.dias_restantes} días ({cp.pct_tiempo}%)
+                        {/if}
+                      </span>
+                      <span class="btn-ci-open"><i class="bi bi-eye"></i> Ver Detalle</span>
+                    </div>
+                  </button>
+                {/each}
               </div>
             </div>
-          </div>
-        {/if}
-
-      {:else}
-        <div class="loading">No se pudieron cargar los datos del reporte.</div>
+          {/if}
+        </div>
       {/if}
+
+      <!-- ESTADÍSTICA DESCRIPTIVA DE PRESUPUESTOS -->
+      {#if stats.estadisticas_presupuesto}
+        <div class="chart-card full-card">
+          <h4 class="chart-title"><i class="bi bi-calculator-fill text-verde"></i> Análisis Estadístico Descriptivo de Inversión (USD)</h4>
+          <div class="stats-metric-grid">
+            <div class="smg-item">
+              <span class="smg-val">${stats.estadisticas_presupuesto.mediana.toLocaleString('es-EC')}</span>
+              <span class="smg-label">Mediana (Q2)</span>
+              <span class="smg-sub">Valor central robusto</span>
+            </div>
+            <div class="smg-item">
+              <span class="smg-val">${stats.estadisticas_presupuesto.media.toLocaleString('es-EC')}</span>
+              <span class="smg-label">Media Aritmética (μ)</span>
+              <span class="smg-sub">Promedio presupuestario</span>
+            </div>
+            <div class="smg-item">
+              <span class="smg-val">${stats.estadisticas_presupuesto.desviacion.toLocaleString('es-EC')}</span>
+              <span class="smg-label">Desviación Estándar (σ)</span>
+              <span class="smg-sub">Dispersión de montos</span>
+            </div>
+            <div class="smg-item">
+              <span class="smg-val">${stats.estadisticas_presupuesto.iqr.toLocaleString('es-EC')}</span>
+              <span class="smg-label">Rango Intercuartílico (IQR)</span>
+              <span class="smg-sub">Q1: ${stats.estadisticas_presupuesto.q1} | Q3: ${stats.estadisticas_presupuesto.q3}</span>
+            </div>
+            <div class="smg-item">
+              <span class="smg-val">{stats.kpis.duracion_mediana_meses} meses</span>
+              <span class="smg-label">Duración Mediana</span>
+              <span class="smg-sub">Promedio: {stats.kpis.duracion_promedio_meses}m</span>
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- FILA 1: ESTADOS + FACULTADES -->
+      <div class="charts-row">
+        <div class="chart-card sm">
+          <h4 class="chart-title"><i class="bi bi-pie-chart-fill text-verde"></i> Proyectos por estado</h4>
+          <div class="chart-wrap h220">
+            <canvas use:chartAction={{
+              type: 'doughnut',
+              data: {
+                labels: Object.keys(stats.estados || {}).map(k => ESTADO_LABEL[k] || k),
+                datasets: [{
+                  data: Object.keys(stats.estados || {}).map(k => stats.estados[k]),
+                  backgroundColor: Object.keys(stats.estados || {}).map(k => ESTADO_COLORES[k] || '#888'),
+                  borderWidth: 2,
+                  borderColor: '#ffffff',
+                  hoverOffset: 6,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: { legend: { display: false }, tooltip: commonTooltip }
+              }
+            }}></canvas>
+          </div>
+          <div class="estado-bars">
+            {#each Object.entries(stats.estados || {}) as [k, v]}
+              <div class="ebar">
+                <span class="ebar-label">{ESTADO_LABEL[k] || k}</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" style="width:{(v/(stats.kpis.total_proyectos||1)*100).toFixed(0)}%;background:{ESTADO_COLORES[k]}"></div>
+                </div>
+                <span class="ebar-val">{v} <small>({(v/(stats.kpis.total_proyectos||1)*100).toFixed(0)}%)</small></span>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="chart-card lg">
+          <h4 class="chart-title"><i class="bi bi-bar-chart-line-fill text-verde"></i> Proyectos por facultad UTEQ</h4>
+          <div class="chart-wrap h320">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_facultad?.labels || [],
+                datasets: [{
+                  label: 'Proyectos',
+                  data: stats.por_facultad?.values || [],
+                  backgroundColor: PALETTE,
+                  borderRadius: 6,
+                  barThickness: 18,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                  y: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILA 2: GEOGRAFÍA (PROVINCIAS + CANTONES) -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <h4 class="chart-title"><i class="bi bi-map-fill text-verde"></i> Cobertura por provincia</h4>
+          <div class="chart-wrap h260">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_provincia?.labels || [],
+                datasets: [{
+                  label: 'Proyectos',
+                  data: stats.por_provincia?.values || [],
+                  backgroundColor: '#1b7505',
+                  borderRadius: 6,
+                  barThickness: 18,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                  y: { grid: { display: false } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h4 class="chart-title"><i class="bi bi-geo-fill text-dorado"></i> Cantones impactados</h4>
+          <div class="chart-wrap h260">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_canton?.labels || [],
+                datasets: [{
+                  label: 'Proyectos',
+                  data: stats.por_canton?.values || [],
+                  backgroundColor: '#dba112',
+                  borderRadius: 6,
+                  barThickness: 18,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                  y: { grid: { display: false } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILA 3: ODS Y CARRERAS -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <h4 class="chart-title"><i class="bi bi-globe-americas text-azul"></i> Alineación con Objetivos ODS</h4>
+          <div class="chart-wrap h260">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_ods?.labels || [],
+                datasets: [{
+                  label: 'Proyectos alineados',
+                  data: stats.por_ods?.values || [],
+                  backgroundColor: '#0284c7',
+                  borderRadius: 6,
+                  barThickness: 18,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                  y: { grid: { display: false } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h4 class="chart-title"><i class="bi bi-mortarboard-fill text-verde"></i> Proyectos por carrera académica</h4>
+          <div class="chart-wrap h260">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_carrera?.labels || [],
+                datasets: [{
+                  label: 'Proyectos',
+                  data: stats.por_carrera?.values || [],
+                  backgroundColor: '#2db80a',
+                  borderRadius: 6,
+                  barThickness: 18,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
+                  y: { grid: { display: false } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILA 4: CONVENIOS + ENTIDADES + PERÍODOS -->
+      <div class="charts-row">
+        <div class="chart-card sm">
+          <h4 class="chart-title"><i class="bi bi-file-earmark-check-fill text-verde"></i> Convenios por estado</h4>
+          <div class="chart-wrap h200">
+            <canvas use:chartAction={{
+              type: 'doughnut',
+              data: {
+                labels: Object.keys(stats.convenios_estados || {}),
+                datasets: [{
+                  data: Object.keys(stats.convenios_estados || {}).map(k => stats.convenios_estados[k]),
+                  backgroundColor: Object.keys(stats.convenios_estados || {}).map(k => CONV_COLORES[k] || '#888'),
+                  borderWidth: 2,
+                  borderColor: '#ffffff',
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: { legend: { display: false }, tooltip: commonTooltip }
+              }
+            }}></canvas>
+          </div>
+          <div class="estado-bars sm-bars">
+            {#each Object.entries(stats.convenios_estados || {}) as [k, v]}
+              <div class="ebar">
+                <span class="ebar-label">{k}</span>
+                <div class="ebar-track">
+                  <div class="ebar-fill" style="width:{(v/(stats.kpis.total_convenios||1)*100).toFixed(0)}%;background:{CONV_COLORES[k]}"></div>
+                </div>
+                <span class="ebar-val">{v}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <div class="chart-card sm">
+          <h4 class="chart-title"><i class="bi bi-buildings-fill text-dorado"></i> Entidades por tipo</h4>
+          <div class="chart-wrap h240">
+            <canvas use:chartAction={{
+              type: 'doughnut',
+              data: {
+                labels: stats.entidades_tipos?.labels || [],
+                datasets: [{
+                  data: stats.entidades_tipos?.values || [],
+                  backgroundColor: PALETTE,
+                  borderWidth: 2,
+                  borderColor: '#ffffff',
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                  legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+                  tooltip: commonTooltip
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card sm">
+          <h4 class="chart-title"><i class="bi bi-calendar-week-fill text-azul"></i> Proyectos por período</h4>
+          <div class="chart-wrap h240">
+            <canvas use:chartAction={{
+              type: 'bar',
+              data: {
+                labels: stats.por_periodo?.labels || [],
+                datasets: [{
+                  label: 'Proyectos',
+                  data: stats.por_periodo?.values || [],
+                  backgroundColor: '#0284c7',
+                  borderRadius: 6,
+                  barThickness: 24,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: commonTooltip },
+                scales: {
+                  x: { grid: { display: false } },
+                  y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
+                }
+              }
+            }}></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÚLTIMOS PROYECTOS CON PAGINACIÓN -->
+      <div class="chart-card full-card">
+        <div class="card-hdr-flex">
+          <h4 class="chart-title"><i class="bi bi-clock-history text-verde"></i> ÚLTIMOS PROYECTOS REGISTRADOS</h4>
+          <a href="/proyectos" class="link-proys">Ir a lista completa de proyectos →</a>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre del Proyecto</th>
+                <th>Facultad & Carrera</th>
+                <th>Fechas Planificadas</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each proyectosPaginados as p}
+                <tr>
+                  <td><span class="code">{p.codigo}</span></td>
+                  <td class="td-trunc">
+                    <button type="button" class="btn-link-proy" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
+                      {p.nombre}
+                    </button>
+                  </td>
+                  <td class="txt-sm">
+                    <div><strong>{p.facultad}</strong></div>
+                    <div class="txt-muted">{p.carrera}</div>
+                  </td>
+                  <td class="txt-sm">{p.fecha_inicio} a {p.fecha_fin}</td>
+                  <td>
+                    <span class="badge-est" style="background:{ESTADO_COLORES[p.estado]}18;color:{ESTADO_COLORES[p.estado]};border:1px solid {ESTADO_COLORES[p.estado]}40">
+                      {ESTADO_LABEL[p.estado] || p.estado}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions-cell">
+                      <button class="btn-action-sm" title="Ver Detalle" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn-action-sm edit" title="Editar Proyecto" onclick={() => goto(`/proyectos/${p.id_proyecto}/editar`)}>
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pag-wrapper">
+          <Pagination
+            bind:page={pageProy}
+            bind:pageSize={pageSizeProy}
+            totalItems={stats.ultimos_proyectos?.length || 0}
+            itemLabel="proyectos"
+          />
+        </div>
+      </div>
+
     </div>
-  </div>
+  {:else}
+    <div class="loading">No se pudieron cargar los datos del reporte.</div>
+  {/if}
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
@@ -1101,39 +923,9 @@
   }
   .btn-print:hover { background: #134217; }
 
-  .page-wrap {
+  .rep-container {
     padding: 20px 24px; width: 100%; box-sizing: border-box;
   }
-
-  .layout-grid {
-    display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start;
-  }
-
-  /* SIDEBAR FLOTANTE */
-  .sidebar-col { position: sticky; top: 20px; }
-  .sidebar-card {
-    background: #ffffff; border-radius: 14px; border: 1px solid var(--borde, #e0e0e0);
-    padding: 16px 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 4px;
-  }
-  .sb-header-title {
-    font-size: 0.7rem; font-weight: 800; color: #94a3b8; letter-spacing: 0.06em;
-    padding: 4px 10px; margin-bottom: 4px;
-  }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
-    border: none; border-radius: 8px; background: transparent;
-    font-family: inherit; font-size: 0.84rem; font-weight: 700; color: #475569;
-    cursor: pointer; transition: all 0.15s ease; text-align: left; text-decoration: none;
-  }
-  .nav-item i { font-size: 1.05rem; color: #64748b; }
-  .nav-item:hover { background: #f1f5f9; color: #0f172a; }
-  .nav-item.active {
-    background: var(--verde-claro, #e8f5e0); color: var(--verde, #1b7505); font-weight: 800;
-  }
-  .nav-item.active i { color: var(--verde, #1b7505); }
-  .sb-divider { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
-
-  .main-col { min-width: 0; }
 
   .loading {
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -1291,28 +1083,6 @@
   .btn-action-sm.edit:hover { background: var(--verde-claro, #e8f5e0); color: var(--verde, #1b7505); border-color: #86efac; }
   .pag-wrapper { margin-top: 14px; }
 
-  /* DOCUMENTOS OFICIALES IMPRIMIBLES */
-  .report-document-card {
-    background: #ffffff; border-radius: 14px; border: 1px solid var(--borde, #e0e0e0); padding: 36px 40px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.03);
-  }
-  .doc-header { display: flex; align-items: center; gap: 20px; border-bottom: 2.5px solid #0f172a; padding-bottom: 20px; margin-bottom: 24px; }
-  .doc-logo { width: 70px; height: auto; object-fit: contain; }
-  .doc-title-box h3 { font-size: 1.2rem; font-weight: 900; color: #0f172a; margin: 0; }
-  .doc-title-box h4 { font-size: 0.95rem; font-weight: 800; color: var(--verde, #1b7505); margin: 2px 0; }
-  .doc-subtitle { font-size: 0.86rem; color: #475569; font-weight: 800; margin: 4px 0; }
-  .doc-meta-row { display: flex; gap: 20px; font-size: 0.78rem; color: #64748b; margin-top: 6px; }
-
-  .doc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
-  .doc-table th { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 12px; font-size: 0.74rem; font-weight: 800; color: #0f172a; text-transform: uppercase; }
-  .doc-table td { border: 1px solid #e2e8f0; padding: 10px 12px; color: #1e293b; }
-
-  .doc-firmas { display: flex; justify-content: space-around; margin-top: 60px; padding-top: 20px; }
-  .firma-col { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
-  .firma-linea { width: 220px; border-top: 1.5px solid #334155; margin-bottom: 8px; }
-  .firma-col span { font-size: 0.78rem; font-weight: 800; color: #0f172a; }
-  .firma-col small { font-size: 0.7rem; color: #64748b; }
-
   /* MODAL DE CONFIGURACIÓN DE IMPRESIÓN */
   .modal-print-setup { max-width: 650px; }
   .modal-hdr-uteq {
@@ -1431,21 +1201,15 @@
   .text-verde { color: var(--verde, #1b7505); }
   .text-azul  { color: #0284c7; }
   .text-dorado { color: var(--dorado, #dba112); }
-  .mb-16 { margin-bottom: 16px; }
-  .txt-sub { font-size: 0.82rem; color: #64748b; }
 
   @media (max-width: 992px) {
-    .layout-grid { grid-template-columns: 1fr; }
     .chart-card.lg { grid-column: span 1; }
-    .sidebar-col { position: static; }
   }
 
   @media print {
-    .subbar, .sidebar-col, .btn-print, .rep-actions, .modal-backdrop { display: none !important; }
-    .page-wrap { padding: 0 !important; }
-    .layout-grid { display: block !important; }
+    .subbar, .btn-print, .rep-actions, .modal-backdrop { display: none !important; }
+    .rep-container { padding: 0 !important; }
     .rep-wrap { padding: 0 !important; gap: 14px !important; }
-    .chart-card, .report-document-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; margin-bottom: 16px; }
-    .doc-firmas { break-inside: avoid; }
+    .chart-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; margin-bottom: 16px; }
   }
 </style>
