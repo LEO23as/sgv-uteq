@@ -248,6 +248,8 @@
         </div>
       {/if}
 
+      <h3 class="rep-section"><span>Resumen ejecutivo</span></h3>
+
       <!-- KPIS PRINCIPALES -->
       <div class="kpis-grid" class:no-print={!printOptKpis}>
         <div class="kpi-card verde">
@@ -382,6 +384,8 @@
         </div>
       {/if}
 
+      <h3 class="rep-section"><span>Distribución de proyectos</span></h3>
+
       <!-- FILA 1: ESTADOS + FACULTADES -->
       <div class="charts-row" class:no-print={!printOptFacultades}>
         <div class="chart-card sm">
@@ -449,6 +453,8 @@
           </div>
         </div>
       </div>
+
+      <h3 class="rep-section"><span>Cobertura territorial e impacto</span></h3>
 
       <!-- FILA 2: GEOGRAFÍA (PROVINCIAS + CANTONES) -->
       <div class="charts-row" class:no-print={!printOptProvincias}>
@@ -571,6 +577,8 @@
           </div>
         </div>
       </div>
+
+      <h3 class="rep-section"><span>Convenios, entidades y períodos</span></h3>
 
       <!-- FILA 4: CONVENIOS + ENTIDADES + PERÍODOS -->
       <div class="charts-row" class:no-print={!printOptProvincias}>
@@ -997,6 +1005,18 @@
   .chart-warning i { font-size: 1.1rem; }
 
   .rep-wrap { display: flex; flex-direction: column; gap: 18px; }
+
+  .rep-section {
+    display: flex; align-items: center; gap: 14px;
+    margin: 10px 0 -2px; font-size: 0.78rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.08em; color: #1b7505;
+  }
+  .rep-section::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, #cbd5e1, transparent);
+  }
+  .rep-section span { flex-shrink: 0; }
+  .rep-section:first-of-type { margin-top: 0; }
 
   /* KPIs Grid */
   .kpis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
