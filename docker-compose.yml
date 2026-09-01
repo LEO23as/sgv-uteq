@@ -11,6 +11,10 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+    # Credenciales sensibles (SECRET_KEY, EMAIL_HOST_PASSWORD, etc.) se leen
+    # desde el archivo .env de la raiz — NO se versionan en este archivo.
+    env_file:
+      - .env
     environment:
       - DB_NAME=postgres
       - DB_USER=postgres
@@ -18,11 +22,6 @@ services:
       - DB_HOST=host.docker.internal
       - DB_PORT=5432
       - DB_OPTIONS=-c search_path=public,sga_principal
-      - EMAIL_HOST=smtp.gmail.com
-      - EMAIL_PORT=587
-      - EMAIL_HOST_USER=pcastrol@uteq.edu.ec
-      - EMAIL_HOST_PASSWORD=dkabuebwozjpntwl
-      - DEFAULT_FROM_EMAIL=pcastrol@uteq.edu.ec
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
