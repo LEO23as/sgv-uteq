@@ -218,6 +218,19 @@
   {:else if stats}
     <div class="rep-wrap">
 
+      <!-- ENCABEZADO OFICIAL (solo impresión) -->
+      <header class="print-header">
+        <div class="ph-inst">
+          <strong>UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO</strong>
+          <span>Dirección de Vinculación con la Sociedad</span>
+        </div>
+        <h1 class="ph-title">Reporte de Gestión y Estadísticas de Vinculación</h1>
+        <div class="ph-meta">
+          <span>Período: <strong>{nombrePeriodoSeleccionado}</strong></span>
+          <span>Fecha de emisión: <strong>{fechaActualFormateada}</strong></span>
+        </div>
+      </header>
+
       {#if chartError}
         <div class="chart-warning">
           <i class="bi bi-bar-chart-line"></i>
@@ -236,7 +249,7 @@
       {/if}
 
       <!-- KPIS PRINCIPALES -->
-      <div class="kpis-grid">
+      <div class="kpis-grid" class:no-print={!printOptKpis}>
         <div class="kpi-card verde">
           <div class="kpi-icon"><i class="bi bi-folder2-open"></i></div>
           <div class="kpi-body">
@@ -294,7 +307,7 @@
 
       <!-- BLOQUE: MODELO DE MONITOREO DE RIESGO TEMPORAL -->
       {#if stats.analisis_riesgo}
-        <div class="analytics-banner">
+        <div class="analytics-banner" class:no-print={!printOptRiesgo}>
           <div class="ab-header">
             <div class="abh-title">
               <i class="bi bi-shield-check text-verde"></i>
@@ -337,7 +350,7 @@
 
       <!-- ESTADÍSTICA DESCRIPTIVA DE PRESUPUESTOS -->
       {#if stats.estadisticas_presupuesto}
-        <div class="chart-card full-card">
+        <div class="chart-card full-card" class:no-print={!printOptStats}>
           <h4 class="chart-title"><i class="bi bi-calculator-fill text-verde"></i> Análisis Estadístico Descriptivo de Inversión (USD)</h4>
           <div class="stats-metric-grid">
             <div class="smg-item">
@@ -370,7 +383,7 @@
       {/if}
 
       <!-- FILA 1: ESTADOS + FACULTADES -->
-      <div class="charts-row">
+      <div class="charts-row" class:no-print={!printOptFacultades}>
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-pie-chart-fill text-verde"></i> Proyectos por estado</h4>
           <div class="chart-wrap h220">
@@ -438,7 +451,7 @@
       </div>
 
       <!-- FILA 2: GEOGRAFÍA (PROVINCIAS + CANTONES) -->
-      <div class="charts-row">
+      <div class="charts-row" class:no-print={!printOptProvincias}>
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-map-fill text-verde"></i> Cobertura por provincia</h4>
           <div class="chart-wrap h260">
@@ -499,7 +512,7 @@
       </div>
 
       <!-- FILA 3: ODS Y CARRERAS -->
-      <div class="charts-row">
+      <div class="charts-row" class:no-print={!printOptProvincias}>
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-globe-americas text-azul"></i> Alineación con Objetivos ODS</h4>
           <div class="chart-wrap h260">
@@ -560,7 +573,7 @@
       </div>
 
       <!-- FILA 4: CONVENIOS + ENTIDADES + PERÍODOS -->
-      <div class="charts-row">
+      <div class="charts-row" class:no-print={!printOptProvincias}>
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-file-earmark-check-fill text-verde"></i> Convenios por estado</h4>
           <div class="chart-wrap h200">
@@ -653,7 +666,7 @@
       </div>
 
       <!-- ÚLTIMOS PROYECTOS CON PAGINACIÓN -->
-      <div class="chart-card full-card">
+      <div class="chart-card full-card" class:no-print={!printOptProyectos}>
         <div class="card-hdr-flex">
           <h4 class="chart-title"><i class="bi bi-clock-history text-verde"></i> ÚLTIMOS PROYECTOS REGISTRADOS</h4>
           <a href="/proyectos" class="link-proys">Ir a lista completa de proyectos →</a>
@@ -715,6 +728,20 @@
           />
         </div>
       </div>
+
+      <!-- PIE OFICIAL CON FIRMAS (solo impresión) -->
+      <footer class="print-footer">
+        <div class="pf-sign">
+          <span class="pf-line"></span>
+          <strong>Elaborado por</strong>
+          <span>Técnico de Vinculación</span>
+        </div>
+        <div class="pf-sign">
+          <span class="pf-line"></span>
+          <strong>Revisado y aprobado por</strong>
+          <span>Dirección de Vinculación con la Sociedad</span>
+        </div>
+      </footer>
 
     </div>
   {:else}
@@ -1234,10 +1261,51 @@
     .chart-card.lg { grid-column: span 1; }
   }
 
+  /* Encabezado y pie oficiales: ocultos en pantalla, visibles al imprimir */
+  .print-header, .print-footer { display: none; }
+
+  @page {
+    size: A4;
+    margin: 16mm 14mm 18mm;
+  }
+
   @media print {
-    .subbar, .btn-print, .rep-actions, .modal-backdrop { display: none !important; }
+    :global(body) { background: #ffffff !important; }
+    .subbar, .btn-print, .rep-actions, .modal-backdrop,
+    .pag-wrapper, .actions-cell, .link-proys, .card-hdr-flex .link-proys { display: none !important; }
+    .no-print { display: none !important; }
+
     .rep-container { padding: 0 !important; }
-    .rep-wrap { padding: 0 !important; gap: 14px !important; }
-    .chart-card { break-inside: avoid; border: 1px solid #ccc !important; box-shadow: none !important; margin-bottom: 16px; }
+    .rep-wrap { padding: 0 !important; gap: 12px !important; }
+
+    .print-header {
+      display: block; margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 2px solid #1b7505; text-align: center;
+    }
+    .ph-inst { display: flex; flex-direction: column; gap: 1px; }
+    .ph-inst strong { font-size: 11pt; letter-spacing: 0.03em; color: #0f172a; }
+    .ph-inst span { font-size: 9pt; color: #475569; }
+    .ph-title { font-size: 13pt; font-weight: 800; color: #1b7505; margin: 8px 0 6px; }
+    .ph-meta { display: flex; justify-content: center; gap: 24px; font-size: 8.5pt; color: #334155; }
+
+    .print-footer {
+      display: flex; justify-content: space-around; gap: 40px;
+      margin-top: 30px; padding-top: 10px;
+    }
+    .pf-sign { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+    .pf-line { display: block; width: 200px; border-top: 1px solid #334155; margin-bottom: 4px; }
+    .pf-sign strong { font-size: 8.5pt; color: #0f172a; }
+    .pf-sign span { font-size: 7.5pt; color: #64748b; }
+
+    .charts-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    .chart-card {
+      break-inside: avoid; border: 1px solid #cbd5e1 !important;
+      box-shadow: none !important; margin-bottom: 10px; padding: 12px 14px !important;
+    }
+    .chart-card.lg, .chart-card.full-card { grid-column: 1 / -1 !important; }
+    .kpis-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+    .kpi-card { break-inside: avoid; box-shadow: none !important; }
+    .analytics-banner { break-inside: avoid; box-shadow: none !important; }
+    canvas { max-height: 240px !important; }
   }
 </style>
