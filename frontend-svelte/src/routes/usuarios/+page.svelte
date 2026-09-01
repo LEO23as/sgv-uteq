@@ -44,6 +44,10 @@
     })
   );
 
+  const paginatedUsuarios = $derived(
+    usuariosFiltrados.slice((page - 1) * pageSize, page * pageSize)
+  );
+
   async function cargarDatos() {
     cargando = true;
     try {
