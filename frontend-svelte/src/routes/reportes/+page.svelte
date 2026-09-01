@@ -104,6 +104,13 @@
     }
   }
 
+  // Copia 100% plana: Chart.js hace Object.defineProperty sobre lo que recibe y
+  // los arrays/objetos de `stats` son proxies reactivos de Svelte 5 (state_descriptors_fixed).
+  function planoConfig(c) {
+    try { return structuredClone($state.snapshot(c)); }
+    catch { return JSON.parse(JSON.stringify(c)); }
+  }
+
   function chartAction(node, config) {
     let chart = null;
     let cfg = config;
@@ -113,7 +120,7 @@
       if (!ChartModule || !cfg || chart) return;
       const previo = ChartModule.getChart ? ChartModule.getChart(node) : null;
       if (previo) previo.destroy();
-      chart = new ChartModule(node, cfg);
+      chart = new ChartModule(node, planoConfig(cfg));
     }
 
     build();
@@ -130,8 +137,9 @@
       update(newConfig) {
         cfg = newConfig;
         if (!chart) { build(); return; }
-        chart.data = newConfig.data;
-        chart.options = newConfig.options;
+        const plano = planoConfig(newConfig);
+        chart.data = plano.data;
+        chart.options = plano.options;
         chart.update('none');
       },
       destroy() {
