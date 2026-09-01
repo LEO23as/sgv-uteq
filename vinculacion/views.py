@@ -1617,12 +1617,27 @@ def api_entidades(request):
 def api_proyectos(request):
     if not request.session.get('usuario_id'):
         return Response({'error': 'No autenticado'}, status=401)
-    q = request.GET.get('q', '')
+    q = request.GET.get('q', '').strip()
+    facultad_id = request.GET.get('facultad')
+    carrera_id = request.GET.get('carrera')
+    periodo_id = request.GET.get('periodo')
+    estado = request.GET.get('estado')
+
     qs = Proyecto.objects.select_related(
         'id_facultad', 'id_carrera', 'id_periodo_inicio'
     ).all().order_by('-creado_en')
+
     if q:
-        qs = qs.filter(Q(nombre__icontains=q) | Q(codigo__icontains=q))
+        qs = qs.filter(Q(nombre__icontains=q) | Q(codigo__icontains=q) | Q(nombre_corto__icontains=q))
+    if facultad_id:
+        qs = qs.filter(id_facultad_id=facultad_id)
+    if carrera_id:
+        qs = qs.filter(id_carrera_id=carrera_id)
+    if periodo_id:
+        qs = qs.filter(id_periodo_inicio_id=periodo_id)
+    if estado:
+        qs = qs.filter(estado=estado)
+
     return Response(ProyectoSerializer(qs, many=True).data)
 
 

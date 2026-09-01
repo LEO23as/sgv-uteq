@@ -48,14 +48,18 @@ class ProyectoSerializer(serializers.ModelSerializer):
     facultad_nombre = serializers.CharField(source='id_facultad.nombre', read_only=True)
     carrera_nombre = serializers.CharField(source='id_carrera.nombre', read_only=True)
     periodo_inicio_nombre = serializers.CharField(source='id_periodo_inicio.nombre', read_only=True)
+    id_facultad = serializers.IntegerField(source='id_facultad_id', read_only=True)
+    id_carrera = serializers.IntegerField(source='id_carrera_id', read_only=True)
+    id_periodo_inicio = serializers.IntegerField(source='id_periodo_inicio_id', read_only=True)
 
     class Meta:
         model = Proyecto
         fields = [
             'id_proyecto', 'codigo', 'nombre', 'nombre_corto',
+            'id_facultad', 'id_carrera', 'id_periodo_inicio',
             'facultad_nombre', 'carrera_nombre', 'periodo_inicio_nombre',
             'estado', 'provincia', 'canton', 'latitud', 'longitud',
-            'fecha_inicio', 'fecha_fin_planificada', 'creado_en'
+            'fecha_inicio', 'fecha_fin_planificada', 'fecha_fin_real', 'creado_en'
         ]
 
 
