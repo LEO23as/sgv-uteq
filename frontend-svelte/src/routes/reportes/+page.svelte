@@ -9,7 +9,9 @@
   let periodos = $state([]);
   let periodoFiltro = $state('');
   let loading = $state(true);
+  let statsError = $state(false);
   let ChartModule = $state(null);
+  let chartError = $state(false);
 
   // Modales
   let modalProyectoId = $state(null);
@@ -78,6 +80,7 @@
       ChartModule = Chart;
     } catch (e) {
       console.error('Error cargando Chart.js', e);
+      chartError = true;
     }
 
     try {
@@ -89,11 +92,13 @@
 
   async function cargarEstadisticas() {
     loading = true;
+    statsError = false;
     try {
       const url = periodoFiltro ? `/api/reportes/stats/?periodo=${periodoFiltro}` : '/api/reportes/stats/';
       stats = await fetchAPI(url);
     } catch {
       stats = null;
+      statsError = true;
     } finally {
       loading = false;
     }
@@ -191,10 +196,23 @@
 </div>
 
 <div class="rep-container">
-  {#if loading || !ChartModule}
+  {#if loading || (!ChartModule && !chartError)}
     <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Generando análisis estadístico e inferencial...</div>
+  {:else if statsError}
+    <div class="rep-error">
+      <i class="bi bi-exclamation-triangle"></i>
+      <p>No se pudieron cargar los datos del reporte.</p>
+      <button class="btn-retry" onclick={cargarEstadisticas}><i class="bi bi-arrow-clockwise"></i> Reintentar</button>
+    </div>
   {:else if stats}
     <div class="rep-wrap">
+
+      {#if chartError}
+        <div class="chart-warning">
+          <i class="bi bi-bar-chart-line"></i>
+          No se pudo cargar la librería de gráficos. Los indicadores numéricos y las tablas se muestran igual.
+        </div>
+      {/if}
 
       <!-- KPIS PRINCIPALES -->
       <div class="kpis-grid">
@@ -679,7 +697,11 @@
 
     </div>
   {:else}
-    <div class="loading">No se pudieron cargar los datos del reporte.</div>
+    <div class="rep-error">
+      <i class="bi bi-exclamation-triangle"></i>
+      <p>No se pudieron cargar los datos del reporte.</p>
+      <button class="btn-retry" onclick={cargarEstadisticas}><i class="bi bi-arrow-clockwise"></i> Reintentar</button>
+    </div>
   {/if}
 </div>
 
@@ -905,6 +927,26 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { display: inline-block; animation: spin 0.7s linear infinite; }
+
+  .rep-error {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    padding: 60px 20px; text-align: center;
+  }
+  .rep-error i { font-size: 2.4rem; color: #f59e0b; }
+  .rep-error p { margin: 0; font-size: 0.9rem; font-weight: 700; color: #64748b; }
+  .btn-retry {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--verde, #1b7505); color: #fff; border: none; border-radius: 20px;
+    padding: 8px 18px; font-size: 0.8rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  }
+  .btn-retry:hover { background: #134217; }
+
+  .chart-warning {
+    display: flex; align-items: center; gap: 10px;
+    background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+    border-radius: 12px; padding: 12px 16px; font-size: 0.8rem; font-weight: 700;
+  }
+  .chart-warning i { font-size: 1.1rem; }
 
   .rep-wrap { display: flex; flex-direction: column; gap: 18px; }
 
