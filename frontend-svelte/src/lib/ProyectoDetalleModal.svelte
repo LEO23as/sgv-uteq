@@ -153,6 +153,10 @@
     }
   }
 
+  function imprimirFicha() {
+    window.print();
+  }
+
   function onKeydown(e) {
     if (e.key === 'Escape' && isOpen) {
       if (fotoActiva) fotoActiva = null;
@@ -166,9 +170,19 @@
 {#if isOpen}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class="modal-backdrop" onclick={() => onClose?.()}>
-    <div class="modal-card" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <div class="modal-card printable-modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
       
-      <!-- HEADER -->
+      <!-- ENCABEZADO INSTITUCIONAL OFICIAL UTEQ PARA IMPRESIÓN -->
+      <div class="print-official-header">
+        <img src="/logo-uteq.png" alt="UTEQ" class="poh-logo" />
+        <div class="poh-title-box">
+          <h3>UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO</h3>
+          <h4>DIRECCIÓN DE VINCULACIÓN CON LA SOCIEDAD</h4>
+          <p>FICHA TÉCNICA OFICIAL DEL PROYECTO DE VINCULACIÓN</p>
+        </div>
+      </div>
+
+      <!-- HEADER EN PANTALLA -->
       <div class="modal-header">
         <div class="mh-left">
           {#if proy?.codigo}
@@ -317,9 +331,17 @@
                     </div>
                   {/each}
                 </div>
-              {:else}
-                <p class="empty-docs">Aún no se han subido documentos al portafolio.</p>
-              {/if}
+          <!-- FIRMAS OFICIALES UTEQ (SOLO EN IMPRESIÓN) -->
+          <div class="print-official-firmas">
+            <div class="pof-col">
+              <div class="pof-line"></div>
+              <span>DIRECTOR(A) DE VINCULACIÓN</span>
+              <small>Universidad Técnica Estatal de Quevedo</small>
+            </div>
+            <div class="pof-col">
+              <div class="pof-line"></div>
+              <span>DIRECTOR / RESPONSABLE DEL PROYECTO</span>
+              <small>{proy.director_proyecto || 'Docente Responsable'}</small>
             </div>
           </div>
         {/if}
@@ -327,6 +349,9 @@
 
       <!-- FOOTER -->
       <div class="modal-footer">
+        <button type="button" class="btn-modal-print" onclick={imprimirFicha}>
+          <i class="bi bi-printer-fill"></i> Imprimir Ficha PDF
+        </button>
         <button type="button" class="btn-modal-close" onclick={() => onClose?.()}>
           Cerrar
         </button>
@@ -470,10 +495,19 @@
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;
   }
+  .btn-modal-print {
+    background: #ffffff; border: 1.5px solid var(--verde, #1b7505); color: var(--verde, #1b7505);
+    padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: .84rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s ease;
+  }
+  .btn-modal-print:hover { background: var(--verde-claro, #e8f5e0); }
   .btn-modal-close { background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: .84rem; cursor: pointer; }
   .btn-modal-close:hover { background: #f1f5f9; }
-  .btn-modal-edit { background: #1b7505; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-modal-edit { background: var(--verde, #1b7505); color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: .84rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .btn-modal-edit:hover { background: #145c04; }
+
+  .print-official-header { display: none; }
+  .print-official-firmas { display: none; }
 
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   .lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 8px; object-fit: contain; }
@@ -488,5 +522,30 @@
     .full-col { grid-column: span 1; }
     .info-grid { grid-template-columns: 1fr; }
     .info-item.full { grid-column: span 1; }
+  }
+
+  @media print {
+    .modal-backdrop { position: static !important; background: none !important; padding: 0 !important; }
+    .modal-card { max-width: 100% !important; max-height: none !important; box-shadow: none !important; border: none !important; }
+    .modal-header, .modal-footer, .doc-upload-row, .btn-doc-del { display: none !important; }
+    .print-official-header {
+      display: flex !important; align-items: center; gap: 16px;
+      border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 20px;
+    }
+    .poh-logo { width: 65px; height: auto; object-fit: contain; }
+    .poh-title-box h3 { font-size: 1.15rem; font-weight: 900; color: #0f172a; margin: 0; }
+    .poh-title-box h4 { font-size: .9rem; font-weight: 800; color: #1b7505; margin: 2px 0; }
+    .poh-title-box p { font-size: .8rem; font-weight: 800; color: #475569; margin: 2px 0; }
+
+    .print-official-firmas {
+      display: flex !important; justify-content: space-around;
+      margin-top: 50px; padding-top: 20px; break-inside: avoid;
+    }
+    .pof-col { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+    .pof-line { width: 220px; border-top: 1.5px solid #334155; margin-bottom: 6px; }
+    .pof-col span { font-size: .78rem; font-weight: 800; color: #0f172a; }
+    .pof-col small { font-size: .7rem; color: #64748b; }
+
+    .card-detail { break-inside: avoid; border: 1px solid #ddd !important; }
   }
 </style>
