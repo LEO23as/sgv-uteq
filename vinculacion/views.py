@@ -2533,6 +2533,81 @@ def api_reportes_stats(request):
     en_ejecucion = estados_count.get('EN_EJECUCION', 0)
     finalizado = estados_count.get('FINALIZADO', 0)
 
+    # Modelo Probabilístico de Riesgo Temporal (Estimación de Cumplimiento)
+    hoy = timezone.now().date()
+    proyectos_en_ejec = list(qs_proyectos.filter(estado='EN_EJECUCION'))
+    bajo_riesgo = 0
+    medio_riesgo = 0
+    alto_riesgo = 0
+    proyectos_criticos = []
+
+    for p in proyectos_en_ejec:
+        if p.fecha_inicio and p.fecha_fin_planificada:
+            dias_totales = max(1, (p.fecha_fin_planificada - p.fecha_inicio).days)
+            dias_transcurridos = (hoy - p.fecha_inicio).days
+            ratio = dias_transcurridos / dias_totales
+            dias_restantes = (p.fecha_fin_planificada - hoy).days
+
+            if dias_restantes < 0 or ratio >= 0.90:
+                alto_riesgo += 1
+                proyectos_criticos.append({
+                    'id': p.id_proyecto,
+                    'codigo': p.codigo,
+                    'nombre': p.nombre_corto or p.nombre,
+                    'facultad': p.id_facultad.nombre_corto or p.id_facultad.nombre if p.id_facultad else 'N/A',
+                    'dias_restantes': dias_restantes,
+                    'fecha_fin': str(p.fecha_fin_planificada),
+                    'vencido': dias_restantes < 0,
+                    'pct_tiempo': min(100, max(0, round(ratio * 100))),
+                })
+            elif ratio >= 0.65:
+                medio_riesgo += 1
+            else:
+                bajo_riesgo += 1
+        else:
+            medio_riesgo += 1
+
+    total_evaluados = len(proyectos_en_ejec)
+    prob_a_tiempo = round((bajo_riesgo + (medio_riesgo * 0.7)) / total_evaluados * 100, 1) if total_evaluados else 100.0
+
+    # Estadística Descriptiva e Inferencia de Presupuestos
+    import statistics
+    presupuestos = [float(p.presupuesto_planificado) for p in qs_proyectos if p.presupuesto_planificado is not None and float(p.presupuesto_planificado) > 0]
+    pres_stats = {
+        'mediana': 0.0,
+        'media': 0.0,
+        'desviacion': 0.0,
+        'q1': 0.0,
+        'q3': 0.0,
+        'iqr': 0.0,
+        'min': 0.0,
+        'max': 0.0,
+        'total_evaluados': len(presupuestos),
+    }
+    if len(presupuestos) >= 1:
+        pres_stats['mediana'] = round(statistics.median(presupuestos), 2)
+        pres_stats['media'] = round(statistics.mean(presupuestos), 2)
+        pres_stats['min'] = round(min(presupuestos), 2)
+        pres_stats['max'] = round(max(presupuestos), 2)
+        if len(presupuestos) >= 2:
+            pres_stats['desviacion'] = round(statistics.stdev(presupuestos), 2)
+        if len(presupuestos) >= 4:
+            cuartiles = statistics.quantiles(presupuestos, n=4)
+            pres_stats['q1'] = round(cuartiles[0], 2)
+            pres_stats['q3'] = round(cuartiles[2], 2)
+            pres_stats['iqr'] = round(pres_stats['q3'] - pres_stats['q1'], 2)
+
+    # Duración de Proyectos (meses)
+    duraciones = []
+    for p in qs_proyectos:
+        if p.fecha_inicio and (p.fecha_fin_planificada or p.fecha_fin_real):
+            fin = p.fecha_fin_real or p.fecha_fin_planificada
+            meses = max(1, round((fin - p.fecha_inicio).days / 30.4))
+            duraciones.append(meses)
+
+    dur_promedio = round(statistics.mean(duraciones), 1) if duraciones else 0
+    dur_mediana = round(statistics.median(duraciones), 1) if duraciones else 0
+
     return JsonResponse({
         'kpis': {
             'total_proyectos': total_proyectos,
@@ -2546,7 +2621,18 @@ def api_reportes_stats(request):
             'provincias_cobertura': len(provs_dict),
             'pct_ejecucion': round(en_ejecucion * 100 / total_proyectos, 1) if total_proyectos else 0,
             'pct_finalizado': round(finalizado * 100 / total_proyectos, 1) if total_proyectos else 0,
+            'duracion_promedio_meses': dur_promedio,
+            'duracion_mediana_meses': dur_mediana,
+            'prob_a_tiempo_pct': prob_a_tiempo,
         },
+        'analisis_riesgo': {
+            'bajo': bajo_riesgo,
+            'medio': medio_riesgo,
+            'alto': alto_riesgo,
+            'probabilidad_cumplimiento': prob_a_tiempo,
+            'criticos': proyectos_criticos[:6],
+        },
+        'estadisticas_presupuesto': pres_stats,
         'estados': estados_count,
         'por_facultad': por_facultad_data,
         'por_carrera': por_carrera_data,
