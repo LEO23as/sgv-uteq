@@ -497,19 +497,54 @@ def _error_amigable(e):
     return s
 
 
+from django.utils.text import get_valid_filename
+
 EXTENSIONES_IMAGEN = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
-EXTENSIONES_DOCUMENTO = EXTENSIONES_IMAGEN | {'.pdf'}
-TAMANIO_MAX_MB = 10
+EXTENSIONES_DOCUMENTO = EXTENSIONES_IMAGEN | {'.pdf', '.doc', '.docx'}
+TAMANIO_MAX_MB = 15
+
+# Cabeceras binarias (Magic Bytes) reales
+MAGIC_BYTES = {
+    '.pdf': [b'%PDF'],
+    '.jpg': [b'\xff\xd8\xff'],
+    '.jpeg': [b'\xff\xd8\xff'],
+    '.png': [b'\x89PNG\r\n\x1a\n'],
+    '.gif': [b'GIF87a', b'GIF89a'],
+    '.webp': [b'RIFF'],
+}
 
 
 def _validar_archivo(archivo, extensiones_permitidas):
-    """Valida tamaño y extensión de un archivo subido. Devuelve un mensaje de error o None si es válido."""
+    """
+    Valida tamaño, extensión y cabecera binaria real (magic bytes).
+    Devuelve un mensaje de error o None si es seguro.
+    """
+    if not archivo or not archivo.name:
+        return 'Archivo no válido o sin nombre.'
+
     ext = os.path.splitext(archivo.name)[1].lower()
     if ext not in extensiones_permitidas:
         permitidas = ', '.join(sorted(extensiones_permitidas))
-        return f'Formato no permitido para "{archivo.name}". Formatos aceptados: {permitidas}.'
+        return f'Formato .{ext} no permitido para "{archivo.name}". Formatos aceptados: {permitidas}.'
+
     if archivo.size > TAMANIO_MAX_MB * 1024 * 1024:
-        return f'El archivo "{archivo.name}" supera el tamaño máximo permitido ({TAMANIO_MAX_MB}MB).'
+        return f'El archivo "{archivo.name}" supera el tamaño máximo permitido ({TAMANIO_MAX_MB} MB).'
+
+    if archivo.size == 0:
+        return f'El archivo "{archivo.name}" está vacío (0 bytes).'
+
+    # Verificación de Magic Bytes (Cabecera real del archivo)
+    if ext in MAGIC_BYTES:
+        try:
+            pos_inicial = archivo.tell()
+            cabecera = archivo.read(16)
+            archivo.seek(pos_inicial)
+            valido = any(cabecera.startswith(sig) or (sig == b'RIFF' and b'WEBP' in cabecera) for sig in MAGIC_BYTES[ext])
+            if not valido:
+                return f'El archivo "{archivo.name}" está corrupto o su contenido real no coincide con la extensión .{ext}.'
+        except Exception:
+            pass
+
     return None
 
 
@@ -522,15 +557,15 @@ def _guardar_fotos(request, proyecto):
         carpeta = f'proyectos/{proyecto.id_proyecto}/'
         ruta_completa = os.path.join(settings.MEDIA_ROOT, carpeta)
         os.makedirs(ruta_completa, exist_ok=True)
-        nombre_archivo = foto.name
-        ruta_final = os.path.join(ruta_completa, nombre_archivo)
+        nombre_seguro = get_valid_filename(foto.name)
+        ruta_final = os.path.join(ruta_completa, nombre_seguro)
         with open(ruta_final, 'wb+') as f:
             for chunk in foto.chunks():
                 f.write(chunk)
         FotoProyecto.objects.create(
             id_proyecto=proyecto,
-            ruta_foto=f'{carpeta}{nombre_archivo}',
-            titulo=nombre_archivo,
+            ruta_foto=f'{carpeta}{nombre_seguro}',
+            titulo=nombre_seguro,
             subida_en=timezone.now(),
         )
 
@@ -1971,16 +2006,17 @@ def api_documento_subir(request, id):
         ruta_completa = os.path.join(settings.MEDIA_ROOT, carpeta)
         os.makedirs(ruta_completa, exist_ok=True)
         ts = int(timezone.now().timestamp() * 1000)
-        nombre_archivo = f'{codigo_tipo}_{ts}_{archivo.name}'
+        nombre_limpio = get_valid_filename(archivo.name)
+        nombre_archivo = f'{codigo_tipo}_{ts}_{nombre_limpio}'
         with open(os.path.join(ruta_completa, nombre_archivo), 'wb+') as f:
             for chunk in archivo.chunks():
                 f.write(chunk)
-        ext = (archivo.name.rsplit('.', 1)[-1] if '.' in archivo.name else '')[:10]
+        ext = (nombre_limpio.rsplit('.', 1)[-1] if '.' in nombre_limpio else '')[:10]
         creado = DocumentoProyecto.objects.create(
             id_proyecto=proyecto,
             id_tipo_doc=tipo,
             id_periodo=proyecto.id_periodo_inicio,
-            nombre_archivo=archivo.name,
+            nombre_archivo=nombre_limpio,
             ruta_archivo=f'{carpeta}{nombre_archivo}',
             tamanio_kb=int(archivo.size / 1024),
             extension=ext,
