@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { fetchAPI } from '$lib/stores';
+  import { fetchAPI, fetchAPICached } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
@@ -108,11 +108,13 @@
 
   onMount(async () => {
     try {
+      // PROYECTOS: Siempre datos vivos y frescos del servidor
+      // CATÁLOGOS: Con caché inteligente en sesión para acelerar la vista a 0 ms
       const [proysRes, facsRes, carrsRes, persRes] = await Promise.all([
         fetchAPI('/api/proyectos/'),
-        fetchAPI('/api/facultades/'),
-        fetchAPI('/api/carreras/'),
-        fetchAPI('/api/periodos/'),
+        fetchAPICached('/api/facultades/'),
+        fetchAPICached('/api/carreras/'),
+        fetchAPICached('/api/periodos/'),
       ]);
       items = proysRes || [];
       facultades = facsRes || [];
