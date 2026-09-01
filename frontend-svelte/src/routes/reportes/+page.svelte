@@ -637,7 +637,7 @@
                 <tr>
                   <td><span class="code">{p.codigo}</span></td>
                   <td class="td-trunc">
-                    <button type="button" class="btn-link-proy" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
+                    <button type="button" class="btn-link-proy" onclick={() => abrirDetalleProyecto(p.id)}>
                       {p.nombre}
                     </button>
                   </td>
@@ -653,10 +653,10 @@
                   </td>
                   <td>
                     <div class="actions-cell">
-                      <button class="btn-action-sm" title="Ver Detalle" onclick={() => abrirDetalleProyecto(p.id_proyecto)}>
+                      <button class="btn-action-sm" title="Ver Detalle" onclick={() => abrirDetalleProyecto(p.id)}>
                         <i class="bi bi-eye"></i>
                       </button>
-                      <button class="btn-action-sm edit" title="Editar Proyecto" onclick={() => goto(`/proyectos/${p.id_proyecto}/editar`)}>
+                      <button class="btn-action-sm edit" title="Editar Proyecto" onclick={() => goto(`/proyectos/${p.id}/editar`)}>
                         <i class="bi bi-pencil"></i>
                       </button>
                     </div>
