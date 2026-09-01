@@ -171,6 +171,17 @@
   <title>Reportes y Estadísticas — SGV UTEQ</title>
 </svelte:head>
 
+{#snippet grafico(hayDatos, config)}
+  {#if hayDatos}
+    <canvas use:chartAction={config}></canvas>
+  {:else}
+    <div class="chart-empty">
+      <i class="bi bi-clipboard-x"></i>
+      <span>Sin datos para este período</span>
+    </div>
+  {/if}
+{/snippet}
+
 <!-- SUBBAR SUPERIOR -->
 <div class="subbar">
   <nav class="breadcrumb">
@@ -211,6 +222,16 @@
         <div class="chart-warning">
           <i class="bi bi-bar-chart-line"></i>
           No se pudo cargar la librería de gráficos. Los indicadores numéricos y las tablas se muestran igual.
+        </div>
+      {/if}
+
+      {#if stats.kpis.total_proyectos === 0}
+        <div class="period-empty">
+          <i class="bi bi-calendar-x"></i>
+          <div>
+            <strong>Sin proyectos registrados en {nombrePeriodoSeleccionado}.</strong>
+            <span>Cambia el período en el filtro superior o selecciona «Todos los períodos».</span>
+          </div>
         </div>
       {/if}
 
@@ -353,7 +374,7 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-pie-chart-fill text-verde"></i> Proyectos por estado</h4>
           <div class="chart-wrap h220">
-            <canvas use:chartAction={{
+            {@render grafico(Object.keys(stats.estados || {}).length > 0, {
               type: 'doughnut',
               data: {
                 labels: Object.keys(stats.estados || {}).map(k => ESTADO_LABEL[k] || k),
@@ -371,7 +392,7 @@
                 cutout: '72%',
                 plugins: { legend: { display: false }, tooltip: commonTooltip }
               }
-            }}></canvas>
+            })}
           </div>
           <div class="estado-bars">
             {#each Object.entries(stats.estados || {}) as [k, v]}
@@ -389,7 +410,7 @@
         <div class="chart-card lg">
           <h4 class="chart-title"><i class="bi bi-bar-chart-line-fill text-verde"></i> Proyectos por facultad UTEQ</h4>
           <div class="chart-wrap h320">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_facultad?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_facultad?.labels || [],
@@ -411,7 +432,7 @@
                   y: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
       </div>
@@ -421,7 +442,7 @@
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-map-fill text-verde"></i> Cobertura por provincia</h4>
           <div class="chart-wrap h260">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_provincia?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_provincia?.labels || [],
@@ -443,14 +464,14 @@
                   y: { grid: { display: false } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
 
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-geo-fill text-dorado"></i> Cantones impactados</h4>
           <div class="chart-wrap h260">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_canton?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_canton?.labels || [],
@@ -472,7 +493,7 @@
                   y: { grid: { display: false } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
       </div>
@@ -482,7 +503,7 @@
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-globe-americas text-azul"></i> Alineación con Objetivos ODS</h4>
           <div class="chart-wrap h260">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_ods?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_ods?.labels || [],
@@ -504,14 +525,14 @@
                   y: { grid: { display: false } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
 
         <div class="chart-card">
           <h4 class="chart-title"><i class="bi bi-mortarboard-fill text-verde"></i> Proyectos por carrera académica</h4>
           <div class="chart-wrap h260">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_carrera?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_carrera?.labels || [],
@@ -533,7 +554,7 @@
                   y: { grid: { display: false } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
       </div>
@@ -543,7 +564,7 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-file-earmark-check-fill text-verde"></i> Convenios por estado</h4>
           <div class="chart-wrap h200">
-            <canvas use:chartAction={{
+            {@render grafico(Object.keys(stats.convenios_estados || {}).length > 0, {
               type: 'doughnut',
               data: {
                 labels: Object.keys(stats.convenios_estados || {}),
@@ -560,7 +581,7 @@
                 cutout: '70%',
                 plugins: { legend: { display: false }, tooltip: commonTooltip }
               }
-            }}></canvas>
+            })}
           </div>
           <div class="estado-bars sm-bars">
             {#each Object.entries(stats.convenios_estados || {}) as [k, v]}
@@ -578,7 +599,7 @@
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-buildings-fill text-dorado"></i> Entidades por tipo</h4>
           <div class="chart-wrap h240">
-            <canvas use:chartAction={{
+            {@render grafico((stats.entidades_tipos?.values?.length || 0) > 0, {
               type: 'doughnut',
               data: {
                 labels: stats.entidades_tipos?.labels || [],
@@ -598,14 +619,14 @@
                   tooltip: commonTooltip
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
 
         <div class="chart-card sm">
           <h4 class="chart-title"><i class="bi bi-calendar-week-fill text-azul"></i> Proyectos por período</h4>
           <div class="chart-wrap h240">
-            <canvas use:chartAction={{
+            {@render grafico((stats.por_periodo?.values?.length || 0) > 0, {
               type: 'bar',
               data: {
                 labels: stats.por_periodo?.labels || [],
@@ -626,7 +647,7 @@
                   y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
                 }
               }
-            }}></canvas>
+            })}
           </div>
         </div>
       </div>
@@ -1027,6 +1048,23 @@
     margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
   }
   .chart-wrap { position: relative; width: 100%; }
+  .chart-empty {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    color: #94a3b8; font-size: 0.78rem; font-weight: 700;
+    border: 1.5px dashed #e2e8f0; border-radius: 12px; background: #fafbfc;
+  }
+  .chart-empty i { font-size: 1.6rem; color: #cbd5e1; }
+
+  .period-empty {
+    display: flex; align-items: center; gap: 14px;
+    background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+    padding: 16px 18px; color: #9a3412;
+  }
+  .period-empty i { font-size: 1.6rem; flex-shrink: 0; }
+  .period-empty div { display: flex; flex-direction: column; gap: 2px; }
+  .period-empty strong { font-size: 0.86rem; font-weight: 800; }
+  .period-empty span { font-size: 0.76rem; color: #b45309; font-weight: 600; }
   .h200 { height: 200px; }
   .h220 { height: 220px; }
   .h240 { height: 240px; }
