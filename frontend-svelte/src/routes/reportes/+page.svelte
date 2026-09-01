@@ -293,34 +293,6 @@
               <span class="rb-sub">Clic para ver proyectos por vencer</span>
             </button>
           </div>
-
-          <!-- LISTA DE PROYECTOS CRÍTICOS (AL DAR CLIC ABRE EL DETALLE) -->
-          {#if stats.analisis_riesgo.criticos && stats.analisis_riesgo.criticos.length > 0}
-            <div class="criticos-box">
-              <span class="criticos-title"><i class="bi bi-exclamation-triangle-fill"></i> Proyectos que requieren atención inmediata:</span>
-              <div class="criticos-list">
-                {#each stats.analisis_riesgo.criticos as cp}
-                  <button type="button" class="critico-item-btn" onclick={() => abrirDetalleProyecto(cp.id_proyecto)}>
-                    <div class="ci-main">
-                      <span class="ci-code">{cp.codigo}</span>
-                      <span class="ci-name" title={cp.nombre}>{cp.nombre}</span>
-                      <span class="ci-fac">{cp.facultad}</span>
-                    </div>
-                    <div class="ci-actions">
-                      <span class="ci-tag" class:vencido={cp.vencido}>
-                        {#if cp.vencido}
-                          <i class="bi bi-x-circle-fill"></i> Plazo vencido
-                        {:else}
-                          <i class="bi bi-clock-history"></i> {cp.dias_restantes} días ({cp.pct_tiempo}%)
-                        {/if}
-                      </span>
-                      <span class="btn-ci-open"><i class="bi bi-eye"></i> Ver Detalle</span>
-                    </div>
-                  </button>
-                {/each}
-              </div>
-            </div>
-          {/if}
         </div>
       {/if}
 
@@ -985,30 +957,6 @@
   .rb-num { font-size: 1.4rem; font-weight: 900; }
   .rb-title { font-size: 0.74rem; font-weight: 800; text-transform: uppercase; }
   .rb-sub { font-size: 0.68rem; opacity: 0.85; font-weight: 600; }
-
-  .criticos-box {
-    background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .criticos-title { font-size: 0.78rem; font-weight: 800; color: #9f1239; display: flex; align-items: center; gap: 6px; }
-  .criticos-list { display: flex; flex-direction: column; gap: 6px; }
-  .critico-item-btn {
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-    background: #ffffff; border: 1px solid #fda4af; border-radius: 8px; padding: 10px 14px; font-size: 0.8rem;
-    cursor: pointer; font-family: inherit; width: 100%; text-align: left; transition: all 0.15s ease;
-  }
-  .critico-item-btn:hover { background: #fff5f5; border-color: #f43f5e; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.1); }
-  .ci-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .ci-code { font-family: monospace; font-weight: 800; color: #be123c; background: #ffe4e6; padding: 2px 6px; border-radius: 4px; }
-  .ci-name { font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
-  .ci-fac { font-size: 0.72rem; color: #64748b; }
-  .ci-actions { display: flex; align-items: center; gap: 8px; }
-  .ci-tag { font-size: 0.74rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 5px; }
-  .ci-tag.vencido { color: #dc2626; font-weight: 800; }
-  .btn-ci-open {
-    background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px;
-    padding: 4px 10px; font-size: 0.74rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;
-  }
 
   /* ESTADÍSTICA DESCRIPTIVA */
   .stats-metric-grid {
