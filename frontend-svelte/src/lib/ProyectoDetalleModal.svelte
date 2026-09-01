@@ -331,6 +331,12 @@
                     </div>
                   {/each}
                 </div>
+              {:else}
+                <p class="empty-docs">Aún no se han subido documentos al portafolio.</p>
+              {/if}
+            </div>
+          </div>
+
           <!-- FIRMAS OFICIALES UTEQ (SOLO EN IMPRESIÓN) -->
           <div class="print-official-firmas">
             <div class="pof-col">
