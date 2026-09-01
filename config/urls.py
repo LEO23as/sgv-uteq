@@ -76,6 +76,9 @@ urlpatterns = [
     path('api/facultades-periodo/',                   estructura.api_facultades_periodo,   name='api_facultades_periodo'),
     path('api/carreras-periodo/',                     estructura.api_carreras_periodo,     name='api_carreras_periodo'),
 
+    # Auditoría Criptográfica Inmutable (Estándar UTEQ Módulo G)
+    path('api/auditoria/verificar/',                  views.api_auditoria_verificar,       name='api_auditoria_verificar'),
+
     # Cualquier otra ruta → mensaje amigable
     path('',        svelte_redirect),
     path('login/',  svelte_redirect, name='login'),

@@ -1465,6 +1465,7 @@ def api_login(request):
     from vinculacion.utils import verificar_password
     if not verificar_password(password, usuario.password):
         return JsonResponse({'error': 'Usuario o contraseña incorrectos'}, status=401)
+    request.session.cycle_key()
     request.session['usuario_id'] = usuario.id_usuario
     request.session['usuario_nombre'] = usuario.nombres or username
     request.session['usuario_rol'] = usuario.id_rol.nombre
@@ -1927,6 +1928,14 @@ def api_proyecto_create(request):
             proyecto.sector = principal.sector or proyecto.sector
             proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
         _guardar_fotos(request, proyecto)
+        from vinculacion.auditoria import registrar_auditoria
+        registrar_auditoria(
+            entidad='PROYECTO',
+            id_registro=proyecto.id_proyecto,
+            accion='CREACION_PROYECTO',
+            detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
+            request=request,
+        )
         return JsonResponse(ProyectoSerializer(proyecto).data, status=201)
     except Exception as e:
         return JsonResponse({'error': _error_amigable(e)}, status=400)
@@ -2067,6 +2076,14 @@ def api_proyecto_delete(request, id):
             InformeSemestral.objects.filter(id_proyecto=proyecto).delete()
             EvaluacionImpacto.objects.filter(id_proyecto=proyecto).delete()
             ActividadSemanal.objects.filter(id_proyecto=proyecto).delete()
+            from vinculacion.auditoria import registrar_auditoria
+            registrar_auditoria(
+                entidad='PROYECTO',
+                id_registro=proyecto.id_proyecto,
+                accion='ELIMINACION_PROYECTO',
+                detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre},
+                request=request,
+            )
             proyecto.delete()
         return JsonResponse({'ok': True})
     except Exception as e:
@@ -2166,6 +2183,14 @@ def api_proyecto_update(request, id):
                     proyecto.sector = principal.sector or proyecto.sector
                     proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
             _guardar_fotos(request, proyecto)
+            from vinculacion.auditoria import registrar_auditoria
+            registrar_auditoria(
+                entidad='PROYECTO',
+                id_registro=proyecto.id_proyecto,
+                accion='MODIFICACION_PROYECTO',
+                detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
+                request=request,
+            )
             return JsonResponse(ProyectoSerializer(proyecto).data)
         except Exception as e:
             return JsonResponse({'error': _error_amigable(e)}, status=400)
@@ -2879,4 +2904,19 @@ def api_usuario_toggle_activo(request, id_usuario):
         'activo': u.activo, 
         'mensaje': f'Usuario {"activado" if u.activo else "inactivado"} correctamente'
     })
+
+
+@csrf_exempt
+@api_view(['GET'])
+def api_auditoria_verificar(request):
+    """
+    Verifica la integridad de toda la cadena de auditoria criptografica.
+    Estándar UTEQ Módulo G (detección de inyecciones/manipulaciones directas en BD).
+    """
+    if not _require_auth(request):
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    from vinculacion.auditoria import verificar_integridad_cadena
+    resultado = verificar_integridad_cadena()
+    return JsonResponse(resultado)
+
 

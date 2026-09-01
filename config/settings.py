@@ -124,3 +124,9 @@ DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='noreply@uteq.edu.ec')
 
 # Rutas públicas
 RUTAS_PUBLICAS = ['/login/', '/']
+# ── SEGURIDAD DE SESIONES Y COOKIES (Estándar UTEQ Módulo B.6) ──
+SESSION_COOKIE_HTTPONLY = True          # Impide que JavaScript lea la cookie de sesión (anti-XSS)
+CSRF_COOKIE_HTTPONLY = False            # Permite leer el token CSRF para peticiones POST
+SESSION_COOKIE_SAMESITE = 'Lax'         # Protege contra ataques CSRF externos
+SESSION_COOKIE_AGE = 60 * 60 * 24       # Expiración: 24 horas (86400 segundos)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False # Mantiene la sesión activa hasta que expire

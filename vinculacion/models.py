@@ -565,3 +565,29 @@ class CapaIndicadorCanton(models.Model):
 
     def __str__(self):
         return f'{self.tipo_indicador} {self.dpa_canton} {self.anio}: {self.valor}{self.unidad}'
+
+
+class BitacoraAuditoria(models.Model):
+    """
+    Bitacora de auditoria inmutable con encadenamiento criptografico (SHA-256).
+    Implementa el estandar de trazabilidad y deteccion de manipulaciones (Modulo G del PFC).
+    """
+    id_bitacora = models.AutoField(primary_key=True)
+    entidad = models.CharField(max_length=60, default='PROYECTO')
+    id_registro = models.IntegerField()
+    accion = models.CharField(max_length=50) # 'CREACION', 'MODIFICACION', 'APROBACION', 'CAMBIO_ESTADO', 'ELIMINACION', 'SUBIDA_DOC'
+    detalles_json = models.TextField(blank=True, null=True)
+    usuario_id = models.IntegerField(blank=True, null=True)
+    username = models.CharField(max_length=100, blank=True, null=True)
+    ip_origen = models.CharField(max_length=45, blank=True, null=True)
+    hash_anterior = models.CharField(max_length=64)
+    hash_actual = models.CharField(max_length=64, db_index=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = True
+        db_table = 'bitacora_auditoria'
+        ordering = ['id_bitacora']
+
+    def __str__(self):
+        return f'[{self.id_bitacora}] {self.accion} - {self.entidad} #{self.id_registro} ({self.hash_actual[:8]}...)'
