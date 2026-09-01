@@ -2533,42 +2533,61 @@ def api_reportes_stats(request):
     en_ejecucion = estados_count.get('EN_EJECUCION', 0)
     finalizado = estados_count.get('FINALIZADO', 0)
 
-    # Modelo Probabilístico de Riesgo Temporal (Estimación de Cumplimiento)
+    # Modelo de Monitoreo de Riesgo Temporal
     hoy = timezone.now().date()
-    proyectos_en_ejec = list(qs_proyectos.filter(estado='EN_EJECUCION'))
-    bajo_riesgo = 0
-    medio_riesgo = 0
-    alto_riesgo = 0
-    proyectos_criticos = []
+    proyectos_en_ejec = list(qs_proyectos.filter(estado='EN_EJECUCION').select_related('id_facultad', 'id_carrera', 'id_periodo_inicio'))
+    lista_bajo = []
+    lista_medio = []
+    lista_alto = []
 
     for p in proyectos_en_ejec:
+        nom = p.nombre_corto or p.nombre
+        fac = p.id_facultad.nombre_corto or p.id_facultad.nombre if p.id_facultad else 'N/A'
+        car = p.id_carrera.nombre if p.id_carrera else 'N/A'
+        per = p.id_periodo_inicio.nombre if p.id_periodo_inicio else 'N/A'
+
         if p.fecha_inicio and p.fecha_fin_planificada:
             dias_totales = max(1, (p.fecha_fin_planificada - p.fecha_inicio).days)
             dias_transcurridos = (hoy - p.fecha_inicio).days
             ratio = dias_transcurridos / dias_totales
             dias_restantes = (p.fecha_fin_planificada - hoy).days
+            item = {
+                'id_proyecto': p.id_proyecto,
+                'codigo': p.codigo,
+                'nombre': nom,
+                'facultad': fac,
+                'carrera': car,
+                'periodo': per,
+                'fecha_inicio': str(p.fecha_inicio),
+                'fecha_fin': str(p.fecha_fin_planificada),
+                'dias_restantes': dias_restantes,
+                'vencido': dias_restantes < 0,
+                'pct_tiempo': min(100, max(0, round(ratio * 100))),
+            }
 
             if dias_restantes < 0 or ratio >= 0.90:
-                alto_riesgo += 1
-                proyectos_criticos.append({
-                    'id': p.id_proyecto,
-                    'codigo': p.codigo,
-                    'nombre': p.nombre_corto or p.nombre,
-                    'facultad': p.id_facultad.nombre_corto or p.id_facultad.nombre if p.id_facultad else 'N/A',
-                    'dias_restantes': dias_restantes,
-                    'fecha_fin': str(p.fecha_fin_planificada),
-                    'vencido': dias_restantes < 0,
-                    'pct_tiempo': min(100, max(0, round(ratio * 100))),
-                })
+                lista_alto.append(item)
             elif ratio >= 0.65:
-                medio_riesgo += 1
+                lista_medio.append(item)
             else:
-                bajo_riesgo += 1
+                lista_bajo.append(item)
         else:
-            medio_riesgo += 1
+            lista_medio.append({
+                'id_proyecto': p.id_proyecto,
+                'codigo': p.codigo,
+                'nombre': nom,
+                'facultad': fac,
+                'carrera': car,
+                'periodo': per,
+                'fecha_inicio': str(p.fecha_inicio) if p.fecha_inicio else '—',
+                'fecha_fin': str(p.fecha_fin_planificada) if p.fecha_fin_planificada else '—',
+                'dias_restantes': 0,
+                'vencido': False,
+                'pct_tiempo': 50,
+            })
 
     total_evaluados = len(proyectos_en_ejec)
-    prob_a_tiempo = round((bajo_riesgo + (medio_riesgo * 0.7)) / total_evaluados * 100, 1) if total_evaluados else 100.0
+    prob_a_tiempo = round((len(lista_bajo) + (len(lista_medio) * 0.7)) / total_evaluados * 100, 1) if total_evaluados else 100.0
 
     # Estadística Descriptiva e Inferencia de Presupuestos
     import statistics
@@ -2608,6 +2627,12 @@ def api_reportes_stats(request):
     dur_promedio = round(statistics.mean(duraciones), 1) if duraciones else 0
     dur_mediana = round(statistics.median(duraciones), 1) if duraciones else 0
 
+    proyectos_todos = list(
+        qs_proyectos.select_related('id_facultad', 'id_carrera', 'id_periodo_inicio')
+        .order_by('-creado_en')
+        .values('id_proyecto', 'codigo', 'nombre', 'nombre_corto', 'id_facultad__nombre_corto', 'id_facultad__nombre', 'id_carrera__nombre', 'id_periodo_inicio__nombre', 'estado', 'fecha_inicio', 'fecha_fin_planificada')
+    )
+
     return JsonResponse({
         'kpis': {
             'total_proyectos': total_proyectos,
@@ -2626,11 +2651,14 @@ def api_reportes_stats(request):
             'prob_a_tiempo_pct': prob_a_tiempo,
         },
         'analisis_riesgo': {
-            'bajo': bajo_riesgo,
-            'medio': medio_riesgo,
-            'alto': alto_riesgo,
+            'bajo': len(lista_bajo),
+            'medio': len(lista_medio),
+            'alto': len(lista_alto),
             'probabilidad_cumplimiento': prob_a_tiempo,
-            'criticos': proyectos_criticos[:6],
+            'lista_bajo': lista_bajo,
+            'lista_medio': lista_medio,
+            'lista_alto': lista_alto,
+            'criticos': lista_alto[:6],
         },
         'estadisticas_presupuesto': pres_stats,
         'estados': estados_count,
@@ -2662,10 +2690,14 @@ def api_reportes_stats(request):
                 'id': x['id_proyecto'],
                 'codigo': x['codigo'],
                 'nombre': x['nombre'],
+                'nombre_corto': x['nombre_corto'] or x['nombre'],
                 'facultad': x['id_facultad__nombre_corto'] or x['id_facultad__nombre'] or 'N/A',
+                'carrera': x['id_carrera__nombre'] or 'N/A',
                 'periodo': x['id_periodo_inicio__nombre'] or 'N/A',
                 'estado': x['estado'],
-            } for x in ultimos
+                'fecha_inicio': str(x['fecha_inicio']) if x['fecha_inicio'] else '—',
+                'fecha_fin': str(x['fecha_fin_planificada']) if x['fecha_fin_planificada'] else '—',
+            } for x in proyectos_todos
         ],
     })
 
