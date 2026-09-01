@@ -1024,11 +1024,11 @@
           <div>
             <h3 class="modal-hdr-title">
               {#if modalRiesgoTipo === 'bajo'}
-                Proyectos en Cronograma (>85% Probabilidad)
+                Proyectos en Cronograma (&gt;85% Probabilidad)
               {:else if modalRiesgoTipo === 'medio'}
                 Proyectos con Alerta Preventiva (65-85%)
               {:else}
-                Proyectos en Riesgo Crítico / Vencidos (<65%)
+                Proyectos en Riesgo Crítico / Vencidos (&lt;65%)
               {/if}
             </h3>
             <span class="modal-hdr-sub">{listaRiesgoActual.length} proyectos encontrados en esta categoría</span>
