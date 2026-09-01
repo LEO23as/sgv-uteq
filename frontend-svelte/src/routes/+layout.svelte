@@ -1199,4 +1199,29 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { display: inline-block; animation: spin .7s linear infinite; }
+
+/* ── IMPRESIÓN: solo el contenido, sin menú/navbar/footer ── */
+@media print {
+  .sga-navbar,
+  .left-col,
+  .sga-fixed-footer,
+  :global(.subbar) {
+    display: none !important;
+  }
+
+  .app-shell {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .body-row,
+  .body-row.no-sidebar {
+    display: block !important;
+    grid-template: none !important;
+  }
+
+  .content { display: block !important; }
+  :global(.content > :not(.subbar)) { min-width: 0 !important; }
+}
 </style>
