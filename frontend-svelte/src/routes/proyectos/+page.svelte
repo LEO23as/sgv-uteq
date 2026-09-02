@@ -561,20 +561,40 @@
       </div>
 
       <div class="section-sub-header">
-        <h4><i class="bi bi-mortarboard-fill text-verde"></i> Selecciona una Carrera:</h4>
+        <h4><i class="bi bi-mortarboard-fill" style="color: {facCfg.color};"></i> Selecciona una Carrera:</h4>
       </div>
 
       <div class="carreras-grid">
         {#each carrerasDeFacultad as car}
-          <div class="carr-card" onclick={() => seleccionarCarrera(car)}>
+          <div 
+            class="carr-card" 
+            style="--fac-color: {facCfg.color}; --fac-bg: {facCfg.bg}; --fac-border: {facCfg.border}; --fac-glow: {facCfg.glow};"
+            onclick={() => seleccionarCarrera(car)}
+          >
             <div class="cc-top">
-              <div class="cc-icon"><i class="bi bi-book-half"></i></div>
-              <span class="cc-badge">{car.totalProyectos} {car.totalProyectos === 1 ? 'proyecto' : 'proyectos'}</span>
+              <div class="cc-icon" style="background: {facCfg.bg}; border: 1px solid {facCfg.border};">
+                <img 
+                  src={facCfg.logo} 
+                  alt="Logo {facCfg.siglas}" 
+                  width="26" 
+                  height="26" 
+                  style="width: 26px; height: 26px; max-width: 26px; max-height: 26px; object-fit: contain;" 
+                  onerror={(e) => {
+                    if (!e.currentTarget.dataset.fallback) {
+                      e.currentTarget.dataset.fallback = '1';
+                      e.currentTarget.src = facCfg.logoSvg;
+                    }
+                  }}
+                />
+              </div>
+              <span class="cc-badge" style="color: {facCfg.color}; background: {facCfg.bg}; border-color: {facCfg.border};">
+                {car.totalProyectos} {car.totalProyectos === 1 ? 'proyecto' : 'proyectos'}
+              </span>
             </div>
 
             <h4 class="cc-title">{car.nombre}</h4>
 
-            <div class="cc-footer">
+            <div class="cc-footer" style="color: {facCfg.color};">
               <span>Ver proyectos de esta carrera</span>
               <i class="bi bi-chevron-right"></i>
             </div>
@@ -943,21 +963,69 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;
   }
   .carr-card {
-    background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px;
-    padding: 18px; cursor: pointer; display: flex; flex-direction: column; gap: 12px;
-    transition: all 0.2s ease;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
   }
   .carr-card:hover {
-    border-color: #38bdf8; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.08);
+    border-color: var(--fac-color, #15803d);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px var(--fac-glow, rgba(21, 128, 61, 0.1));
   }
   .cc-top { display: flex; align-items: center; justify-content: space-between; }
   .cc-icon {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
   }
-  .cc-badge { font-size: 0.72rem; font-weight: 800; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 6px; }
-  .cc-title { font-size: 0.92rem; font-weight: 800; color: #1e293b; line-height: 1.35; margin: 0; min-height: 38px; }
-  .cc-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem; font-weight: 700; color: #0284c7; padding-top: 6px; border-top: 1px solid #f8fafc; }
+  .cc-badge {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+  }
+  .cc-title {
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin: 0;
+    min-height: 40px;
+    transition: color 0.15s ease;
+  }
+  .carr-card:hover .cc-title {
+    color: var(--fac-color, #0f172a);
+  }
+  .cc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.76rem;
+    font-weight: 800;
+    padding-top: 8px;
+    border-top: 1px solid #f8fafc;
+    transition: transform 0.2s ease;
+  }
+  .carr-card:hover .cc-footer i {
+    transform: translateX(4px);
+  }
+  .cc-footer i {
+    transition: transform 0.2s ease;
+  }
 
   /* BARRA DE CONTEXTO EN TABLA */
   .context-bar {
