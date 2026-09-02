@@ -101,9 +101,19 @@
       toast.error('Ingresa los nombres del usuario');
       return;
     }
-    if (!modoEdicion && !form.apellidos.trim()) {
-      toast.error('Ingresa los apellidos para generar el usuario');
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(form.nombres.trim())) {
+      toast.error('Los nombres solo deben contener letras y espacios');
       return;
+    }
+    if (!modoEdicion) {
+      if (!form.apellidos.trim()) {
+        toast.error('Ingresa los apellidos para generar el usuario');
+        return;
+      }
+      if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(form.apellidos.trim())) {
+        toast.error('Los apellidos solo deben contener letras y espacios');
+        return;
+      }
     }
     if (!form.correo.trim()) {
       toast.error('Ingresa el correo electrónico para enviar las credenciales');
@@ -401,13 +411,25 @@
         <div class="sga-form-grid">
           <div class="sga-fg">
             <label>NOMBRES *</label>
-            <input type="text" bind:value={form.nombres} placeholder="Ej: Juan Carlos" required />
+            <input
+              type="text"
+              bind:value={form.nombres}
+              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')}
+              placeholder="Ej: Juan Carlos"
+              required
+            />
           </div>
 
           {#if !modoEdicion}
             <div class="sga-fg">
               <label>APELLIDOS *</label>
-              <input type="text" bind:value={form.apellidos} placeholder="Ej: Mendoza Morales" required />
+              <input
+                type="text"
+                bind:value={form.apellidos}
+                oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')}
+                placeholder="Ej: Mendoza Morales"
+                required
+              />
             </div>
           {/if}
 

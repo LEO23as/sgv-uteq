@@ -39,7 +39,12 @@
   });
 
   async function guardar() {
-    error = ''; saving = true;
+    error = '';
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+      error = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+      return;
+    }
+    saving = true;
     try {
       const res = await fetch(`/api/convenios/${id}/`, {
         method:'PUT', credentials:'include',
@@ -99,7 +104,7 @@
         </div>
         <div class="field col-3"><label>Fecha firma</label><input type="date" bind:value={form.fecha_firma} /></div>
         <div class="field col-3"><label>Fecha inicio</label><input type="date" bind:value={form.fecha_inicio} /></div>
-        <div class="field col-3"><label>Fecha fin</label><input type="date" bind:value={form.fecha_fin} /></div>
+        <div class="field col-3"><label>Fecha fin</label><input type="date" bind:value={form.fecha_fin} min={form.fecha_inicio} /></div>
         <div class="field col-3"><label>Duración (años)</label><input type="number" min="1" max="10" bind:value={form.duracion_anios} /></div>
         <div class="field col-3"><label>Estudiantes asignados</label><input type="number" min="0" bind:value={form.estudiantes_asignados} /></div>
         <div class="field col-9"><label>Observaciones</label><textarea rows="2" bind:value={form.observaciones}></textarea></div>

@@ -43,6 +43,10 @@
 
   async function guardar() {
     error = '';
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+      error = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+      return;
+    }
     saving = true;
     try {
       const res = await fetch(`/api/periodos/${id}/`, {
@@ -90,7 +94,7 @@
         </div>
         <div class="field col-12"><label>Nombre completo *</label><input bind:value={form.nombre} /></div>
         <div class="field col-4"><label>Fecha inicio *</label><input type="date" bind:value={form.fecha_inicio} /></div>
-        <div class="field col-4"><label>Fecha fin *</label><input type="date" bind:value={form.fecha_fin} /></div>
+        <div class="field col-4"><label>Fecha fin *</label><input type="date" bind:value={form.fecha_fin} min={form.fecha_inicio} /></div>
         <div class="field col-4" style="justify-content:flex-end;padding-bottom:4px">
           <label class="check-label">
             <input type="checkbox" bind:checked={form.activo} />Período activo

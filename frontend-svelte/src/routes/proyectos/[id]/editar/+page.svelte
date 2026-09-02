@@ -185,6 +185,12 @@
     if (form.fecha_inicio && form.fecha_fin_planificada && form.fecha_fin_planificada <= form.fecha_inicio) {
       error = 'La fecha de finalización debe ser posterior a la de inicio.'; toast.error(error); return;
     }
+    if (form.presupuesto_planificado !== '' && form.presupuesto_planificado !== null && form.presupuesto_planificado !== undefined) {
+      const monto = Number(form.presupuesto_planificado);
+      if (isNaN(monto) || monto < 0) {
+        error = 'El presupuesto no puede ser un valor negativo.'; toast.error(error); return;
+      }
+    }
     if (ubicaciones.length) {
       const pr = ubicaciones.find(u => u.es_principal) || ubicaciones[0];
       form.latitud = pr.latitud; form.longitud = pr.longitud;
@@ -302,7 +308,15 @@
           </div>
         </div>
         <div class="grid-3">
-          <div class="field"><label>Director del proyecto</label><input bind:value={form.director_nombre} placeholder="Nombre completo del director..." /></div>
+          <div class="field">
+            <label>Director del proyecto</label>
+            <input
+              type="text"
+              bind:value={form.director_nombre}
+              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]/g, '')}
+              placeholder="Nombre completo del director..."
+            />
+          </div>
           <div class="field"><label>Correo del director</label><input type="email" bind:value={form.director_correo} placeholder="director@uteq.edu.ec" /></div>
           <div class="field">
             <label>Estado del proyecto *</label>
@@ -318,14 +332,24 @@
         </div>
         <div class="grid-2">
           <div class="field"><label>Fecha de inicio</label><input type="date" bind:value={form.fecha_inicio} /></div>
-          <div class="field"><label>Fecha de finalización planificada</label><input type="date" bind:value={form.fecha_fin_planificada} /></div>
+          <div class="field"><label>Fecha de finalización planificada</label><input type="date" bind:value={form.fecha_fin_planificada} min={form.fecha_inicio} /></div>
         </div>
       </div>
 
       <div class="sec">
         <h4 class="sec-hdr"><i class="bi bi-cash-coin"></i> Presupuesto y negociación</h4>
         <div class="grid-obs">
-          <div class="field"><label>Presupuesto planificado (USD)</label><input type="number" min="0" step="0.01" bind:value={form.presupuesto_planificado} placeholder="0.00" /></div>
+          <div class="field">
+            <label>Presupuesto planificado (USD)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              bind:value={form.presupuesto_planificado}
+              onkeydown={(e) => ['-', 'e', 'E', '+'].includes(e.key) && e.preventDefault()}
+              placeholder="0.00"
+            />
+          </div>
           <div class="field"><label>Términos de negociación</label><textarea rows="2" bind:value={form.terminos_negociacion} placeholder="Detalles de negociación o acuerdos..."></textarea></div>
         </div>
       </div>

@@ -16,6 +16,10 @@
       error = 'Todos los campos obligatorios deben completarse.';
       return;
     }
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+      error = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+      return;
+    }
     saving = true;
     try {
       const res = await fetch('/api/periodos/create/', {
@@ -85,7 +89,7 @@
         </div>
         <div class="field col-4">
           <label>Fecha de fin *</label>
-          <input type="date" bind:value={form.fecha_fin} />
+          <input type="date" bind:value={form.fecha_fin} min={form.fecha_inicio} />
         </div>
         <div class="field col-4" style="justify-content:flex-end;padding-bottom:4px">
           <label class="check-label">

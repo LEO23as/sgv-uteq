@@ -35,6 +35,10 @@
       error = 'Proyecto y entidad son obligatorios.';
       return;
     }
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+      error = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+      return;
+    }
     saving = true;
     try {
       const res = await fetch('/api/convenios/create/', {
@@ -117,7 +121,7 @@
       <div class="grid-row">
         <div class="field col-3"><label>Fecha de firma</label><input type="date" bind:value={form.fecha_firma} /></div>
         <div class="field col-3"><label>Fecha de inicio</label><input type="date" bind:value={form.fecha_inicio} /></div>
-        <div class="field col-3"><label>Fecha de fin</label><input type="date" bind:value={form.fecha_fin} /></div>
+        <div class="field col-3"><label>Fecha de fin</label><input type="date" bind:value={form.fecha_fin} min={form.fecha_inicio} /></div>
         <div class="field col-3"><label>Duración (años)</label><input type="number" min="1" max="10" bind:value={form.duracion_anios} /></div>
       </div>
     </div>

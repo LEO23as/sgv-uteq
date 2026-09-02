@@ -97,6 +97,9 @@
     } else if (!form.id_entidad) {
       error = 'Debes buscar y seleccionar una entidad cooperante.'; return;
     }
+    if (form.fecha_inicio && form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+      error = 'La fecha de fin no puede ser anterior a la fecha de inicio.'; return;
+    }
     saving = true;
     try {
       let idEntidad = form.id_entidad;
@@ -238,7 +241,16 @@
               </div>
             </div>
             <div class="grid-3">
-              <div class="field"><label>RUC o Cédula</label><input bind:value={entidadForm.ruc} placeholder="Ej. 1291823912001" maxlength="15" /></div>
+              <div class="field">
+                <label>RUC o Cédula</label>
+                <input
+                  type="text"
+                  maxlength="13"
+                  bind:value={entidadForm.ruc}
+                  oninput={(e) => e.target.value = e.target.value.replace(/\D/g, '').slice(0, 13)}
+                  placeholder="Ej. 1291823912001"
+                />
+              </div>
               <div class="field"><label>Teléfono</label><input bind:value={entidadForm.telefono} placeholder="Ej. 0991234567" /></div>
               <div class="field"><label>Correo Electrónico</label><input type="email" bind:value={entidadForm.correo} placeholder="contacto@entidad.gob.ec" /></div>
             </div>
@@ -273,7 +285,7 @@
           <div class="grid-4">
             <div class="field"><label>Fecha de firma</label><input type="date" bind:value={form.fecha_firma} /></div>
             <div class="field"><label>Fecha de inicio</label><input type="date" bind:value={form.fecha_inicio} /></div>
-            <div class="field"><label>Fecha de fin</label><input type="date" bind:value={form.fecha_fin} /></div>
+            <div class="field"><label>Fecha de fin</label><input type="date" bind:value={form.fecha_fin} min={form.fecha_inicio} /></div>
             <div class="field"><label>Duración (años)</label><input type="number" min="1" max="10" bind:value={form.duracion_anios} /></div>
           </div>
         </div>

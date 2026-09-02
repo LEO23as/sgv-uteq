@@ -67,7 +67,16 @@
             {/each}
           </select>
         </div>
-        <div class="field col-3"><label>RUC</label><input bind:value={form.ruc} maxlength="15" placeholder="1234567890001" /></div>
+        <div class="field col-3">
+          <label>RUC</label>
+          <input
+            type="text"
+            maxlength="13"
+            bind:value={form.ruc}
+            oninput={(e) => e.target.value = e.target.value.replace(/\D/g, '').slice(0, 13)}
+            placeholder="1203456789001"
+          />
+        </div>
         <div class="field col-3"><label>Sector</label><input bind:value={form.sector} placeholder="Público, Privado..." /></div>
         <div class="field col-3"><label>Teléfono</label><input bind:value={form.telefono} /></div>
         <div class="field col-3"><label>Correo electrónico</label><input type="email" bind:value={form.correo} /></div>
@@ -78,7 +87,15 @@
     <div class="sec">
       <h4 class="sec-hdr">Representante legal</h4>
       <div class="grid-row">
-        <div class="field col-5"><label>Nombre del representante</label><input bind:value={form.representante_legal} /></div>
+        <div class="field col-5">
+          <label>Nombre del representante</label>
+          <input
+            type="text"
+            bind:value={form.representante_legal}
+            oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')}
+            placeholder="Ej: Marco Antonio Solís"
+          />
+        </div>
         <div class="field col-4"><label>Cargo</label><input bind:value={form.cargo_representante} placeholder="Alcalde, Director..." /></div>
       </div>
     </div>
