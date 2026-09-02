@@ -8,6 +8,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 import json
 import os
+import re
 import uuid
 
 from rest_framework.decorators import api_view
@@ -27,7 +28,7 @@ from vinculacion.serializers import (
     EntidadSerializer, TipoEntidadSerializer, ProyectoSerializer,
     ConvenioSerializer, DocenteSerializer, RolSerializer
 )
-from vinculacion.utils import verificar_password
+from vinculacion.utils import verificar_password, validar_cedula_ecuador, validar_ruc_ecuador
 
 
 def login_view(request):
@@ -355,6 +356,11 @@ def entidad_nueva(request):
                 'tipos': tipos, 'data': request.POST, 'accion': 'Nueva'
             })
         ruc = request.POST.get('ruc', '').strip() or None
+        if ruc and not validar_ruc_ecuador(ruc):
+            messages.error(request, 'El RUC ingresado no es válido para Ecuador (debe tener 13 dígitos y terminar en 001).')
+            return render(request, 'entidades/form.html', {
+                'tipos': tipos, 'data': request.POST, 'accion': 'Nueva'
+            })
         if ruc and EntidadCooperante.objects.filter(ruc=ruc).exists():
             messages.error(request, f'Ya existe una entidad con el RUC {ruc}.')
             return render(request, 'entidades/form.html', {
@@ -403,6 +409,12 @@ def entidad_editar(request, id):
                 'accion': 'Editar', 'entidad': entidad, 'editar': True
             })
         ruc = request.POST.get('ruc', '').strip() or None
+        if ruc and not validar_ruc_ecuador(ruc):
+            messages.error(request, 'El RUC ingresado no es válido para Ecuador (debe tener 13 dígitos y terminar en 001).')
+            return render(request, 'entidades/form.html', {
+                'tipos': tipos, 'data': request.POST,
+                'accion': 'Editar', 'entidad': entidad, 'editar': True
+            })
         if ruc and EntidadCooperante.objects.filter(ruc=ruc).exclude(id_entidad=id).exists():
             messages.error(request, f'Ya existe otra entidad con el RUC {ruc}.')
             return render(request, 'entidades/form.html', {
@@ -1713,6 +1725,10 @@ def api_periodo_detail(request, id):
             data = json.loads(request.body)
         except Exception:
             data = {}
+        fecha_inicio = data.get('fecha_inicio', str(periodo.fecha_inicio) if periodo.fecha_inicio else None)
+        fecha_fin = data.get('fecha_fin', str(periodo.fecha_fin) if periodo.fecha_fin else None)
+        if fecha_inicio and fecha_fin and str(fecha_fin) < str(fecha_inicio):
+            return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
         for field in ['codigo', 'nombre', 'tipo', 'fecha_inicio', 'fecha_fin']:
             if field in data and data[field]:
                 setattr(periodo, field, data[field])
@@ -1740,12 +1756,16 @@ def api_periodos_post(request):
     try:
         if PeriodoAcademico.objects.filter(codigo=data['codigo']).exists():
             return JsonResponse({'error': f"Ya existe un periodo con el código {data['codigo']}"}, status=400)
+        fecha_inicio = data.get('fecha_inicio')
+        fecha_fin = data.get('fecha_fin')
+        if fecha_inicio and fecha_fin and str(fecha_fin) < str(fecha_inicio):
+            return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
         periodo = PeriodoAcademico.objects.create(
             codigo=data['codigo'],
             nombre=data['nombre'],
             tipo=data['tipo'],
-            fecha_inicio=data['fecha_inicio'],
-            fecha_fin=data['fecha_fin'],
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
             activo=data.get('activo', True),
             creado_en=timezone.now(),
         )
@@ -1850,8 +1870,13 @@ def api_entidades_post(request):
     try:
         tipo = TipoEntidad.objects.get(id_tipo=data['id_tipo'])
         ruc = data.get('ruc', '').strip() or None
+        if ruc and not validar_ruc_ecuador(ruc):
+            return JsonResponse({'error': 'El RUC ingresado no es válido para Ecuador (debe tener 13 dígitos y terminar en 001)'}, status=400)
         if ruc and EntidadCooperante.objects.filter(ruc=ruc).exists():
             return JsonResponse({'error': f'Ya existe una entidad con el RUC {ruc}'}, status=400)
+        rep = (data.get('representante_legal') or '').strip()
+        if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', rep):
+            return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
         entidad = EntidadCooperante.objects.create(
             nombre=data['nombre'],
             nombre_corto=data.get('nombre_corto', '') or None,
@@ -1888,6 +1913,16 @@ def api_entidad_detail(request, id):
             data = json.loads(request.body)
         except Exception:
             data = {}
+        if 'ruc' in data:
+            ruc = data.get('ruc', '').strip() or None
+            if ruc and not validar_ruc_ecuador(ruc):
+                return JsonResponse({'error': 'El RUC ingresado no es válido para Ecuador (debe tener 13 dígitos y terminar en 001)'}, status=400)
+            if ruc and EntidadCooperante.objects.filter(ruc=ruc).exclude(id_entidad=id).exists():
+                return JsonResponse({'error': f'Ya existe otra entidad con el RUC {ruc}'}, status=400)
+        if 'representante_legal' in data and data.get('representante_legal'):
+            rep = data.get('representante_legal', '').strip()
+            if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', rep):
+                return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
         for field in ['nombre', 'nombre_corto', 'ruc', 'representante_legal', 'cargo_representante',
                       'telefono', 'correo', 'pagina_web', 'provincia', 'canton', 'parroquia',
                       'direccion', 'sector', 'observaciones']:
@@ -1918,6 +1953,30 @@ def api_proyecto_create(request):
                 return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
             if Proyecto.objects.filter(codigo=codigo).exists():
                 return JsonResponse({'error': f'Ya existe un proyecto con el código {codigo}'}, status=400)
+
+            fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
+            fecha_fin = request.POST.get('fecha_fin_planificada', '').strip() or None
+            presupuesto = request.POST.get('presupuesto_planificado', '').strip()
+            presupuesto = presupuesto if presupuesto != '' else None
+            director_nombre = request.POST.get('director_nombre', '').strip() or None
+
+            # Validar fechas
+            if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+                return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
+
+            # Validar presupuesto
+            if presupuesto is not None:
+                try:
+                    monto = float(presupuesto)
+                    if monto < 0:
+                        return JsonResponse({'error': 'El presupuesto no puede ser un valor negativo'}, status=400)
+                except (ValueError, TypeError):
+                    return JsonResponse({'error': 'El presupuesto debe ser un número válido'}, status=400)
+
+            # Validar nombre del director si fue ingresado
+            if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]+$', director_nombre):
+                return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+
             lat = request.POST.get('latitud', '').strip() or None
             lng = request.POST.get('longitud', '').strip() or None
             # nombre_corto se autogenera del título (se quitó como campo redundante)
@@ -1934,7 +1993,7 @@ def api_proyecto_create(request):
                 linea_vinculacion=request.POST.get('linea_vinculacion', '').strip() or None,
                 area_conocimiento=request.POST.get('area_conocimiento', '').strip() or None,
                 sub_area_conocimiento=request.POST.get('sub_area_conocimiento', '').strip() or None,
-                director_nombre=request.POST.get('director_nombre', '').strip() or None,
+                director_nombre=director_nombre,
                 director_correo=request.POST.get('director_correo', '').strip() or None,
                 provincia=request.POST.get('provincia', '').strip() or None,
                 canton=request.POST.get('canton', '').strip() or None,
@@ -1942,11 +2001,11 @@ def api_proyecto_create(request):
                 sector=request.POST.get('sector', '').strip() or None,
                 descripcion=request.POST.get('descripcion', '').strip() or None,
                 objetivo_general=request.POST.get('objetivo_general', '').strip() or None,
-                fecha_inicio=request.POST.get('fecha_inicio', '').strip() or None,
-                fecha_fin_planificada=request.POST.get('fecha_fin_planificada', '').strip() or None,
+                fecha_inicio=fecha_inicio,
+                fecha_fin_planificada=fecha_fin,
                 ods=request.POST.get('ods', '').strip() or None,
                 observaciones=request.POST.get('observaciones', '').strip() or None,
-                presupuesto_planificado=request.POST.get('presupuesto_planificado', '').strip() or None,
+                presupuesto_planificado=presupuesto,
                 terminos_negociacion=request.POST.get('terminos_negociacion', '').strip() or None,
                 latitud=lat,
                 longitud=lng,
@@ -2178,6 +2237,30 @@ def api_proyecto_update(request, id):
                     return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
                 if Proyecto.objects.filter(codigo=codigo).exclude(id_proyecto=id).exists():
                     return JsonResponse({'error': f'Ya existe otro proyecto con el código {codigo}'}, status=400)
+
+                fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
+                fecha_fin = request.POST.get('fecha_fin_planificada', '').strip() or None
+                presupuesto = request.POST.get('presupuesto_planificado', '').strip()
+                presupuesto = presupuesto if presupuesto != '' else None
+                director_nombre = request.POST.get('director_nombre', '').strip() or None
+
+                # Validar fechas
+                if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+                    return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
+
+                # Validar presupuesto
+                if presupuesto is not None:
+                    try:
+                        monto = float(presupuesto)
+                        if monto < 0:
+                            return JsonResponse({'error': 'El presupuesto no puede ser un valor negativo'}, status=400)
+                    except (ValueError, TypeError):
+                        return JsonResponse({'error': 'El presupuesto debe ser un número válido'}, status=400)
+
+                # Validar nombre del director si fue ingresado
+                if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]+$', director_nombre):
+                    return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+
                 proyecto.codigo = codigo
                 proyecto.nombre = nombre
                 proyecto.nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
@@ -2185,7 +2268,7 @@ def api_proyecto_update(request, id):
                 proyecto.id_carrera = Carrera.objects.get(id_carrera=request.POST['id_carrera'])
                 proyecto.id_periodo_inicio = PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio'])
                 proyecto.estado = request.POST.get('estado', proyecto.estado)
-                proyecto.director_nombre = request.POST.get('director_nombre', '').strip() or None
+                proyecto.director_nombre = director_nombre
                 proyecto.director_correo = request.POST.get('director_correo', '').strip() or None
                 proyecto.linea_vinculacion = request.POST.get('linea_vinculacion', '').strip() or None
                 proyecto.programa = request.POST.get('programa', '').strip() or None
@@ -2198,10 +2281,10 @@ def api_proyecto_update(request, id):
                 proyecto.descripcion = request.POST.get('descripcion', '').strip() or None
                 proyecto.objetivo_general = request.POST.get('objetivo_general', '').strip() or None
                 proyecto.ods = request.POST.get('ods', '').strip() or None
-                proyecto.fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
-                proyecto.fecha_fin_planificada = request.POST.get('fecha_fin_planificada', '').strip() or None
+                proyecto.fecha_inicio = fecha_inicio
+                proyecto.fecha_fin_planificada = fecha_fin
                 proyecto.observaciones = request.POST.get('observaciones', '').strip() or None
-                proyecto.presupuesto_planificado = request.POST.get('presupuesto_planificado', '').strip() or None
+                proyecto.presupuesto_planificado = presupuesto
                 proyecto.terminos_negociacion = request.POST.get('terminos_negociacion', '').strip() or None
                 lat = request.POST.get('latitud', '').strip()
                 lng = request.POST.get('longitud', '').strip()
@@ -2297,14 +2380,18 @@ def api_convenios_post(request):
     except Exception:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     try:
+        fecha_inicio = data.get('fecha_inicio') or None
+        fecha_fin = data.get('fecha_fin') or None
+        if fecha_inicio and fecha_fin and str(fecha_fin) < str(fecha_inicio):
+            return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
         convenio = Convenio.objects.create(
             id_proyecto=Proyecto.objects.get(pk=data['id_proyecto']),
             id_entidad=EntidadCooperante.objects.get(pk=data['id_entidad']),
             id_periodo=PeriodoAcademico.objects.get(pk=data['id_periodo']) if data.get('id_periodo') else None,
             numero_memorando=data.get('numero_memorando', '') or None,
             fecha_firma=data.get('fecha_firma') or None,
-            fecha_inicio=data.get('fecha_inicio') or None,
-            fecha_fin=data.get('fecha_fin') or None,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
             duracion_anios=data.get('duracion_anios') or 2,
             estudiantes_asignados=data.get('estudiantes_asignados') or None,
             estado=data.get('estado', 'VIGENTE'),
@@ -2358,7 +2445,14 @@ def api_convenio_detail(request, id):
     if request.method in ('PUT', 'PATCH'):
         try:
             with transaction.atomic():
-                data = json.loads(request.body)
+                try:
+                    data = json.loads(request.body)
+                except Exception:
+                    data = {}
+                fecha_inicio = data.get('fecha_inicio', str(convenio.fecha_inicio) if convenio.fecha_inicio else None)
+                fecha_fin = data.get('fecha_fin', str(convenio.fecha_fin) if convenio.fecha_fin else None)
+                if fecha_inicio and fecha_fin and str(fecha_fin) < str(fecha_inicio):
+                    return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
                 for field in ['numero_memorando', 'fecha_firma', 'fecha_inicio', 'fecha_fin',
                               'duracion_anios', 'estudiantes_asignados', 'estado', 'observaciones']:
                     if field in data:
@@ -2901,6 +2995,7 @@ def api_usuario_crear(request):
     data = request.data
     nombres = (data.get('nombres') or '').strip()
     apellidos = (data.get('apellidos') or '').strip()
+    cedula = (data.get('cedula') or '').strip()
     correo = (data.get('correo') or '').strip().lower()
     id_rol = data.get('id_rol')
     id_facultad = data.get('id_facultad')
@@ -2909,6 +3004,12 @@ def api_usuario_crear(request):
 
     if not nombres:
         return Response({'error': 'Los nombres son requeridos'}, status=400)
+    if nombres and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', nombres):
+        return Response({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+    if apellidos and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', apellidos):
+        return Response({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+    if cedula and not validar_cedula_ecuador(cedula):
+        return Response({'error': 'La cédula ingresada no es válida'}, status=400)
     if not id_rol:
         return Response({'error': 'Debe seleccionar un rol'}, status=400)
 
@@ -2989,7 +3090,14 @@ def api_usuario_editar(request, id_usuario):
     
     data = request.data
     if 'nombres' in data:
-        u.nombres = data.get('nombres', '').strip() or u.nombres
+        nombres_input = data.get('nombres', '').strip()
+        if nombres_input and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', nombres_input):
+            return Response({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+        u.nombres = nombres_input or u.nombres
+    if 'cedula' in data:
+        cedula_input = data.get('cedula', '').strip()
+        if cedula_input and not validar_cedula_ecuador(cedula_input):
+            return Response({'error': 'La cédula ingresada no es válida'}, status=400)
     if 'correo' in data:
         u.correo = data.get('correo', '').strip().lower() or None
     if 'id_rol' in data:
