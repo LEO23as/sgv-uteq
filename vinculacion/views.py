@@ -1246,7 +1246,19 @@ def api_proyecto_detalle(request, id):
     )
     fotos = list(FotoProyecto.objects.filter(id_proyecto=proyecto).values('ruta_foto', 'titulo'))
     fotos_urls = [{'url': '/media/' + f['ruta_foto'], 'titulo': f['titulo']} for f in fotos]
-    convenios_count = Convenio.objects.filter(id_proyecto=proyecto).count()
+    convs_qs = Convenio.objects.filter(id_proyecto=proyecto).select_related('id_entidad')
+    convenios_data = [
+        {
+            'id_convenio': c.id_convenio,
+            'entidad_nombre': c.id_entidad.nombre,
+            'estado': c.estado,
+            'numero_memorando': c.numero_memorando or '',
+            'fecha_inicio': str(c.fecha_inicio) if c.fecha_inicio else '',
+            'fecha_fin': str(c.fecha_fin) if c.fecha_fin else '',
+            'duracion_anios': c.duracion_anios or 2,
+        }
+        for c in convs_qs
+    ]
 
     COLORES = {
         'EN_EJECUCION': '#1b7505', 'PROPUESTO': '#dba112', 'APROBADO': '#0d6efd',
@@ -1284,7 +1296,8 @@ def api_proyecto_detalle(request, id):
         'resolucion_aprobacion': proyecto.resolucion_aprobacion or '',
         'fecha_aprobacion': str(proyecto.fecha_aprobacion) if proyecto.fecha_aprobacion else '',
         'fotos': fotos_urls,
-        'convenios_count': convenios_count,
+        'convenios': convenios_data,
+        'convenios_count': len(convenios_data),
         'url_detalle': f'/proyectos/{proyecto.id_proyecto}/detalle/',
         'url_editar': f'/proyectos/{proyecto.id_proyecto}/editar/',
     })
