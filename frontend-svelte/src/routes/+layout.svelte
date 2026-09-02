@@ -62,6 +62,8 @@
       periodosList = [];
       selectedPeriodCode = 'Sin período';
     }
+  }
+
   // PWA & Notificaciones Nativas
   let deferredInstallPrompt = $state(null);
   let canInstallPWA = $state(false);
