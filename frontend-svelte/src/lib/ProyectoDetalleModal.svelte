@@ -154,7 +154,302 @@
   }
 
   function imprimirFicha() {
-    window.print();
+    if (!proy) return;
+
+    const av = calcularAvanceTemporal(proy.fecha_inicio, proy.fecha_fin_planificada || proy.fecha_fin_real, proy.estado);
+    const ahora = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const win = window.open('', '_blank');
+    if (!win) {
+      toast.error('Por favor permite ventanas emergentes para generar la Ficha Técnica');
+      return;
+    }
+
+    const conveniosRows = (proy.convenios && proy.convenios.length > 0)
+      ? proy.convenios.map((c, i) => `
+        <tr>
+          <td style="text-align:center;">${i + 1}</td>
+          <td><strong>${c.entidad_nombre || '—'}</strong></td>
+          <td>${c.numero_memorando || 'Sin Nro.'}</td>
+          <td>${c.fecha_inicio ? formatFechaLocal(c.fecha_inicio) : '—'}</td>
+          <td>${c.fecha_fin ? formatFechaLocal(c.fecha_fin) : '—'}</td>
+          <td><span style="font-weight:700; color:${c.estado === 'VIGENTE' ? '#15803d' : '#dc2626'};">${c.estado || '—'}</span></td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" style="text-align:center; color:#64748b; font-style:italic;">No registra convenios formalizados para este proyecto</td></tr>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Ficha Técnica Oficial - ${proy.codigo}</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 14mm 14mm 14mm; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Nunito', Arial, sans-serif; color: #1e293b; margin: 0; padding: 12px; font-size: 10pt; line-height: 1.35; background: #fff; }
+    
+    .no-print-bar {
+      background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 8px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-action {
+      background: #15803d; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11pt;
+    }
+    .btn-action:hover { background: #166534; }
+    .btn-close {
+      background: #64748b; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11pt; margin-left: 8px;
+    }
+    
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .header-table td { vertical-align: middle; }
+    .logo-img { max-height: 68px; max-width: 140px; object-fit: contain; }
+    .header-center { text-align: center; }
+    .header-center h1 { font-size: 12pt; margin: 0; color: #15803d; text-transform: uppercase; font-weight: 900; letter-spacing: 0.5px; }
+    .header-center h2 { font-size: 10pt; margin: 2px 0 0; color: #334155; font-weight: 800; }
+    .header-center h3 { font-size: 9pt; margin: 2px 0 0; color: #0284c7; font-weight: 700; }
+    
+    .sub-bar {
+      background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 6px 12px; border-radius: 6px; margin-bottom: 14px;
+      display: flex; justify-content: space-between; font-size: 8.5pt; font-weight: 700; color: #166534;
+    }
+
+    .sec-title {
+      font-size: 9.5pt; font-weight: 900; color: #0f172a; text-transform: uppercase;
+      background: #f1f5f9; padding: 4px 10px; border-left: 4px solid #15803d; margin: 12px 0 6px;
+    }
+
+    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+    .data-table th, .data-table td { border: 1px solid #cbd5e1; padding: 5px 8px; vertical-align: top; }
+    .data-table th { background: #f8fafc; font-weight: 800; color: #475569; width: 22%; }
+    .data-table td { color: #0f172a; }
+
+    .title-highlight {
+      font-size: 10.5pt; font-weight: 900; color: #0f172a; line-height: 1.3;
+    }
+
+    .badge-estado {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 8pt;
+      background: ${proy.estado === 'EN_EJECUCION' ? '#dcfce7' : '#e0f2fe'};
+      color: ${proy.estado === 'EN_EJECUCION' ? '#15803d' : '#0369a1'};
+      border: 1px solid ${proy.estado === 'EN_EJECUCION' ? '#86efac' : '#7dd3fc'};
+    }
+
+    .signatures-block {
+      margin-top: 32px; display: table; width: 100%; page-break-inside: avoid;
+    }
+    .sig-row { display: table-row; }
+    .sig-cell {
+      display: table-cell; width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px;
+    }
+    .sig-line {
+      border-top: 1.5px solid #334155; width: 85%; margin: 38px auto 6px;
+    }
+    .sig-name { font-size: 8pt; font-weight: 800; color: #0f172a; display: block; }
+    .sig-cargo { font-size: 7.2pt; color: #64748b; display: block; }
+
+    .footer-stamp {
+      margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between;
+      font-size: 7.2pt; color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <div>
+      <strong>Vista previa oficial de impresión A4</strong> • Formato ejecutivo institucional
+    </div>
+    <div>
+      <button class="btn-action" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+      <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
+    </div>
+  </div>
+
+  <!-- MEMBRETE OFICIAL CON AMBOS LOGOS -->
+  <table class="header-table">
+    <tr>
+      <td style="width: 20%; text-align: left;">
+        <img src="/logo-uteq.png" alt="UTEQ" class="logo-img" />
+      </td>
+      <td class="header-center" style="width: 60%;">
+        <h1>UNIVERSIDAD TÉCNICA ESTATAL DE QUEVEDO</h1>
+        <h2>DIRECCIÓN DE VINCULACIÓN CON LA SOCIEDAD</h2>
+        <h3>FICHA TÉCNICA EJECUTIVA DE PROYECTO DE VINCULACIÓN</h3>
+      </td>
+      <td style="width: 20%; text-align: right;">
+        <img src="/logo-vinculacion.png" alt="Vinculación UTEQ" class="logo-img" />
+      </td>
+    </tr>
+  </table>
+
+  <div class="sub-bar">
+    <span>CÓDIGO: <strong>${proy.codigo}</strong></span>
+    <span>PERÍODO: <strong>${proy.periodo}</strong></span>
+    <span>FECHA DE EMISIÓN: <strong>${ahora}</strong></span>
+  </div>
+
+  <!-- 1. IDENTIFICACIÓN Y DATOS GENERALES -->
+  <div class="sec-title">1. Identificación y Estado del Proyecto</div>
+  <table class="data-table">
+    <tr>
+      <th>Título Oficial:</th>
+      <td colspan="3" class="title-highlight">${proy.nombre}</td>
+    </tr>
+    <tr>
+      <th>Nombre Corto:</th>
+      <td>${proy.nombre_corto || '—'}</td>
+      <th>Estado Oficial:</th>
+      <td><span class="badge-estado">${proy.estado_label || proy.estado}</span> (${av.label})</td>
+    </tr>
+    <tr>
+      <th>Período Inicio:</th>
+      <td>${proy.periodo}</td>
+      <th>Cronograma:</th>
+      <td>${formatFechaLocal(proy.fecha_inicio)} al ${formatFechaLocal(proy.fecha_fin_planificada || proy.fecha_fin_real)}</td>
+    </tr>
+  </table>
+
+  <!-- 2. ESTRUCTURA ACADÉMICA Y RESPONSABLES -->
+  <div class="sec-title">2. Estructura Académica y Responsables</div>
+  <table class="data-table">
+    <tr>
+      <th>Facultad Responsable:</th>
+      <td><strong>${proy.facultad}</strong></td>
+      <th>Carrera(s):</th>
+      <td><strong>${proy.carrera}</strong></td>
+    </tr>
+    <tr>
+      <th>Director del Proyecto:</th>
+      <td>${proy.director_nombre || 'Docente Responsable no asignado'}</td>
+      <th>Correo Institucional:</th>
+      <td>${proy.director_correo || '—'}</td>
+    </tr>
+  </table>
+
+  <!-- 3. ALINEACIÓN ESTRATÉGICA Y PLANIFICACIÓN -->
+  <div class="sec-title">3. Alineación Estratégica y Planificación</div>
+  <table class="data-table">
+    <tr>
+      <th>Línea de Vinculación:</th>
+      <td>${proy.linea_vinculacion || '—'}</td>
+      <th>ODS Vinculado:</th>
+      <td>${proy.ods || '—'}</td>
+    </tr>
+    <tr>
+      <th>Presupuesto Asignado:</th>
+      <td><strong style="color:#15803d;">$ ${proy.presupuesto_planificado || '0.00'} USD</strong></td>
+      <th>Resolución de Aprobación:</th>
+      <td>${proy.resolucion_aprobacion || 'Resolución Consejo Directivo'} (${proy.fecha_aprobacion ? formatFechaLocal(proy.fecha_aprobacion) : '—'})</td>
+    </tr>
+  </table>
+
+  <!-- 4. RESUMEN EJECUTIVO Y OBJETIVOS -->
+  <div class="sec-title">4. Resumen Ejecutivo y Objetivos</div>
+  <table class="data-table">
+    <tr>
+      <th>Objetivo General:</th>
+      <td>${proy.objetivo_general || 'No registrado'}</td>
+    </tr>
+    ${proy.objetivos_especificos ? `
+    <tr>
+      <th>Objetivos Específicos:</th>
+      <td>${proy.objetivos_especificos}</td>
+    </tr>
+    ` : ''}
+    <tr>
+      <th>Descripción y Alcance:</th>
+      <td>${proy.descripcion || '—'}</td>
+    </tr>
+  </table>
+
+  <!-- 5. LOCALIZACIÓN TERRITORIAL Y GEORREFERENCIACIÓN GPS -->
+  <div class="sec-title">5. Localización Territorial y Georreferenciación GPS</div>
+  <table class="data-table">
+    <tr>
+      <th>Provincia:</th>
+      <td>${proy.provincia || 'Los Ríos'}</td>
+      <th>Cantón / Parroquia:</th>
+      <td>${proy.canton || '—'}, ${proy.parroquia || '—'}</td>
+    </tr>
+    <tr>
+      <th>Sector / Comunidad:</th>
+      <td>${proy.sector || '—'}</td>
+      <th>Coordenadas GPS:</th>
+      <td><strong>Lat:</strong> ${proy.latitud || '—'} &nbsp;|&nbsp; <strong>Lng:</strong> ${proy.longitud || '—'}</td>
+    </tr>
+  </table>
+
+  <!-- 6. CONVENIOS INTERINSTITUCIONALES -->
+  <div class="sec-title">6. Convenios y Alianzas Interinstitucionales Asociadas (${proy.convenios?.length || 0})</div>
+  <table class="data-table">
+    <thead>
+      <tr style="background:#f1f5f9; text-align:left;">
+        <th style="width:5%; text-align:center;">#</th>
+        <th style="width:35%;">Entidad Cooperante</th>
+        <th style="width:20%;">N° Memorando</th>
+        <th style="width:15%;">F. Inicio</th>
+        <th style="width:15%;">F. Fin</th>
+        <th style="width:10%;">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${conveniosRows}
+    </tbody>
+  </table>
+
+  <!-- 7. EXPEDIENTE DIGITAL Y PORTAFOLIO -->
+  <div class="sec-title">7. Expediente y Evidencias Digitales</div>
+  <table class="data-table">
+    <tr>
+      <th>Documentos Acreditados:</th>
+      <td><strong>${documentos.length}</strong> archivos registrados en portafolio institucional</td>
+      <th>Evidencias Fotográficas:</th>
+      <td><strong>${proy.fotos?.length || 0}</strong> capturas georreferenciadas</td>
+    </tr>
+  </table>
+
+  <!-- 8. BLOQUE OFICIAL DE LEGALIZACIÓN Y FIRMAS -->
+  <div class="signatures-block">
+    <div class="sig-row">
+      <div class="sig-cell">
+        <div class="sig-line"></div>
+        <span class="sig-name">${proy.director_nombre || 'DIRECTOR DEL PROYECTO'}</span>
+        <span class="sig-cargo">Director / Docente Responsable</span>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-line"></div>
+        <span class="sig-name">DECANATO / SUBDECANATO</span>
+        <span class="sig-cargo">${proy.facultad}</span>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-line"></div>
+        <span class="sig-name">DIRECCIÓN DE VINCULACIÓN</span>
+        <span class="sig-cargo">Universidad Técnica Estatal de Quevedo</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-stamp">
+    <span>Sistema de Gestión y Georreferenciación de Vinculación (SGV UTEQ)</span>
+    <span>Acreditación Institucional CACES • Página 1 de 1</span>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 400);
+    };
+  </script>
+</body>
+</html>`;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   }
 
   function onKeydown(e) {
