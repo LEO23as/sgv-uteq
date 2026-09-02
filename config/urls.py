@@ -19,6 +19,7 @@ urlpatterns = [
     path('api/auth/logout/',         views.api_logout,            name='api_logout'),
     path('api/auth/me/',             views.api_me,                name='api_me'),
     path('api/auth/cambiar-clave-primer-acceso/', views.api_cambiar_clave_primer_acceso, name='api_cambiar_clave_primer_acceso'),
+    path('api/health/',              views.api_health,            name='api_health'),
     path('api/dashboard/stats/',     views.api_dashboard_stats,   name='api_dashboard_stats'),
     path('api/periodos/',            views.api_periodos,          name='api_periodos'),
     path('api/tipos-documento/',     views.api_tipos_documento,   name='api_tipos_documento'),

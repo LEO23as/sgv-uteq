@@ -3372,3 +3372,36 @@ def api_auditoria_listar(request):
     })
 
 
+def api_health(request):
+    """Endpoint oficial de observabilidad y monitoreo de salud del sistema SGV-UTEQ."""
+    from django.db import connection
+    db_ok = True
+    db_error = None
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception as e:
+        db_ok = False
+        db_error = str(e)
+
+    total_proyectos = Proyecto.objects.count() if db_ok else 0
+    total_convenios = Convenio.objects.count() if db_ok else 0
+
+    return JsonResponse({
+        'status': 'HEALTHY' if db_ok else 'UNHEALTHY',
+        'sistema': 'SGV-UTEQ (Sistema de Gestión y Georreferenciación de Vinculación)',
+        'institucion': 'Universidad Técnica Estatal de Quevedo',
+        'database': {
+            'status': 'CONNECTED' if db_ok else 'DISCONNECTED',
+            'cluster': 'PostgreSQL High-Availability (Leader/Follower Streaming)',
+            'error': db_error,
+        },
+        'telemetria': {
+            'proyectos_registrados': total_proyectos,
+            'convenios_registrados': total_convenios,
+        },
+        'timestamp': timezone.now().isoformat(),
+    }, status=200 if db_ok else 503)
+
+
+
