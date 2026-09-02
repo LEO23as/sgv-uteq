@@ -77,6 +77,7 @@ urlpatterns = [
     path('api/carreras-periodo/',                     estructura.api_carreras_periodo,     name='api_carreras_periodo'),
 
     # Auditoría Criptográfica Inmutable (Estándar UTEQ Módulo G)
+    path('api/auditoria/listar/',                     views.api_auditoria_listar,          name='api_auditoria_listar'),
     path('api/auditoria/verificar/',                  views.api_auditoria_verificar,       name='api_auditoria_verificar'),
 
     # Cualquier otra ruta → mensaje amigable

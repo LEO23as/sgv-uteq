@@ -20,7 +20,8 @@ from vinculacion.models import (
     EntidadCooperante, TipoEntidad, Proyecto, FotoProyecto,
     Convenio, AnexoConvenio, ProyectoDocente, ProyectoEstudiante,
     Docente, Rol, ProyectoUbicacion, DocumentoProyecto,
-    ProyectoBeneficiario, InformeSemestral, EvaluacionImpacto, ActividadSemanal
+    ProyectoBeneficiario, InformeSemestral, EvaluacionImpacto, ActividadSemanal,
+    BitacoraAuditoria
 )
 from django.db import transaction
 from vinculacion.serializers import (
@@ -3187,5 +3188,67 @@ def api_auditoria_verificar(request):
     from vinculacion.auditoria import verificar_integridad_cadena
     resultado = verificar_integridad_cadena()
     return JsonResponse(resultado)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def api_auditoria_listar(request):
+    """Devuelve eventos de auditoria con filtros, paginacion y estadisticas forenses."""
+    if not _require_auth(request):
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+    entidad = request.GET.get('entidad', '').strip()
+    accion = request.GET.get('accion', '').strip()
+    q = request.GET.get('q', '').strip()
+    qs = BitacoraAuditoria.objects.all().order_by('-id_bitacora')
+    if entidad:
+        qs = qs.filter(entidad=entidad)
+    if accion:
+        qs = qs.filter(accion__icontains=accion)
+    if q:
+        qs = qs.filter(
+            Q(username__icontains=q) |
+            Q(ip_origen__icontains=q) |
+            Q(detalles_json__icontains=q)
+        )
+    # Metricas forenses
+    total = qs.count()
+    creaciones = qs.filter(accion__icontains='CREACION').count()
+    modificaciones = qs.filter(accion__icontains='MODIFICACION').count()
+    eliminaciones = qs.filter(accion__icontains='ELIMINACION').count()
+    # Paginacion
+    try:
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 15))
+    except ValueError:
+        page, page_size = 1, 15
+    start = (page - 1) * page_size
+    end = start + page_size
+    items = []
+    for b in qs[start:end]:
+        items.append({
+            'id': b.id_bitacora,
+            'entidad': b.entidad,
+            'id_registro': b.id_registro,
+            'accion': b.accion,
+            'usuario_id': b.usuario_id,
+            'username': b.username or 'Sistema',
+            'ip_origen': b.ip_origen or '127.0.0.1',
+            'hash_anterior': b.hash_anterior,
+            'hash_actual': b.hash_actual,
+            'creado_en': b.creado_en.strftime('%Y-%m-%d %H:%M:%S') if b.creado_en else '',
+            'detalles': json.loads(b.detalles_json) if b.detalles_json else {},
+        })
+    return JsonResponse({
+        'results': items,
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'kpis': {
+            'total': total,
+            'creaciones': creaciones,
+            'modificaciones': modificaciones,
+            'eliminaciones': eliminaciones,
+        }
+    })
 
 

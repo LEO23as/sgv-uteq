@@ -40,10 +40,20 @@ def registrar_auditoria(entidad, id_registro, accion, detalles=None, request=Non
         ultimo_evento = BitacoraAuditoria.objects.order_by('-id_bitacora').first()
         hash_anterior = ultimo_evento.hash_actual if ultimo_evento else GENESIS_HASH
 
-        ahora = timezone.now()
-        creado_en_str = ahora.isoformat()
+        evento = BitacoraAuditoria(
+            entidad=entidad,
+            id_registro=id_registro,
+            accion=accion,
+            detalles_json=detalles_str,
+            usuario_id=usuario_id,
+            username=username,
+            ip_origen=ip_origen,
+            hash_anterior=hash_anterior,
+        )
+        evento.save()
 
-        # Calcular nuevo hash
+        # Calcular nuevo hash con el timestamp exacto persistido
+        creado_en_str = evento.creado_en.strftime('%Y-%m-%d %H:%M:%S') if evento.creado_en else timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         hash_actual = _calcular_hash(
             hash_anterior=hash_anterior,
             entidad=entidad,
@@ -54,19 +64,8 @@ def registrar_auditoria(entidad, id_registro, accion, detalles=None, request=Non
             detalles_str=detalles_str,
             creado_en_str=creado_en_str,
         )
-
-        evento = BitacoraAuditoria.objects.create(
-            entidad=entidad,
-            id_registro=id_registro,
-            accion=accion,
-            detalles_json=detalles_str,
-            usuario_id=usuario_id,
-            username=username,
-            ip_origen=ip_origen,
-            hash_anterior=hash_anterior,
-            hash_actual=hash_actual,
-            creado_en=ahora,
-        )
+        evento.hash_actual = hash_actual
+        evento.save(update_fields=['hash_actual'])
         return evento
     except Exception as e:
         # No bloquear la transacción principal si la auditoría falla
@@ -98,7 +97,7 @@ def verificar_integridad_cadena():
             })
 
         # 2. Recalcular hash de los datos del bloque actual
-        creado_en_str = ev.creado_en.isoformat() if hasattr(ev.creado_en, 'isoformat') else str(ev.creado_en)
+        creado_en_str = ev.creado_en.strftime('%Y-%m-%d %H:%M:%S') if ev.creado_en else ''
         hash_recalculado = _calcular_hash(
             hash_anterior=ev.hash_anterior,
             entidad=ev.entidad,
