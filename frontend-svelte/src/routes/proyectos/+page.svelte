@@ -72,7 +72,16 @@
       glow: 'rgba(217, 119, 6, 0.18)'
     },
     'SOCIALES': {
-      siglas: 'FCSEH',
+      siglas: 'FCSEF',
+      color: '#7c3aed',
+      bg: '#f5f3ff',
+      border: '#ddd6fe',
+      logo: '/img/facultades/fcseh.png',
+      logoSvg: '/img/facultades/fcseh.svg',
+      glow: 'rgba(124, 58, 237, 0.18)'
+    },
+    'FILOSOFIA': {
+      siglas: 'FCSEF',
       color: '#7c3aed',
       bg: '#f5f3ff',
       border: '#ddd6fe',
