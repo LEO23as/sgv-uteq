@@ -3404,4 +3404,49 @@ def api_health(request):
     }, status=200 if db_ok else 503)
 
 
+@csrf_exempt
+def api_vincular_dispositivo(request):
+    """Verifica identidad y registra vinculación de dispositivo para PWA y notificaciones."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    password = data.get('password', '').strip()
+    username = request.session.get('usuario_username') or request.session.get('username') or data.get('username', '').strip()
+
+    if not password:
+        return JsonResponse({'error': 'Debe ingresar su contraseña para confirmar identidad'}, status=400)
+
+    try:
+        usuario = Usuario.objects.select_related('id_rol').get(username=username, activo=True)
+    except Usuario.DoesNotExist:
+        return JsonResponse({'error': 'Usuario no autenticado o no encontrado'}, status=401)
+
+    from vinculacion.utils import verificar_password
+    if not verificar_password(password, usuario.password):
+        return JsonResponse({'error': 'Contraseña incorrecta. Verifique sus credenciales.'}, status=401)
+
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': 'Identidad confirmada exitosamente',
+        'usuario': usuario.nombres or usuario.username,
+        'username': usuario.username,
+        'ip': ip,
+        'user_agent': user_agent,
+        'fecha': timezone.now().isoformat(),
+    })
+
+
+
 

@@ -201,8 +201,8 @@
                    { href: '/auditoria', icon: 'bi-shield-lock-fill', label: 'Bitácora Criptográfica' },
                  ]},
     configuracion: { modulo: 'Configuración',    links: [
+                   { href: '/configuracion',        icon: 'bi-phone-fill',     label: 'Mis dispositivos (PWA)' },
                    { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
-                   { href: '/configuracion/capas',  icon: 'bi-layers-half',    label: 'Capas del mapa'     },
                    { href: '/auditoria',            icon: 'bi-shield-lock',    label: 'Auditoría Forense'  },
                  ]},
   };
