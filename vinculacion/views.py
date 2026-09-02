@@ -1246,8 +1246,18 @@ def api_proyecto_detalle(request, id):
     )
     fotos = list(FotoProyecto.objects.filter(id_proyecto=proyecto).values('ruta_foto', 'titulo'))
     fotos_urls = [{'url': '/media/' + f['ruta_foto'], 'titulo': f['titulo']} for f in fotos]
-    convenios_qs = Convenio.objects.filter(id_proyecto=proyecto).values('id_convenio', 'entidad_nombre', 'numero_memorando', 'estado', 'fecha_inicio', 'fecha_fin')
-    convenios_list = list(convenios_qs)
+    convenios_qs = Convenio.objects.filter(id_proyecto=proyecto).select_related('id_entidad')
+    convenios_list = [
+        {
+            'id_convenio': c.id_convenio,
+            'entidad_nombre': c.id_entidad.nombre if c.id_entidad else 'Entidad Cooperante',
+            'numero_memorando': c.numero_memorando or '',
+            'estado': c.estado,
+            'fecha_inicio': str(c.fecha_inicio) if c.fecha_inicio else '',
+            'fecha_fin': str(c.fecha_fin) if c.fecha_fin else '',
+        }
+        for c in convenios_qs
+    ]
     convenios_count = len(convenios_list)
 
     COLORES = {
