@@ -572,20 +572,8 @@
             onclick={() => seleccionarCarrera(car)}
           >
             <div class="cc-top">
-              <div class="cc-icon" style="background: {facCfg.bg}; border: 1px solid {facCfg.border};">
-                <img 
-                  src={facCfg.logo} 
-                  alt="Logo {facCfg.siglas}" 
-                  width="26" 
-                  height="26" 
-                  style="width: 26px; height: 26px; max-width: 26px; max-height: 26px; object-fit: contain;" 
-                  onerror={(e) => {
-                    if (!e.currentTarget.dataset.fallback) {
-                      e.currentTarget.dataset.fallback = '1';
-                      e.currentTarget.src = facCfg.logoSvg;
-                    }
-                  }}
-                />
+              <div class="cc-icon" style="background: {facCfg.bg}; color: {facCfg.color}; border: 1px solid {facCfg.border};">
+                <i class="bi bi-mortarboard-fill"></i>
               </div>
               <span class="cc-badge" style="color: {facCfg.color}; background: {facCfg.bg}; border-color: {facCfg.border};">
                 {car.totalProyectos} {car.totalProyectos === 1 ? 'proyecto' : 'proyectos'}
