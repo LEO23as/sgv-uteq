@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import { fetchAPI, capaNBIActiva } from '$lib/stores';
   import { get } from 'svelte/store';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let facultades   = $state([]);
   let carreras     = $state([]);
   let periodos     = $state([]);
   let anios        = $state([]);
+  let cargandoProyectos = $state(false);
 
   let filtros = $state({ facultad:'', carrera:'', periodo:'', estado:'', anio:'', buscar:'' });
   let total   = $state(0);
@@ -145,16 +147,18 @@
 
   // ── Proyectos ────────────────────────────────────────────────
   async function cargarProyectos() {
-    const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([k,v]) => { if(v) params.set(k,v); });
-    const data = await fetchAPI('/api/mapa/proyectos/?' + params.toString());
-    total = data.features?.length ?? 0;
+    cargandoProyectos = true;
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filtros).forEach(([k,v]) => { if(v) params.set(k,v); });
+      const data = await fetchAPI('/api/mapa/proyectos/?' + params.toString());
+      total = data.features?.length ?? 0;
 
-    markersLayer.clearLayers();
-    if (redesLayer) redesLayer.clearLayers();
-    proyectoRedExtendidaId = null;
+      markersLayer.clearLayers();
+      if (redesLayer) redesLayer.clearLayers();
+      proyectoRedExtendidaId = null;
 
-    (data.features || []).forEach(f => {
+      (data.features || []).forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
       // Validación defensiva: ignorar coordenadas nulas, NaN o en el océano (0, 0)
       if (lat == null || lng == null || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
@@ -208,6 +212,11 @@
       );
       markersLayer.addLayer(marker);
     });
+    } catch (e) {
+      console.error('Error al cargar proyectos en el mapa:', e);
+    } finally {
+      cargandoProyectos = false;
+    }
   }
 
   // ── Capa NBI/INEC ───────────────────────────────────────────
@@ -490,6 +499,9 @@
 
     <!-- MAPA CON WIDGET HUD FLOTANTE -->
     <div class="map-container-wrap">
+      {#if cargandoProyectos}
+        <InstitutionalLoader fullscreen={false} texto="ACTUALIZANDO MAPA" subtexto="Georreferenciando proyectos..." />
+      {/if}
       <div id="map" style="width:100%;height:100%;"></div>
 
       <div class="map-hud-bar">

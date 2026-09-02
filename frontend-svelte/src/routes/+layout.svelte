@@ -2,12 +2,13 @@
   import '../app.css';
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page, navigating } from '$app/stores';
   import { get } from 'svelte/store';
-  import { user, checkAuth, logout, capaNBIActiva, fetchAPI } from '$lib/stores';
+  import { user, checkAuth, logout, capaNBIActiva, fetchAPI, loading } from '$lib/stores';
   import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida } from '$lib/notifications';
   import Toasts from '$lib/Toasts.svelte';
   import ConfirmDialog from '$lib/ConfirmDialog.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let { children } = $props();
 
@@ -184,6 +185,10 @@
 <Toasts />
 <ConfirmDialog />
 
+{#if $navigating || $loading}
+  <InstitutionalLoader texto="CARGANDO MÓDULO" subtexto="Sistema de Gestión de Vinculación UTEQ" />
+{/if}
+
 {#if PUBLIC.includes($page.url.pathname)}
   {#if authChecked}
     {@render children()}
@@ -192,9 +197,7 @@
   {#if authChecked}
     {@render children()}
   {:else}
-    <div class="checking">
-      <i class="bi bi-arrow-repeat spin"></i> Verificando sesión...
-    </div>
+    <InstitutionalLoader texto="INICIANDO SISTEMA" subtexto="Verificando credenciales institucionales..." />
   {/if}
 {:else}
   <div class="app-shell">
