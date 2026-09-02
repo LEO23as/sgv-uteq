@@ -50,6 +50,8 @@ def login_view(request):
             messages.error(request, 'Usuario o contraseña incorrectos.')
             return render(request, 'auth/login.html')
         request.session['usuario_id'] = usuario.id_usuario
+        request.session['username'] = usuario.username
+        request.session['usuario_username'] = usuario.username
         request.session['usuario_nombre'] = usuario.nombres or username
         request.session['usuario_rol'] = usuario.id_rol.nombre
         usuario.ultimo_acceso = timezone.now()
@@ -1521,6 +1523,8 @@ def api_login(request):
         return JsonResponse({'error': 'Usuario o contraseña incorrectos'}, status=401)
     request.session.cycle_key()
     request.session['usuario_id'] = usuario.id_usuario
+    request.session['username'] = usuario.username
+    request.session['usuario_username'] = usuario.username
     request.session['usuario_nombre'] = usuario.nombres or username
     request.session['usuario_rol'] = usuario.id_rol.nombre
     usuario.ultimo_acceso = timezone.now()
@@ -1903,6 +1907,14 @@ def api_entidades_post(request):
             activo=data.get('activo', True),
             creado_en=timezone.now(),
         )
+        from vinculacion.auditoria import registrar_auditoria
+        registrar_auditoria(
+            entidad='ENTIDAD',
+            id_registro=entidad.id_entidad,
+            accion='CREACION_ENTIDAD',
+            detalles={'nombre': entidad.nombre, 'ruc': entidad.ruc},
+            request=request,
+        )
         return JsonResponse(EntidadSerializer(entidad).data, status=201)
     except Exception as e:
         return JsonResponse({'error': _error_amigable(e)}, status=400)
@@ -1940,7 +1952,26 @@ def api_entidad_detail(request, id):
         if 'activo' in data:
             entidad.activo = bool(data['activo'])
         entidad.save()
+        from vinculacion.auditoria import registrar_auditoria
+        registrar_auditoria(
+            entidad='ENTIDAD',
+            id_registro=entidad.id_entidad,
+            accion='MODIFICACION_ENTIDAD',
+            detalles={'nombre': entidad.nombre, 'ruc': entidad.ruc},
+            request=request,
+        )
         return JsonResponse(EntidadSerializer(entidad).data)
+    if request.method == 'DELETE':
+        from vinculacion.auditoria import registrar_auditoria
+        registrar_auditoria(
+            entidad='ENTIDAD',
+            id_registro=entidad.id_entidad,
+            accion='ELIMINACION_ENTIDAD',
+            detalles={'nombre': entidad.nombre},
+            request=request,
+        )
+        entidad.delete()
+        return JsonResponse({'ok': True})
     return JsonResponse({'error': 'method'}, status=405)
 
 
@@ -2110,6 +2141,16 @@ def api_documento_subir(request, id):
             proyecto.actualizado_en = timezone.now()
             proyecto.save(update_fields=['fecha_aprobacion', 'resolucion_aprobacion', 'actualizado_en'])
 
+    from vinculacion.auditoria import registrar_auditoria
+    for c in creados:
+        registrar_auditoria(
+            entidad='DOCUMENTO',
+            id_registro=c['id'],
+            accion=f'SUBIDA_{codigo_tipo}',
+            detalles={'proyecto_id': proyecto.id_proyecto, 'archivo': c['nombre'], 'tipo': c['tipo']},
+            request=request,
+        )
+
     return JsonResponse({
         'ok': True,
         'documentos': creados,
@@ -2153,6 +2194,14 @@ def api_documento_eliminar(request, id_documento):
             os.remove(ruta)
     except Exception:
         pass
+    from vinculacion.auditoria import registrar_auditoria
+    registrar_auditoria(
+        entidad='DOCUMENTO',
+        id_registro=doc.id_documento,
+        accion='ELIMINACION_DOCUMENTO',
+        detalles={'proyecto_id': doc.id_proyecto_id, 'archivo': doc.nombre_archivo},
+        request=request,
+    )
     doc.delete()
     return JsonResponse({'ok': True})
 
@@ -2404,6 +2453,14 @@ def api_convenios_post(request):
             estado=data.get('estado', 'VIGENTE'),
             observaciones=data.get('observaciones', '') or None,
         )
+        from vinculacion.auditoria import registrar_auditoria
+        registrar_auditoria(
+            entidad='CONVENIO',
+            id_registro=convenio.pk,
+            accion='CREACION_CONVENIO',
+            detalles={'memorando': convenio.numero_memorando, 'proyecto_id': convenio.id_proyecto_id, 'estado': convenio.estado},
+            request=request,
+        )
         return JsonResponse({'id_convenio': convenio.pk, 'ok': True}, status=201)
     except Exception as e:
         return JsonResponse({'error': _error_amigable(e)}, status=400)
@@ -2469,6 +2526,14 @@ def api_convenio_detail(request, id):
                 if 'estado' in data:
                     convenio.estado = data['estado']
                 convenio.save()
+                from vinculacion.auditoria import registrar_auditoria
+                registrar_auditoria(
+                    entidad='CONVENIO',
+                    id_registro=convenio.pk,
+                    accion='MODIFICACION_CONVENIO',
+                    detalles={'memorando': convenio.numero_memorando, 'estado': convenio.estado},
+                    request=request,
+                )
                 return JsonResponse({'ok': True})
         except Exception as e:
             return JsonResponse({'error': _error_amigable(e)}, status=400)
@@ -2479,6 +2544,14 @@ def api_convenio_detail(request, id):
                     ruta = os.path.join(settings.MEDIA_ROOT, anexo.ruta_archivo)
                     if os.path.exists(ruta):
                         os.remove(ruta)
+                from vinculacion.auditoria import registrar_auditoria
+                registrar_auditoria(
+                    entidad='CONVENIO',
+                    id_registro=convenio.pk,
+                    accion='ELIMINACION_CONVENIO',
+                    detalles={'memorando': convenio.numero_memorando},
+                    request=request,
+                )
                 convenio.delete()
                 return JsonResponse({'ok': True})
         except Exception as e:
@@ -3064,6 +3137,15 @@ def api_usuario_crear(request):
         creado_en=timezone.now(),
     )
 
+    from vinculacion.auditoria import registrar_auditoria
+    registrar_auditoria(
+        entidad='USUARIO',
+        id_registro=usuario.id_usuario,
+        accion='CREACION_USUARIO',
+        detalles={'username': usuario.username, 'rol': rol.nombre, 'nombre': usuario.nombres},
+        request=request,
+    )
+
     correo_enviado = False
     if correo:
         try:
@@ -3124,6 +3206,14 @@ def api_usuario_editar(request, id_usuario):
         u.activo = bool(data['activo'])
 
     u.save()
+    from vinculacion.auditoria import registrar_auditoria
+    registrar_auditoria(
+        entidad='USUARIO',
+        id_registro=u.id_usuario,
+        accion='MODIFICACION_USUARIO',
+        detalles={'username': u.username, 'nombre': u.nombres, 'rol': u.id_rol.nombre if u.id_rol else ''},
+        request=request,
+    )
     return Response({'ok': True, 'mensaje': 'Usuario actualizado correctamente'})
 
 
@@ -3143,6 +3233,15 @@ def api_usuario_reset_password(request, id_usuario):
     u.password = hashear_password(password_plano)
     u.debe_cambiar_clave = True
     u.save(update_fields=['password', 'debe_cambiar_clave'])
+
+    from vinculacion.auditoria import registrar_auditoria
+    registrar_auditoria(
+        entidad='USUARIO',
+        id_registro=u.id_usuario,
+        accion='RESET_PASSWORD_USUARIO',
+        detalles={'username': u.username},
+        request=request,
+    )
 
     correo_enviado = False
     if u.correo:
@@ -3175,6 +3274,15 @@ def api_usuario_toggle_activo(request, id_usuario):
     
     u.activo = not u.activo
     u.save(update_fields=['activo'])
+
+    from vinculacion.auditoria import registrar_auditoria
+    registrar_auditoria(
+        entidad='USUARIO',
+        id_registro=u.id_usuario,
+        accion='CAMBIO_ESTADO_USUARIO',
+        detalles={'username': u.username, 'activo': u.activo},
+        request=request,
+    )
     return Response({
         'ok': True, 
         'activo': u.activo, 
@@ -3230,14 +3338,20 @@ def api_auditoria_listar(request):
     start = (page - 1) * page_size
     end = start + page_size
     items = []
+    usuarios_map = {u.id_usuario: u.username for u in Usuario.objects.all()}
     for b in qs[start:end]:
+        uname = b.username
+        if (not uname or uname in ('ANONIMO', 'SISTEMA')) and b.usuario_id in usuarios_map:
+            uname = usuarios_map[b.usuario_id]
+        if not uname:
+            uname = 'SISTEMA'
         items.append({
             'id': b.id_bitacora,
             'entidad': b.entidad,
             'id_registro': b.id_registro,
             'accion': b.accion,
             'usuario_id': b.usuario_id,
-            'username': b.username or 'Sistema',
+            'username': uname,
             'ip_origen': b.ip_origen or '127.0.0.1',
             'hash_anterior': b.hash_anterior,
             'hash_actual': b.hash_actual,

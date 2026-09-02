@@ -18,8 +18,11 @@ def _calcular_hash(hash_anterior, entidad, id_registro, accion, usuario_id, user
 def registrar_auditoria(entidad, id_registro, accion, detalles=None, request=None, usuario=None):
     """
     Registra un evento encadenado criptográficamente.
+    Garantiza la trazabilidad del operador (username, usuario_id, IP de red).
     """
     try:
+        from .models import Usuario
+
         # Determinar usuario e IP
         usuario_id = None
         username = 'SISTEMA'
@@ -27,11 +30,31 @@ def registrar_auditoria(entidad, id_registro, accion, detalles=None, request=Non
 
         if request:
             usuario_id = request.session.get('usuario_id')
-            username = request.session.get('usuario_nombre') or request.session.get('username') or 'ANONIMO'
+            username = (
+                request.session.get('username') or 
+                request.session.get('usuario_username') or 
+                request.session.get('usuario_nombre')
+            )
+            # Si tenemos el ID de usuario pero no el username exacto en sesión, consultarlo en BD
+            if usuario_id and (not username or username in ('ANONIMO', 'SISTEMA')):
+                try:
+                    u = Usuario.objects.filter(id_usuario=usuario_id).first()
+                    if u:
+                        username = u.username or u.nombres
+                except Exception:
+                    pass
+
+            if not username and hasattr(request, 'user') and request.user.is_authenticated:
+                username = getattr(request.user, 'username', 'SISTEMA')
+                usuario_id = getattr(request.user, 'id_usuario', getattr(request.user, 'id', None))
+
+            if not username:
+                username = 'SISTEMA'
+
             ip_origen = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', '127.0.0.1')).split(',')[0].strip()
         elif usuario:
             usuario_id = getattr(usuario, 'id_usuario', None)
-            username = getattr(usuario, 'username', 'SISTEMA')
+            username = getattr(usuario, 'username', None) or getattr(usuario, 'nombres', 'SISTEMA')
 
         # Formatear detalles
         detalles_str = json.dumps(detalles, ensure_ascii=False, default=str) if detalles else '{}'
