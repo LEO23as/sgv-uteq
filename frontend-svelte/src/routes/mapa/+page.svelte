@@ -208,15 +208,26 @@
       const tieneMulti = numUbis > 1;
 
       const icon = L.divIcon({
-        className: '',
+        className: 'sgv-pin-container',
         html: `
-          <div class="main-marker-hub" style="--c:${p.color};">
-            <div class="marker-dot"></div>
-            ${tieneMulti ? `<span class="hub-multi-badge" title="${numUbis} sedes de ejecución">${numUbis}</span>` : ''}
+          <div class="sgv-pin-hub" style="--c:${p.color};">
+            <svg class="sgv-pin-svg" viewBox="0 0 28 36" width="28" height="36">
+              <ellipse cx="14" cy="35" rx="5" ry="1.5" fill="rgba(0,0,0,0.3)" />
+              <path d="M14 1 C6.82 1 1 6.82 1 14 C1 23.8 14 35 14 35 C14 35 27 23.8 27 14 C27 6.82 21.18 1 14 1 Z" 
+                    fill="${p.color}" 
+                    stroke="#ffffff" 
+                    stroke-width="1.8" 
+                    stroke-linejoin="round" />
+              <circle cx="14" cy="13.5" r="7.5" fill="#ffffff" />
+              <path d="M14 9.5 L19.5 12 L14 14.5 L8.5 12 Z" fill="${p.color}" />
+              <path d="M10.5 13.5 V15.8 C10.5 17 14 17.5 14 17.5 C14 17.5 17.5 17 17.5 15.8 V13.5" fill="${p.color}" />
+              <path d="M19 12.5 V16.2" stroke="${p.color}" stroke-width="0.8" stroke-linecap="round" />
+            </svg>
+            ${tieneMulti ? `<span class="sgv-pin-badge" title="${numUbis} sedes de ejecución">${numUbis}</span>` : ''}
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [28, 36],
+        iconAnchor: [14, 35],
       });
 
       const marker = L.marker([lat, lng], { icon, zIndexOffset: tieneMulti ? 500 : 100 });
@@ -246,7 +257,7 @@
 
       marker.bindTooltip(
         `<b>${p.nombre_corto}</b>${tieneMulti ? `<br><span style="color:#15803d;font-weight:700;">🌐 Red de ${numUbis} ubicaciones</span>` : ''}`,
-        { direction: 'top', offset: [0, -14] }
+        { direction: 'top', offset: [0, -35] }
       );
       markersLayer.addLayer(marker);
     });
@@ -1352,47 +1363,52 @@
   color: var(--gris);
 }
 
-/* ── MARCADOR PRINCIPAL (HUB) ── */
-:global(.main-marker-hub) {
+/* ── PIN PRINCIPAL DE GEORREFERENCIACIÓN UTEQ ── */
+:global(.sgv-pin-container) {
+  background: transparent !important;
+  border: none !important;
+}
+
+:global(.sgv-pin-hub) {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 36px;
+  cursor: pointer;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.22s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-:global(.marker-dot) {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--c, #1b7505);
-  border: 2.5px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  cursor: pointer;
-  transition: transform 0.18s ease;
+:global(.sgv-pin-hub:hover) {
+  transform: scale(1.25) translateY(-5px);
+  filter: drop-shadow(0 7px 12px rgba(0, 0, 0, 0.5));
+  z-index: 9999 !important;
 }
 
-:global(.main-marker-hub:hover .marker-dot) {
-  transform: scale(1.2);
+:global(.sgv-pin-svg) {
+  display: block;
+  overflow: visible;
 }
 
-:global(.hub-multi-badge) {
+:global(.sgv-pin-badge) {
   position: absolute;
   top: -4px;
-  right: -4px;
-  background: #1b7505;
+  right: -5px;
+  background: #0f172a;
   color: #ffffff;
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   font-weight: 900;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 /* ── CHINCHETAS SATÉLITE (GOOGLE EARTH PIN STYLE) ── */
