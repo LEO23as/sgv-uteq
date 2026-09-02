@@ -1246,19 +1246,19 @@ def api_proyecto_detalle(request, id):
     )
     fotos = list(FotoProyecto.objects.filter(id_proyecto=proyecto).values('ruta_foto', 'titulo'))
     fotos_urls = [{'url': '/media/' + f['ruta_foto'], 'titulo': f['titulo']} for f in fotos]
-    convs_qs = Convenio.objects.filter(id_proyecto=proyecto).select_related('id_entidad')
-    convenios_data = [
+    convenios_qs = Convenio.objects.filter(id_proyecto=proyecto).select_related('id_entidad')
+    convenios_list = [
         {
             'id_convenio': c.id_convenio,
-            'entidad_nombre': c.id_entidad.nombre,
-            'estado': c.estado,
+            'entidad_nombre': c.id_entidad.nombre if c.id_entidad else 'Entidad Cooperante',
             'numero_memorando': c.numero_memorando or '',
+            'estado': c.estado,
             'fecha_inicio': str(c.fecha_inicio) if c.fecha_inicio else '',
             'fecha_fin': str(c.fecha_fin) if c.fecha_fin else '',
-            'duracion_anios': c.duracion_anios or 2,
         }
-        for c in convs_qs
+        for c in convenios_qs
     ]
+    convenios_count = len(convenios_list)
 
     COLORES = {
         'EN_EJECUCION': '#1b7505', 'PROPUESTO': '#dba112', 'APROBADO': '#0d6efd',
@@ -1280,12 +1280,17 @@ def api_proyecto_detalle(request, id):
         'estado': proyecto.estado,
         'estado_label': ESTADO_LABEL.get(proyecto.estado, proyecto.estado),
         'color': COLORES.get(proyecto.estado, '#1b7505'),
+        'director_nombre': proyecto.director_nombre or '',
+        'director_correo': proyecto.director_correo or '',
         'provincia': proyecto.provincia or '',
         'canton': proyecto.canton or '',
         'parroquia': proyecto.parroquia or '',
         'sector': proyecto.sector or '',
+        'latitud': str(proyecto.latitud) if proyecto.latitud is not None else '',
+        'longitud': str(proyecto.longitud) if proyecto.longitud is not None else '',
         'descripcion': proyecto.descripcion or '',
         'objetivo_general': proyecto.objetivo_general or '',
+        'objetivos_especificos': proyecto.objetivos_especificos or '',
         'ods': proyecto.ods or '',
         'alcance': proyecto.alcance or '',
         'linea_vinculacion': proyecto.linea_vinculacion or '',
@@ -1296,8 +1301,8 @@ def api_proyecto_detalle(request, id):
         'resolucion_aprobacion': proyecto.resolucion_aprobacion or '',
         'fecha_aprobacion': str(proyecto.fecha_aprobacion) if proyecto.fecha_aprobacion else '',
         'fotos': fotos_urls,
-        'convenios': convenios_data,
-        'convenios_count': len(convenios_data),
+        'convenios_count': convenios_count,
+        'convenios': convenios_list,
         'url_detalle': f'/proyectos/{proyecto.id_proyecto}/detalle/',
         'url_editar': f'/proyectos/{proyecto.id_proyecto}/editar/',
     })

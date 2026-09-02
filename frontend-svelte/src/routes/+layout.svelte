@@ -212,9 +212,9 @@
     if (pathname.startsWith('/proyectos'))     return 'proyectos';
     if (pathname.startsWith('/entidades'))     return 'entidades';
     if (pathname.startsWith('/convenios'))     return 'convenios';
-    if (pathname.startsWith('/auditoria'))     return 'auditoria';
     if (pathname.startsWith('/configuracion')) return 'configuracion';
-    if (pathname.startsWith('/periodos'))      return 'periodos';
+    if (pathname.startsWith('/periodos'))      return 'configuracion';
+    if (pathname.startsWith('/auditoria'))     return 'configuracion';
     if (pathname.startsWith('/facultades') || pathname.startsWith('/carreras')) return 'facultades';
     if (pathname.startsWith('/reportes'))      return 'reportes';
     return 'dashboard';
@@ -456,10 +456,6 @@
                 <a href="/usuarios" class="pmenu-item" onclick={() => showProfileDropdown = false}>
                   <i class="bi bi-people-fill"></i>
                   <span>Gestión de Usuarios</span>
-                </a>
-                <a href="/auditoria" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-shield-lock-fill"></i>
-                  <span>Auditoría Forense</span>
                 </a>
                 <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
                   <i class="bi bi-gear-fill"></i>

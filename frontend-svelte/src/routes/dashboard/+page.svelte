@@ -72,7 +72,7 @@
       href: '/configuracion', 
       bi: 'bi-sliders', 
       label: 'Configuración', 
-      desc: 'Períodos, capas y ajustes', 
+      desc: 'Dispositivos, períodos y auditoría', 
       key: null, 
       color: '#475569', 
       bg: '#f1f5f9',
@@ -96,16 +96,6 @@
       key: 'usuarios', 
       color: '#9333ea', 
       bg: '#faf5ff',
-      disabled: false 
-    },
-    { 
-      href: '/auditoria', 
-      bi: 'bi-shield-lock', 
-      label: 'Auditoría', 
-      desc: 'Trazabilidad forense SHA-256', 
-      key: null, 
-      color: '#059669', 
-      bg: '#ecfdf5',
       disabled: false 
     },
   ];
