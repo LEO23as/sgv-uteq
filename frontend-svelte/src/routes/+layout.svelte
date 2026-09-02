@@ -201,9 +201,9 @@
                    { href: '/auditoria', icon: 'bi-shield-lock-fill', label: 'Bitácora Criptográfica' },
                  ]},
     configuracion: { modulo: 'Configuración',    links: [
-                   { href: '/configuracion',        icon: 'bi-phone-fill',     label: 'Mis dispositivos (PWA)' },
+                   { href: '/configuracion',        icon: 'bi-phone',          label: 'Mis dispositivos' },
                    { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
-                   { href: '/auditoria',            icon: 'bi-shield-lock',    label: 'Auditoría Forense'  },
+                   { href: '/auditoria',            icon: 'bi-shield-lock-fill', label: 'Auditoría Forense'  },
                  ]},
   };
 
@@ -214,7 +214,7 @@
     if (pathname.startsWith('/convenios'))     return 'convenios';
     if (pathname.startsWith('/auditoria'))     return 'auditoria';
     if (pathname.startsWith('/configuracion')) return 'configuracion';
-    if (pathname.startsWith('/periodos'))      return 'configuracion';
+    if (pathname.startsWith('/periodos'))      return 'periodos';
     if (pathname.startsWith('/facultades') || pathname.startsWith('/carreras')) return 'facultades';
     if (pathname.startsWith('/reportes'))      return 'reportes';
     return 'dashboard';
@@ -461,10 +461,10 @@
                   <i class="bi bi-shield-lock-fill"></i>
                   <span>Auditoría Forense</span>
                 </a>
-                <button class="pmenu-item" onclick={() => { showProfileDropdown = false; instalarPWA(); }}>
-                  <i class="bi bi-phone"></i>
-                  <span>Instalar App Móvil (PWA)</span>
-                </button>
+                <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
+                  <i class="bi bi-gear-fill"></i>
+                  <span>Configuración</span>
+                </a>
               </div>
 
               <div class="profile-divider"></div>

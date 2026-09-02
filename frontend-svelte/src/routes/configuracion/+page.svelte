@@ -12,6 +12,7 @@
   // Modales
   let showModalIdentidad = $state(false);
   let showModalPreferencias = $state(false);
+  let showModalAyudaPermiso = $state(false);
   let showPassword = $state(false);
   let passwordInput = $state('');
   let verificandoClave = $state(false);
@@ -36,7 +37,7 @@
   function detectarPlataforma() {
     if (typeof window === 'undefined') return { so: 'Dispositivo', tipo: 'Escritorio', icon: 'bi-display' };
     const ua = navigator.userAgent || '';
-    if (/android/i.test(ua)) return { so: 'Android', tipo: 'Móvil', icon: 'bi-android2' };
+    if (/android/i.test(ua)) return { so: 'Android', tipo: 'Móvil', icon: 'bi-phone-fill' };
     if (/iphone|ipad|ipod/i.test(ua)) return { so: 'iOS', tipo: 'Móvil', icon: 'bi-apple' };
     if (/windows/i.test(ua)) return { so: 'Windows', tipo: 'Escritorio', icon: 'bi-microsoft' };
     if (/macintosh|mac os x/i.test(ua)) return { so: 'macOS', tipo: 'Escritorio', icon: 'bi-apple' };
@@ -67,27 +68,23 @@
   }
 
   onMount(async () => {
-    // 1. Detectar permisos de notificación y PWA
     if (typeof window !== 'undefined') {
       permisosNotif = 'Notification' in window ? Notification.permission : 'default';
       appInstalada = window.matchMedia('(display-mode: standalone)').matches || Boolean(navigator.standalone);
 
-      // Cargar preferencias guardadas
       const savedPrefs = localStorage.getItem('sgv_pref_notificaciones');
       if (savedPrefs) {
         try { Object.assign(prefs, JSON.parse(savedPrefs)); } catch {}
       }
     }
 
-    // 2. Obtener IP real del servidor
     try {
       const health = await fetchAPI('/api/health/');
       if (health?.timestamp) {
-        // Obtenemos telemetría de red
+        // Obtenemos telemetría
       }
     } catch {}
 
-    // 3. Cargar o Inicializar dispositivos vinculados
     const infoActual = detectarPlataforma();
     const navActual = detectarNavegador();
 
@@ -100,7 +97,6 @@
       }
     }
 
-    // Asegurar que el dispositivo actual esté en la lista
     let actualDev = dispositivos.find(d => d.actual);
     if (!actualDev) {
       actualDev = {
@@ -117,7 +113,6 @@
       dispositivos = [actualDev, ...dispositivos.filter(d => !d.actual)];
       localStorage.setItem('sgv_dispositivos_vinculados', JSON.stringify(dispositivos));
     } else {
-      // Actualizar actividad reciente
       actualDev.actividad = new Date().toISOString();
       actualDev.navegador = navActual;
       dispositivos = [...dispositivos];
@@ -127,7 +122,6 @@
     cargando = false;
   });
 
-  // Flujo: Vincular Dispositivo con Verificación de Contraseña
   function abrirModalVincular() {
     passwordInput = '';
     showPassword = false;
@@ -156,21 +150,18 @@
         return;
       }
 
-      // Éxito: Vincular dispositivo
       if (data.ip) ipActual = data.ip;
       showModalIdentidad = false;
       toast.success('¡Identidad verificada exitosamente!');
 
-      // Pedir permiso nativo si no lo tiene
       const ok = await solicitarPermisoNotificaciones();
       if (ok) {
         permisosNotif = 'granted';
         toast.success('Permiso de notificaciones concedido.');
 
-        // Enviar notificación nativa al teléfono / PC (estilo SGA)
         if ('Notification' in window && Notification.permission === 'granted') {
           const userNom = $user?.nombre || 'Usuario';
-          const notifMsg = `¡Bienvenido, ${userNom}! Dispositivo vinculado exitosamente al SGV UTEQ. Recibirás recordatorios de caducidad y alertas institucionales.`;
+          const notifMsg = `¡Bienvenido, ${userNom}! Dispositivo vinculado exitosamente al SGV UTEQ.`;
           try {
             new Notification('SGV UTEQ • Dispositivo Vinculado', {
               body: notifMsg,
@@ -178,9 +169,12 @@
             });
           } catch {}
         }
+      } else {
+        if ('Notification' in window && Notification.permission === 'denied') {
+          showModalAyudaPermiso = true;
+        }
       }
 
-      // Actualizar tarjeta
       appInstalada = true;
       const infoActual = detectarPlataforma();
       const navActual = detectarNavegador();
@@ -209,6 +203,11 @@
   }
 
   async function permitirNotificacionesCard() {
+    if ('Notification' in window && Notification.permission === 'denied') {
+      showModalAyudaPermiso = true;
+      return;
+    }
+
     const ok = await solicitarPermisoNotificaciones();
     if (ok) {
       permisosNotif = 'granted';
@@ -220,7 +219,11 @@
         });
       }
     } else {
-      toast.info('Permiso bloqueado o rechazado en el navegador.');
+      if ('Notification' in window && Notification.permission === 'denied') {
+        showModalAyudaPermiso = true;
+      } else {
+        toast.info('Solicitud de notificación cancelada.');
+      }
     }
   }
 
@@ -243,7 +246,6 @@
     toast.success('Se cerraron todas las demás sesiones.');
   }
 
-  // Flujo: Guardar Preferencias de Notificaciones
   function guardarPreferencias() {
     localStorage.setItem('sgv_pref_notificaciones', JSON.stringify(prefs));
     showModalPreferencias = false;
@@ -255,105 +257,112 @@
   }
 </script>
 
-<div class="config-page">
-  <!-- MIGA DE PAN -->
-  <div class="crumbs-bar">
-    <a href="/dashboard" class="cb-link">Inicio</a>
-    <span class="cb-sep">/</span>
-    <span class="cb-link">Configuración</span>
-    <span class="cb-sep">/</span>
-    <span class="cb-current">Mis dispositivos vinculados</span>
-  </div>
+<svelte:head>
+  <title>Mis Dispositivos — SGV UTEQ</title>
+</svelte:head>
 
-  <!-- CABECERA PRINCIPAL -->
-  <div class="page-head">
-    <div class="ph-titles">
-      <h2>Mis dispositivos vinculados</h2>
-      <p>Tienes la sesión iniciada en estos dispositivos o has iniciado sesión en ellos.</p>
+<!-- SUBBAR INSTITUCIONAL (ESTILO UNIFORME SGV) -->
+<div class="subbar">
+  <nav class="breadcrumb">
+    <a href="/dashboard">Inicio</a>
+    <span class="sep">/</span>
+    <span class="current">Configuración</span>
+    <span class="sep">/</span>
+    <span class="current">Mis dispositivos</span>
+  </nav>
+
+  <div class="subbar-actions">
+    <button class="btn-nuevo" onclick={abrirModalVincular}>
+      <i class="bi bi-plus-lg"></i> Vincular dispositivo
+    </button>
+  </div>
+</div>
+
+<!-- CUERPO PRINCIPAL DEL MÓDULO -->
+<div class="page-wrap">
+  <div class="page-top">
+    <div>
+      <h2 class="page-title"><i class="bi bi-phone"></i> Mis dispositivos vinculados</h2>
+      <p class="page-sub">Tienes la sesión iniciada en estos dispositivos o has iniciado sesión en ellos.</p>
     </div>
   </div>
 
   <!-- BANNER DE ÉXITO PWA -->
   {#if appInstalada}
-    <div class="success-banner">
-      <div class="sb-icon">🎉</div>
-      <div class="sb-text">
+    <div class="alert-pwa-success">
+      <div class="aps-icon">🎉</div>
+      <div class="aps-content">
         <strong>¡Aplicación instalada correctamente!</strong>
         <p>El SGV ya está disponible en tu dispositivo. Ahora puedes acceder desde tu pantalla de inicio.</p>
       </div>
     </div>
   {/if}
 
-  <!-- BARRA DE ACCIONES SUPERIORES -->
-  <div class="actions-toolbar">
-    <button class="btn-tool-blue" onclick={() => showModalPreferencias = true}>
+  <!-- BARRA DE ACCIONES SUPERIORES (ESTILO SGA UTEQ) -->
+  <div class="toolbar-sga">
+    <button class="btn-sga-blue" onclick={() => showModalPreferencias = true}>
       <i class="bi bi-megaphone-fill"></i>
       <span>Configurar notificaciones</span>
     </button>
-    <button class="btn-tool-red" onclick={cerrarOtrasSesiones}>
+    <button class="btn-sga-red" onclick={cerrarOtrasSesiones}>
       <i class="bi bi-power"></i>
       <span>Cerrar todas las demás sesiones</span>
     </button>
-    <button class="btn-tool-green" onclick={abrirModalVincular}>
+    <button class="btn-sga-green" onclick={abrirModalVincular}>
       <i class="bi bi-plus-lg"></i>
       <span>Vincular este dispositivo</span>
     </button>
   </div>
 
   <!-- TARJETAS DE DISPOSITIVOS VINCULADOS -->
-  <div class="devices-list">
+  <div class="devices-stack">
     {#each dispositivos as dev}
-      <div class="device-card" class:is-current={dev.actual}>
-        <!-- ÍCONO DE SISTEMA OPERATIVO -->
-        <div class="dev-os-badge">
+      <div class="dev-card-sga" class:is-current={dev.actual}>
+        <div class="dev-badge-icon">
           <i class="bi {dev.icon}"></i>
         </div>
 
-        <!-- TÍTULO Y BADGE ACTUAL -->
-        <div class="dev-header">
-          <h3 class="dev-title">
-            {dev.so}
+        <div class="dev-top-info">
+          <div class="dev-name-row">
+            <span class="dev-os-title">{dev.so}</span>
             {#if dev.actual}
-              <span class="badge-actual"><i class="bi bi-check-circle-fill"></i> actual</span>
+              <span class="dev-actual-tag"><i class="bi bi-check-circle-fill"></i> actual</span>
             {/if}
-          </h3>
-          <span class="dev-type">{dev.tipo}</span>
-          <span class="dev-ip">Dirección IP: {dev.ip}</span>
-          <span class="dev-meta">Primer inicio de sesión: {dev.primerInicio}</span>
+          </div>
+          <span class="dev-sub-type">{dev.tipo}</span>
+          <span class="dev-ip-info">Dirección IP: {dev.ip}</span>
+          <span class="dev-login-first">Primer inicio de sesión: {dev.primerInicio}</span>
         </div>
 
-        <div class="dev-divider"></div>
+        <div class="dev-hr"></div>
 
-        <!-- ACTIVIDAD RECIENTE -->
-        <div class="dev-section">
-          <span class="dev-sec-lbl">ACTIVIDAD RECIENTE</span>
-          <span class="dev-sec-val">{formatearFechaEspanol(dev.actividad)}</span>
+        <div class="dev-meta-block">
+          <span class="dmb-label">ACTIVIDAD RECIENTE</span>
+          <span class="dmb-value">{formatearFechaEspanol(dev.actividad)}</span>
         </div>
 
-        <div class="dev-divider"></div>
+        <div class="dev-hr"></div>
 
-        <!-- PERMISOS DE NOTIFICACIÓN -->
-        <div class="dev-section">
-          <span class="dev-sec-lbl">NAVEGADORES / PERMISO</span>
-          <span class="dev-sec-val">
+        <div class="dev-meta-block">
+          <span class="dmb-label">NAVEGADORES / PERMISO</span>
+          <span class="dmb-value">
             {dev.navegador} / 
             {#if permisosNotif === 'granted'}
-              <span class="text-green-perm">Tiene permiso de notificación</span>
+              <span class="badge-perm-ok">Tiene permiso de notificación</span>
             {:else}
-              <span class="text-gray-perm">Sin permiso de notificación</span>
+              <span class="badge-perm-no">Sin permiso de notificación</span>
             {/if}
           </span>
         </div>
 
-        <!-- BOTONES DE ACCIÓN DE LA TARJETA -->
-        <div class="dev-actions">
-          <button class="btn-dev-unlink" onclick={() => desvincularDispositivo(dev)}>
+        <div class="dev-card-footer">
+          <button class="btn-card-unlink" onclick={() => desvincularDispositivo(dev)}>
             <i class="bi bi-arrow-return-left"></i>
             <span>Desvincular</span>
           </button>
           
           {#if dev.actual && permisosNotif !== 'granted'}
-            <button class="btn-dev-notify" onclick={permitirNotificacionesCard}>
+            <button class="btn-card-notify" onclick={permitirNotificacionesCard}>
               <i class="bi bi-megaphone-fill"></i>
               <span>Permitir que me notifique</span>
             </button>
@@ -369,16 +378,16 @@
      ════════════════════════════════════════════════════════════════════════ -->
 {#if showModalIdentidad}
   <div class="modal-backdrop" onclick={() => showModalIdentidad = false}>
-    <div class="modal-card modal-identidad" onclick={(e) => e.stopPropagation()}>
-      <div class="mi-icon-wrap">
+    <div class="modal-box modal-identidad" onclick={(e) => e.stopPropagation()}>
+      <div class="mi-lock-circle">
         <i class="bi bi-lock-fill"></i>
       </div>
 
       <h3 class="mi-title">Confirma tu identidad</h3>
-      <p class="mi-desc">Por seguridad, ingresa tu contraseña para vincular este dispositivo a tu cuenta.</p>
+      <p class="mi-subtitle">Por seguridad, ingresa tu contraseña para vincular este dispositivo a tu cuenta.</p>
 
       <form onsubmit={(e) => { e.preventDefault(); confirmarVinculacion(); }}>
-        <div class="pwd-field-wrap">
+        <div class="pwd-wrapper">
           <input
             type={showPassword ? 'text' : 'password'}
             bind:value={passwordInput}
@@ -388,7 +397,7 @@
           />
           <button
             type="button"
-            class="btn-eye"
+            class="btn-eye-toggle"
             onclick={() => showPassword = !showPassword}
             tabindex="-1"
           >
@@ -396,7 +405,7 @@
           </button>
         </div>
 
-        <button type="submit" class="btn-confirm-auth" disabled={verificandoClave}>
+        <button type="submit" class="btn-auth-submit" disabled={verificandoClave}>
           {#if verificandoClave}
             <span class="spinner-border spinner-border-sm"></span> Verificando...
           {:else}
@@ -404,7 +413,7 @@
           {/if}
         </button>
 
-        <button type="button" class="btn-cancel-auth" onclick={() => showModalIdentidad = false}>
+        <button type="button" class="btn-auth-cancel" onclick={() => showModalIdentidad = false}>
           <i class="bi bi-arrow-left"></i> Cancelar
         </button>
       </form>
@@ -417,126 +426,114 @@
      ════════════════════════════════════════════════════════════════════════ -->
 {#if showModalPreferencias}
   <div class="modal-backdrop" onclick={() => showModalPreferencias = false}>
-    <div class="modal-card modal-prefs" onclick={(e) => e.stopPropagation()}>
-      <div class="mp-header">
-        <div class="mp-title-wrap">
+    <div class="modal-box modal-prefs" onclick={(e) => e.stopPropagation()}>
+      <div class="mp-head">
+        <div class="mp-head-title">
           <i class="bi bi-send-fill text-blue"></i>
           <div>
             <h4>Notificaciones</h4>
-            <span class="mp-subtitle">Configura tus preferencias</span>
+            <span>Configura tus preferencias</span>
           </div>
         </div>
-        <button class="btn-close-modal" onclick={() => showModalPreferencias = false}>✕</button>
+        <button class="btn-mp-close" onclick={() => showModalPreferencias = false}>✕</button>
       </div>
 
-      <!-- BOTONES RÁPIDOS -->
-      <div class="mp-quick-actions">
-        <button class="btn-qa" onclick={() => toggleTodas(true)}>
+      <div class="mp-actions-bar">
+        <button class="btn-mp-action" onclick={() => toggleTodas(true)}>
           <i class="bi bi-check2"></i> Activar todas
         </button>
-        <button class="btn-qa" onclick={() => toggleTodas(false)}>
+        <button class="btn-mp-action" onclick={() => toggleTodas(false)}>
           <i class="bi bi-x"></i> Desactivar todas
         </button>
       </div>
 
-      <div class="mp-body">
-        <!-- SECCIÓN 1: GENERAL -->
-        <div class="mp-section">
-          <div class="mp-sec-head">
-            <div class="mpsh-left">
-              <i class="bi bi-megaphone-fill"></i>
-              <div>
-                <strong>General</strong>
-                <span class="mpsh-count">2 opciones</span>
-              </div>
-            </div>
+      <div class="mp-scroll-body">
+        <div class="mp-group">
+          <div class="mp-group-title">
+            <i class="bi bi-megaphone-fill"></i>
+            <span>General</span>
+            <small>2 opciones</small>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Alertas de inicio de sesión</span>
-              <span class="mpi-desc">Recibe un aviso cuando se inicie sesión en un nuevo dispositivo.</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Alertas de inicio de sesión</span>
+              <span class="mpr-desc">Recibe un aviso cuando se inicie sesión en un nuevo dispositivo.</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.loginAlerts}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Recordatorios de sistema</span>
-              <span class="mpi-desc">Avisos sobre mantenimientos programados de la plataforma.</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Recordatorios de sistema</span>
+              <span class="mpr-desc">Avisos sobre mantenimientos programados de la plataforma.</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.systemAlerts}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
         </div>
 
-        <!-- SECCIÓN 2: GESTIÓN DE VINCULACIÓN -->
-        <div class="mp-section">
-          <div class="mp-sec-head">
-            <div class="mpsh-left">
-              <i class="bi bi-mortarboard-fill"></i>
-              <div>
-                <strong>Gestión de Vinculación</strong>
-                <span class="mpsh-count">4 opciones</span>
-              </div>
-            </div>
+        <div class="mp-group">
+          <div class="mp-group-title">
+            <i class="bi bi-mortarboard-fill"></i>
+            <span>Gestión de Vinculación</span>
+            <small>4 opciones</small>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Caducidad de convenios</span>
-              <span class="mpi-desc">Recordatorio cuando un convenio esté próximo a vencer (60 días).</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Caducidad de convenios</span>
+              <span class="mpr-desc">Recordatorio cuando un convenio esté próximo a vencer (60 días).</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.caducidadConvenios}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Cierre de proyectos</span>
-              <span class="mpi-desc">Aviso de proyectos que finalizan su cronograma de ejecución.</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Cierre de proyectos</span>
+              <span class="mpr-desc">Aviso de proyectos que finalizan su cronograma de ejecución.</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.cierreProyectos}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Proyectos propuestos</span>
-              <span class="mpi-desc">Notificación cuando se registre un nuevo proyecto pendiente de revisión.</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Proyectos propuestos</span>
+              <span class="mpr-desc">Notificación cuando se registre un nuevo proyecto pendiente de revisión.</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.proyectosPropuestos}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
 
-          <div class="mp-item">
-            <div class="mpi-text">
-              <span class="mpi-name">Alertas de auditoría</span>
-              <span class="mpi-desc">Aviso cuando se registren modificaciones sensibles en el sistema.</span>
+          <div class="mp-row">
+            <div class="mpr-info">
+              <span class="mpr-name">Alertas de auditoría</span>
+              <span class="mpr-desc">Aviso cuando se registren modificaciones sensibles en el sistema.</span>
             </div>
-            <label class="switch">
+            <label class="switch-sga">
               <input type="checkbox" bind:checked={prefs.alertasAuditoria}>
-              <span class="slider"></span>
+              <span class="slider-sga"></span>
             </label>
           </div>
         </div>
       </div>
 
-      <!-- FOOTER -->
-      <div class="mp-footer">
-        <span class="mp-count-summary">{totalActivas()} activas / 6 total</span>
-        <div class="mp-footer-btns">
+      <div class="mp-foot">
+        <span class="mp-total-txt">{totalActivas()} activas / 6 total</span>
+        <div class="mp-foot-btns">
           <button class="btn-mp-save" onclick={guardarPreferencias}>
             <i class="bi bi-check2"></i> Guardar
           </button>
@@ -549,242 +546,297 @@
   </div>
 {/if}
 
-<style>
-  .config-page {
-    padding: 10px 4px 40px;
-    max-width: 1000px;
-    margin: 0 auto;
-  }
+<!-- ════════════════════════════════════════════════════════════════════════
+     MODAL 3: GUÍA PARA DESBLOQUEAR NOTIFICACIONES EN EL NAVEGADOR
+     ════════════════════════════════════════════════════════════════════════ -->
+{#if showModalAyudaPermiso}
+  <div class="modal-backdrop" onclick={() => showModalAyudaPermiso = false}>
+    <div class="modal-box modal-ayuda" onclick={(e) => e.stopPropagation()}>
+      <div class="may-icon">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <h3 class="may-title">Notificaciones bloqueadas en tu navegador</h3>
+      <p class="may-desc">Tu navegador tiene bloqueado el permiso de notificaciones para este enlace. Para habilitarlas sigue estos 3 pasos:</p>
 
-  .crumbs-bar {
+      <div class="may-steps">
+        <div class="may-step">
+          <span class="ms-num">1</span>
+          <div class="ms-txt">Haz clic en el icono <strong>"No es seguro"</strong> o candado a la izquierda de la dirección URL en la barra superior.</div>
+        </div>
+        <div class="may-step">
+          <span class="ms-num">2</span>
+          <div class="ms-txt">Busca la opción <strong>"Notificaciones"</strong> y cambia de <em>Bloquear</em> a <strong>"Permitir"</strong>.</div>
+        </div>
+        <div class="may-step">
+          <span class="ms-num">3</span>
+          <div class="ms-txt">Recarga la página (presiona <strong>Ctrl + F5</strong>) para aplicar los cambios.</div>
+        </div>
+      </div>
+
+      <button class="btn-auth-submit" onclick={() => showModalAyudaPermiso = false}>
+        ¡Entendido!
+      </button>
+    </div>
+  </div>
+{/if}
+
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     ESTILOS BASE UNIFORMES SGV UTEQ
+     ══════════════════════════════════════════════════════════════ */
+  .subbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+  }
+  .breadcrumb {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 0.82rem;
     font-weight: 700;
-    color: #64748b;
-    margin-bottom: 16px;
   }
-  .cb-link {
+  .breadcrumb a {
     color: #0284c7;
     text-decoration: none;
   }
-  .cb-link:hover {
+  .breadcrumb a:hover {
     text-decoration: underline;
   }
-  .cb-sep {
-    color: #cbd5e1;
+  .breadcrumb .sep {
+    color: #94a3b8;
   }
-  .cb-current {
-    color: #0f172a;
+  .breadcrumb .current {
+    color: #1e293b;
   }
 
-  .page-head h2 {
-    font-size: 1.4rem;
+  .btn-nuevo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #15803d;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-nuevo:hover {
+    background: #166534;
+  }
+
+  .page-wrap {
+    padding: 0 24px 40px;
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+  .page-top {
+    margin-bottom: 18px;
+  }
+  .page-title {
+    font-size: 1.35rem;
     font-weight: 900;
     color: #1e293b;
     margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .page-head p {
-    font-size: 0.88rem;
+  .page-title i {
+    color: #15803d;
+  }
+  .page-sub {
+    font-size: 0.85rem;
     color: #64748b;
     margin: 0;
   }
 
-  /* BANNER DE ÉXITO */
-  .success-banner {
+  /* BANNER ÉXITO */
+  .alert-pwa-success {
     display: flex;
     align-items: center;
     gap: 14px;
     background: #e8f5e9;
     border: 1px solid #c8e6c9;
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin: 18px 0;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 18px;
   }
-  .sb-icon {
-    font-size: 1.5rem;
+  .aps-icon {
+    font-size: 1.4rem;
   }
-  .sb-text strong {
-    font-size: 0.92rem;
+  .aps-content strong {
+    font-size: 0.9rem;
     color: #2e7d32;
     display: block;
   }
-  .sb-text p {
-    font-size: 0.82rem;
+  .aps-content p {
+    font-size: 0.8rem;
     color: #388e3c;
     margin: 2px 0 0;
   }
 
-  /* BOTONES DE ACCIÓN */
-  .actions-toolbar {
+  /* BARRA DE ACCIONES SGA */
+  .toolbar-sga {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
-    margin: 18px 0 24px;
+    margin-bottom: 22px;
   }
-
-  .btn-tool-blue, .btn-tool-red, .btn-tool-green {
+  .btn-sga-blue, .btn-sga-red, .btn-sga-green {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 18px;
+    padding: 8px 16px;
     border-radius: 8px;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 800;
     cursor: pointer;
     transition: all 0.15s ease;
   }
-
-  .btn-tool-blue {
+  .btn-sga-blue {
     background: #ffffff;
     border: 1px solid #cbd5e1;
     color: #0284c7;
   }
-  .btn-tool-blue:hover {
+  .btn-sga-blue:hover {
     background: #f0f9ff;
     border-color: #7dd3fc;
   }
-
-  .btn-tool-red {
+  .btn-sga-red {
     background: #ef4444;
     border: 1px solid #dc2626;
     color: #ffffff;
   }
-  .btn-tool-red:hover {
+  .btn-sga-red:hover {
     background: #dc2626;
   }
-
-  .btn-tool-green {
+  .btn-sga-green {
     background: #15803d;
     border: 1px solid #166534;
     color: #ffffff;
   }
-  .btn-tool-green:hover {
+  .btn-sga-green:hover {
     background: #166534;
   }
 
-  /* TARJETA DE DISPOSITIVO */
-  .devices-list {
+  /* TARJETAS DE DISPOSITIVO SGA */
+  .devices-stack {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
   }
-
-  .device-card {
+  .dev-card-sga {
     position: relative;
     background: #ffffff;
     border: 1.5px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 22px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-  }
-  .device-card.is-current {
-    border-color: #cbd5e1;
-  }
-
-  .dev-os-badge {
-    position: absolute;
-    top: 22px;
-    right: 22px;
-    width: 48px;
-    height: 48px;
     border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  }
+  .dev-badge-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     background: #f1f5f9;
     color: #475569;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
   }
 
-  .dev-title {
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: #1e293b;
-    margin: 0 0 6px;
+  .dev-name-row {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 4px;
   }
-
-  .badge-actual {
-    font-size: 0.85rem;
+  .dev-os-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1e293b;
+  }
+  .dev-actual-tag {
+    font-size: 0.84rem;
     font-weight: 700;
     color: #16a34a;
     display: inline-flex;
     align-items: center;
     gap: 4px;
   }
-
-  .dev-type {
+  .dev-sub-type {
     display: block;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: #64748b;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
-
-  .dev-ip {
+  .dev-ip-info {
     display: block;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: #334155;
     margin-bottom: 2px;
   }
-
-  .dev-meta {
+  .dev-login-first {
     display: block;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: #64748b;
   }
 
-  .dev-divider {
+  .dev-hr {
     height: 1px;
     background: #f1f5f9;
-    margin: 16px 0;
+    margin: 14px 0;
   }
 
-  .dev-section {
+  .dev-meta-block {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
   }
-
-  .dev-sec-lbl {
-    font-size: 0.72rem;
+  .dmb-label {
+    font-size: 0.7rem;
     font-weight: 800;
     color: #64748b;
     letter-spacing: 0.04em;
   }
-
-  .dev-sec-val {
-    font-size: 0.85rem;
+  .dmb-value {
+    font-size: 0.84rem;
     font-weight: 600;
     color: #1e293b;
   }
-
-  .text-green-perm {
+  .badge-perm-ok {
     color: #16a34a;
     font-weight: 700;
   }
-  .text-gray-perm {
+  .badge-perm-no {
     color: #94a3b8;
   }
 
-  .dev-actions {
+  .dev-card-footer {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 18px;
+    margin-top: 16px;
   }
-
-  .btn-dev-unlink {
+  .btn-card-unlink {
     background: #ffffff;
     border: 1px solid #cbd5e1;
     color: #0284c7;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 700;
     padding: 6px 14px;
     border-radius: 6px;
@@ -793,15 +845,14 @@
     align-items: center;
     gap: 6px;
   }
-  .btn-dev-unlink:hover {
+  .btn-card-unlink:hover {
     background: #f8fafc;
   }
-
-  .btn-dev-notify {
+  .btn-card-notify {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     color: #16a34a;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 800;
     padding: 6px 14px;
     border-radius: 6px;
@@ -810,17 +861,17 @@
     align-items: center;
     gap: 6px;
   }
-  .btn-dev-notify:hover {
+  .btn-card-notify:hover {
     background: #dcfce7;
   }
 
   /* ══════════════════════════════════════════════════════════════
-     MODAL DE IDENTIDAD (CANDADO)
+     MODALES
      ══════════════════════════════════════════════════════════════ */
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(15, 23, 42, 0.5);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -828,74 +879,60 @@
     z-index: 9999;
     padding: 16px;
   }
-
-  .modal-card {
+  .modal-box {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 14px;
     width: 100%;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    animation: popIn 0.2s ease-out;
-  }
-
-  @keyframes popIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
   }
 
   .modal-identidad {
     max-width: 440px;
-    padding: 36px 32px 30px;
+    padding: 34px 30px 28px;
     text-align: center;
   }
-
-  .mi-icon-wrap {
-    width: 64px;
-    height: 64px;
+  .mi-lock-circle {
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #e0f2fe;
     color: #0284c7;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
-    margin: 0 auto 18px;
+    font-size: 1.7rem;
+    margin: 0 auto 16px;
   }
-
   .mi-title {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 900;
     color: #0f172a;
-    margin: 0 0 8px;
+    margin: 0 0 6px;
   }
-
-  .mi-desc {
-    font-size: 0.85rem;
+  .mi-subtitle {
+    font-size: 0.84rem;
     color: #64748b;
-    line-height: 1.45;
-    margin: 0 0 24px;
+    margin: 0 0 20px;
+    line-height: 1.4;
   }
 
-  .pwd-field-wrap {
+  .pwd-wrapper {
     position: relative;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
-
   .pwd-input {
     width: 100%;
-    padding: 12px 42px 12px 16px;
+    padding: 12px 42px 12px 14px;
     border: 1.5px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     outline: none;
-    transition: border-color 0.15s;
     box-sizing: border-box;
   }
   .pwd-input:focus {
     border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
   }
-
-  .btn-eye {
+  .btn-eye-toggle {
     position: absolute;
     right: 12px;
     top: 50%;
@@ -904,270 +941,271 @@
     border: none;
     color: #94a3b8;
     cursor: pointer;
-    font-size: 1.1rem;
-    padding: 4px;
-  }
-  .btn-eye:hover {
-    color: #475569;
+    font-size: 1.05rem;
   }
 
-  .btn-confirm-auth {
+  .btn-auth-submit {
     width: 100%;
-    padding: 12px;
+    padding: 11px;
     background: #334155;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.88rem;
+    border-radius: 7px;
+    font-size: 0.86rem;
     font-weight: 800;
     cursor: pointer;
-    margin-bottom: 10px;
-    transition: background 0.15s;
+    margin-bottom: 8px;
   }
-  .btn-confirm-auth:hover:not(:disabled) {
+  .btn-auth-submit:hover:not(:disabled) {
     background: #1e293b;
   }
-  .btn-confirm-auth:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-
-  .btn-cancel-auth {
+  .btn-auth-cancel {
     width: 100%;
-    padding: 10px;
+    padding: 9px;
     background: #ffffff;
     color: #475569;
     border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 0.85rem;
+    border-radius: 7px;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: background 0.15s;
-  }
-  .btn-cancel-auth:hover {
-    background: #f1f5f9;
   }
 
-  /* ══════════════════════════════════════════════════════════════
-     MODAL PREFERENCIAS DE NOTIFICACIONES (SGA STYLE)
-     ══════════════════════════════════════════════════════════════ */
+  /* MODAL PREFERENCIAS */
   .modal-prefs {
-    max-width: 580px;
-    padding: 0;
+    max-width: 560px;
     overflow: hidden;
   }
-
-  .mp-header {
+  .mp-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid #f1f5f9;
   }
-  .mp-title-wrap {
+  .mp-head-title {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
-  .mp-title-wrap i {
-    font-size: 1.3rem;
+  .mp-head-title i {
+    font-size: 1.25rem;
   }
-  .mp-title-wrap h4 {
-    font-size: 1.05rem;
+  .mp-head-title h4 {
+    font-size: 1rem;
     font-weight: 900;
     color: #0f172a;
     margin: 0;
   }
-  .mp-subtitle {
-    font-size: 0.76rem;
+  .mp-head-title span {
+    font-size: 0.74rem;
     color: #64748b;
   }
-
-  .btn-close-modal {
+  .btn-mp-close {
     background: none;
     border: none;
     font-size: 1.1rem;
     color: #94a3b8;
     cursor: pointer;
   }
-  .btn-close-modal:hover {
-    color: #0f172a;
-  }
 
-  .mp-quick-actions {
+  .mp-actions-bar {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    padding: 12px 24px;
+    gap: 10px;
+    padding: 10px 20px;
     background: #f8fafc;
     border-bottom: 1px solid #f1f5f9;
   }
-  .btn-qa {
+  .btn-mp-action {
     background: #ffffff;
     border: 1px solid #cbd5e1;
     color: #0284c7;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 800;
     padding: 4px 10px;
     border-radius: 6px;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .btn-qa:hover {
-    background: #f0f9ff;
-    border-color: #bae6fd;
   }
 
-  .mp-body {
-    max-height: 420px;
+  .mp-scroll-body {
+    max-height: 400px;
     overflow-y: auto;
-    padding: 16px 24px;
+    padding: 14px 20px;
   }
-
-  .mp-section {
-    margin-bottom: 20px;
+  .mp-group {
+    margin-bottom: 16px;
   }
-
-  .mp-sec-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border-radius: 8px;
-    margin-bottom: 10px;
-  }
-  .mpsh-left {
+  .mp-group-title {
     display: flex;
     align-items: center;
     gap: 8px;
+    background: #f8fafc;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
     color: #334155;
-    font-size: 0.85rem;
+    margin-bottom: 8px;
   }
-  .mpsh-count {
-    font-size: 0.72rem;
+  .mp-group-title small {
+    font-size: 0.7rem;
     color: #94a3b8;
-    margin-left: 6px;
+    margin-left: auto;
   }
-
-  .mp-item {
+  .mp-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 12px 8px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 10px 6px;
+    border-bottom: 1px solid #f8fafc;
   }
-  .mp-item:last-child {
-    border-bottom: none;
-  }
-
-  .mpi-text {
+  .mpr-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  .mpi-name {
-    font-size: 0.86rem;
+  .mpr-name {
+    font-size: 0.84rem;
     font-weight: 800;
     color: #1e293b;
   }
-  .mpi-desc {
-    font-size: 0.76rem;
+  .mpr-desc {
+    font-size: 0.74rem;
     color: #64748b;
-    line-height: 1.35;
   }
 
-  /* SWITCH TOGGLE */
-  .switch {
+  .switch-sga {
     position: relative;
     display: inline-block;
-    width: 44px;
-    height: 24px;
+    width: 40px;
+    height: 22px;
     flex-shrink: 0;
   }
-  .switch input {
+  .switch-sga input {
     opacity: 0;
     width: 0;
     height: 0;
   }
-  .slider {
+  .slider-sga {
     position: absolute;
     cursor: pointer;
     inset: 0;
     background-color: #cbd5e1;
     transition: 0.2s;
-    border-radius: 24px;
+    border-radius: 22px;
   }
-  .slider:before {
+  .slider-sga:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
     left: 3px;
     bottom: 3px;
     background-color: white;
     transition: 0.2s;
     border-radius: 50%;
   }
-  input:checked + .slider {
+  input:checked + .slider-sga {
     background-color: #16a34a;
   }
-  input:checked + .slider:before {
-    transform: translateX(20px);
+  input:checked + .slider-sga:before {
+    transform: translateX(18px);
   }
 
-  /* FOOTER MODAL */
-  .mp-footer {
+  .mp-foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 24px;
+    padding: 12px 20px;
     background: #f8fafc;
     border-top: 1px solid #f1f5f9;
   }
-  .mp-count-summary {
-    font-size: 0.74rem;
+  .mp-total-txt {
+    font-size: 0.72rem;
     font-weight: 700;
     color: #64748b;
   }
-  .mp-footer-btns {
+  .mp-foot-btns {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
-
   .btn-mp-save {
     background: #16a34a;
     color: #ffffff;
     border: none;
-    padding: 7px 16px;
+    padding: 6px 14px;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 800;
     cursor: pointer;
   }
-  .btn-mp-save:hover {
-    background: #15803d;
-  }
-
   .btn-mp-cancel {
     background: #0284c7;
     color: #ffffff;
     border: none;
-    padding: 7px 16px;
+    padding: 6px 14px;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     font-weight: 800;
     cursor: pointer;
   }
-  .btn-mp-cancel:hover {
-    background: #0369a1;
+
+  /* MODAL AYUDA */
+  .modal-ayuda {
+    max-width: 460px;
+    padding: 28px 24px 22px;
+    text-align: center;
+  }
+  .may-icon {
+    font-size: 2.2rem;
+    color: #f59e0b;
+    margin-bottom: 12px;
+  }
+  .may-title {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #1e293b;
+    margin: 0 0 8px;
+  }
+  .may-desc {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0 0 16px;
+    line-height: 1.4;
+  }
+  .may-steps {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    background: #f8fafc;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  .may-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .ms-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .ms-txt {
+    font-size: 0.8rem;
+    color: #334155;
+    line-height: 1.35;
   }
 </style>
