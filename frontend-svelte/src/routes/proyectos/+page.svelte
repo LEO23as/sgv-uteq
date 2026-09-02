@@ -7,6 +7,7 @@
   import ProgressBar from '$lib/ProgressBar.svelte';
   import Pagination from '$lib/Pagination.svelte';
   import ProyectoDetalleModal from '$lib/ProyectoDetalleModal.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let items       = $state([]);
   let facultades  = $state([]);
@@ -340,7 +341,7 @@
   </div>
 
   {#if loading}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando información institucional...</div>
+    <InstitutionalLoader fullscreen={true} texto="CARGANDO PROYECTOS" subtexto="Consultando proyectos institucionales UTEQ..." />
   {:else}
 
     <!-- ══════════════════════════════════════════════════════════════

@@ -6,6 +6,7 @@
   import ProgressBar from '$lib/ProgressBar.svelte';
   import Pagination from '$lib/Pagination.svelte';
   import ConvenioDetalleModal from '$lib/ConvenioDetalleModal.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let items = $state([]);
   let periodos = $state([]);
@@ -282,7 +283,7 @@
   </div>
 
   {#if loading}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando convenios...</div>
+    <InstitutionalLoader fullscreen={true} texto="CARGANDO CONVENIOS" subtexto="Consultando convenios interinstitucionales..." />
   {:else}
     <div class="table-card">
       <table>

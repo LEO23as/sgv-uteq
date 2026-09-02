@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { toast } from '$lib/toast';
   import Pagination from '$lib/Pagination.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   // Estados de datos
   let eventos = $state([]);
@@ -308,10 +309,7 @@
   <!-- TABLA DE AUDITORÍA FORENSE -->
   <div class="table-wrap">
     {#if cargando}
-      <div class="loading-box">
-        <i class="bi bi-arrow-repeat spin"></i>
-        <span>Consultando bitácora forense...</span>
-      </div>
+      <InstitutionalLoader fullscreen={true} texto="CARGANDO AUDITORÍA" subtexto="Consultando bitácora criptográfica forense..." />
     {:else if eventos.length === 0}
       <div class="empty-box">
         <i class="bi bi-shield-slash"></i>

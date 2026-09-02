@@ -4,6 +4,7 @@
   import { fetchAPI, fetchAPICached } from '$lib/stores';
   import Pagination from '$lib/Pagination.svelte';
   import ProyectoDetalleModal from '$lib/ProyectoDetalleModal.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let stats = $state(null);
   let periodos = $state([]);
@@ -236,7 +237,7 @@
 
 <div class="rep-container">
   {#if loading || (!ChartModule && !chartError)}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Generando análisis estadístico e inferencial...</div>
+    <InstitutionalLoader fullscreen={true} texto="GENERANDO REPORTES" subtexto="Calculando métricas estadísticas e inferenciales..." />
   {:else if statsError}
     <div class="rep-error">
       <i class="bi bi-exclamation-triangle"></i>

@@ -3,6 +3,7 @@
   import { fetchAPI } from '$lib/stores';
   import { toast } from '$lib/toast';
   import Pagination from '$lib/Pagination.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let facultades = $state([]);
   let carreras   = $state([]);
@@ -100,7 +101,7 @@
   </div>
 
   {#if loading}
-    <div class="loading"><i class="bi bi-arrow-repeat spin"></i> Cargando...</div>
+    <InstitutionalLoader fullscreen={true} texto="CARGANDO FACULTADES" subtexto="Consultando facultades y carreras UTEQ..." />
   {:else if tab === 'facultades'}
     <div class="table-card">
       <table>

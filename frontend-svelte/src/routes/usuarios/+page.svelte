@@ -302,9 +302,7 @@
 
     <!-- TABLA ESTILO VERDE SGA -->
     {#if cargando}
-      <div style="position: relative; min-height: 280px; width: 100%;">
-        <InstitutionalLoader fullscreen={false} texto="CARGANDO USUARIOS" subtexto="Consultando directorio institucional UTEQ..." />
-      </div>
+      <InstitutionalLoader fullscreen={true} texto="CARGANDO USUARIOS" subtexto="Consultando directorio institucional UTEQ..." />
     {:else if !usuariosFiltrados.length}
       <div class="empty-state">
         <i class="bi bi-search" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
