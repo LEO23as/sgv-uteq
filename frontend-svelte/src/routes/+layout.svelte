@@ -5,7 +5,8 @@
   import { page, navigating } from '$app/stores';
   import { get } from 'svelte/store';
   import { user, checkAuth, logout, capaNBIActiva, fetchAPI, loading } from '$lib/stores';
-  import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida } from '$lib/notifications';
+  import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida, solicitarPermisoNotificaciones } from '$lib/notifications';
+  import { toast } from '$lib/toast';
   import Toasts from '$lib/Toasts.svelte';
   import ConfirmDialog from '$lib/ConfirmDialog.svelte';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
@@ -61,9 +62,28 @@
       periodosList = [];
       selectedPeriodCode = 'Sin período';
     }
-  }
+  // PWA & Notificaciones Nativas
+  let deferredInstallPrompt = $state(null);
+  let canInstallPWA = $state(false);
+  let permNotif = $state('default');
 
   onMount(async () => {
+    if (typeof window !== 'undefined') {
+      permNotif = 'Notification' in window ? Notification.permission : 'default';
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        canInstallPWA = true;
+      });
+
+      window.addEventListener('appinstalled', () => {
+        canInstallPWA = false;
+        deferredInstallPrompt = null;
+        toast.success('¡SGV UTEQ instalada en tu dispositivo!');
+      });
+    }
+
     const u = await checkAuth();
     authChecked = true;
     const path = get(page).url.pathname;
@@ -79,6 +99,30 @@
     updateClock();
     clockInterval = setInterval(updateClock, 1000);
   });
+
+  async function instalarPWA() {
+    if (!deferredInstallPrompt) {
+      toast.info('Para instalar en iPhone/iPad: pulsa "Compartir" y selecciona "Agregar a inicio".');
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      canInstallPWA = false;
+    }
+    deferredInstallPrompt = null;
+  }
+
+  async function activarAvisosNativos() {
+    const ok = await solicitarPermisoNotificaciones();
+    if (ok) {
+      permNotif = 'granted';
+      toast.success('¡Recordatorios de caducidad activos en tu dispositivo!');
+      cargarNotificaciones();
+    } else {
+      toast.info('Permiso de notificaciones no otorgado.');
+    }
+  }
 
   onDestroy(() => {
     if (clockInterval) clearInterval(clockInterval);
@@ -229,6 +273,14 @@
       </div>
 
       <div class="navbar-right">
+        <!-- Botón Instalar PWA Móvil -->
+        {#if canInstallPWA}
+          <button class="btn-install-pwa" onclick={instalarPWA} title="Instalar SGV UTEQ como App en este dispositivo">
+            <i class="bi bi-phone"></i>
+            <span>Instalar App</span>
+          </button>
+        {/if}
+
         <!-- Notificaciones -->
         <div class="notif-btn-wrap">
           <button class="icon-btn" class:active={showNotificacionesDropdown} title="Notificaciones y Alertas" onclick={toggleNotificaciones}>
@@ -254,6 +306,16 @@
                   </button>
                 {/if}
               </div>
+
+              {#if permNotif !== 'granted'}
+                <div class="nd-pwa-banner">
+                  <div class="nd-pwa-text">
+                    <i class="bi bi-bell"></i>
+                    <span>¿Activar avisos de caducidad en este dispositivo?</span>
+                  </div>
+                  <button class="btn-nd-activate" onclick={activarAvisosNativos}>Activar</button>
+                </div>
+              {/if}
 
               <div class="notif-items-list">
                 {#if $notificaciones.length === 0}
@@ -397,6 +459,10 @@
                   <i class="bi bi-shield-lock-fill"></i>
                   <span>Auditoría Forense</span>
                 </a>
+                <button class="pmenu-item" onclick={() => { showProfileDropdown = false; instalarPWA(); }}>
+                  <i class="bi bi-phone"></i>
+                  <span>Instalar App Móvil (PWA)</span>
+                </button>
               </div>
 
               <div class="profile-divider"></div>
@@ -571,6 +637,62 @@
 }
 
 .icon-btn:hover, .icon-btn.active { background: rgba(255, 255, 255, 0.25); }
+
+.btn-install-pwa {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-install-pwa:hover {
+  background: #ffffff;
+  color: var(--verde);
+}
+
+.nd-pwa-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #bbf7d0;
+  font-size: 0.74rem;
+}
+.nd-pwa-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #166534;
+  font-weight: 700;
+}
+.nd-pwa-text i {
+  color: #16a34a;
+  font-size: 0.9rem;
+}
+.btn-nd-activate {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-nd-activate:hover {
+  background: #15803d;
+}
 
 .badge-dot {
   position: absolute;

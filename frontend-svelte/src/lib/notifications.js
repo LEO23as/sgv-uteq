@@ -155,6 +155,7 @@ export async function cargarNotificaciones() {
     });
 
     notificaciones.set(lista);
+    emitirAlertaCaducidadNativa(lista);
   } catch (e) {
     console.error('Error cargando notificaciones:', e);
   } finally {
@@ -172,4 +173,55 @@ export function marcarTodasLeidas() {
 
 export function marcarLeida(id) {
   notificaciones.update(list => list.map(n => n.id === id ? { ...n, leida: true } : n));
+}
+
+export async function solicitarPermisoNotificaciones() {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return false;
+  }
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+  if (Notification.permission !== 'denied') {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+  return false;
+}
+
+export function emitirAlertaCaducidadNativa(lista) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  const criticas = lista.filter(n => n.tipo === 'convenio' || n.id.startsWith('proy-cierre'));
+  if (criticas.length === 0) return;
+
+  const ultimoAviso = sessionStorage.getItem('sgv_ultimo_aviso_caducidad');
+  if (ultimoAviso && Date.now() - Number(ultimoAviso) < 3600000) return;
+  sessionStorage.setItem('sgv_ultimo_aviso_caducidad', String(Date.now()));
+
+  const primera = criticas[0];
+  const total = criticas.length;
+  const titulo = total === 1 ? primera.titulo : `SGV UTEQ: ${total} Alertas de Caducidad`;
+  const cuerpo = total === 1 ? primera.mensaje : `Hay ${total} convenios y proyectos próximos a caducar o finalizar vigencia.`;
+
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(titulo, {
+          body: cuerpo,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          data: { url: primera.link || '/convenios' }
+        });
+      });
+    } else {
+      new Notification(titulo, {
+        body: cuerpo,
+        icon: '/icons/icon-192.png'
+      });
+    }
+  } catch (e) {
+    console.log('Aviso nativo omitido:', e);
+  }
 }
