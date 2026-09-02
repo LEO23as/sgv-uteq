@@ -49,7 +49,8 @@
       color: '#16a34a',
       bg: '#f0fdf4',
       border: '#86efac',
-      logo: '/img/facultades/fcaf.svg',
+      logo: '/img/facultades/fcaf.png',
+      logoSvg: '/img/facultades/fcaf.svg',
       glow: 'rgba(22, 163, 74, 0.18)'
     },
     'EMPRESARIALES': {
@@ -57,7 +58,8 @@
       color: '#2563eb',
       bg: '#eff6ff',
       border: '#93c5fd',
-      logo: '/img/facultades/fce.svg',
+      logo: '/img/facultades/fce.png',
+      logoSvg: '/img/facultades/fce.svg',
       glow: 'rgba(37, 99, 235, 0.18)'
     },
     'PECUARIAS': {
@@ -65,7 +67,8 @@
       color: '#d97706',
       bg: '#fffbeb',
       border: '#fde68a',
-      logo: '/img/facultades/fcp.svg',
+      logo: '/img/facultades/fcp.png',
+      logoSvg: '/img/facultades/fcp.svg',
       glow: 'rgba(217, 119, 6, 0.18)'
     },
     'SOCIALES': {
@@ -73,7 +76,8 @@
       color: '#7c3aed',
       bg: '#f5f3ff',
       border: '#ddd6fe',
-      logo: '/img/facultades/fcseh.svg',
+      logo: '/img/facultades/fcseh.png',
+      logoSvg: '/img/facultades/fcseh.svg',
       glow: 'rgba(124, 58, 237, 0.18)'
     },
     'COMPUTACION': {
@@ -81,7 +85,8 @@
       color: '#0284c7',
       bg: '#f0f9ff',
       border: '#7dd3fc',
-      logo: '/img/facultades/fccd.svg',
+      logo: '/img/facultades/fccd.png',
+      logoSvg: '/img/facultades/fccd.svg',
       glow: 'rgba(2, 132, 199, 0.18)'
     },
     'INGENIERIA': {
@@ -89,21 +94,53 @@
       color: '#0284c7',
       bg: '#f0f9ff',
       border: '#7dd3fc',
-      logo: '/img/facultades/fccd.svg',
+      logo: '/img/facultades/fci.png',
+      logoSvg: '/img/facultades/fccd.svg',
       glow: 'rgba(2, 132, 199, 0.18)'
+    },
+    'INDUSTRIA': {
+      siglas: 'FCIP',
+      color: '#d97706',
+      bg: '#fffbeb',
+      border: '#fde68a',
+      logo: '/img/facultades/fcip.png',
+      logoSvg: '/img/facultades/fccd.svg',
+      glow: 'rgba(217, 119, 6, 0.18)'
+    },
+    'PRODUCCION': {
+      siglas: 'FCIP',
+      color: '#d97706',
+      bg: '#fffbeb',
+      border: '#fde68a',
+      logo: '/img/facultades/fcip.png',
+      logoSvg: '/img/facultades/fccd.svg',
+      glow: 'rgba(217, 119, 6, 0.18)'
     },
     'EDUCACION': {
       siglas: 'FCED',
       color: '#059669',
       bg: '#ecfdf5',
       border: '#a7f3d0',
-      logo: '/img/facultades/fced.svg',
+      logo: '/img/facultades/fced.png',
+      logoSvg: '/img/facultades/fced.svg',
       glow: 'rgba(5, 150, 105, 0.18)'
+    },
+    'SALUD': {
+      siglas: 'FCS',
+      color: '#e11d48',
+      bg: '#fff1f2',
+      border: '#fecdd3',
+      logo: '/img/facultades/fcs.png',
+      logoSvg: '/img/facultades/fcaf.svg',
+      glow: 'rgba(225, 29, 72, 0.18)'
     },
   };
 
   function getFacConfig(nombre) {
-    const n = (nombre || '').toUpperCase();
+    const n = (nombre || '')
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
     for (const [k, cfg] of Object.entries(FACULTADES_CONFIG)) {
       if (n.includes(k)) return cfg;
     }
@@ -112,7 +149,8 @@
       color: '#16a34a',
       bg: '#f0fdf4',
       border: '#86efac',
-      logo: '/img/facultades/fcaf.svg',
+      logo: '/img/facultades/fcaf.png',
+      logoSvg: '/img/facultades/fcaf.svg',
       glow: 'rgba(22, 163, 74, 0.15)'
     };
   }
@@ -430,7 +468,17 @@
 
             <div class="fc-head">
               <div class="fc-logo-wrap" style="background: {cfg.bg}; border-color: {cfg.border};">
-                <img src={cfg.logo} alt="Logo {cfg.siglas}" class="fc-logo-img" />
+                <img 
+                  src={cfg.logo} 
+                  alt="Logo {cfg.siglas}" 
+                  class="fc-logo-img" 
+                  onerror={(e) => {
+                    if (!e.currentTarget.dataset.fallback) {
+                      e.currentTarget.dataset.fallback = '1';
+                      e.currentTarget.src = cfg.logoSvg;
+                    }
+                  }}
+                />
               </div>
               <div class="fc-badges">
                 <span class="fc-badge-siglas" style="color: {cfg.color}; background: {cfg.bg}; border-color: {cfg.border};">{cfg.siglas}</span>
@@ -475,7 +523,17 @@
           <i class="bi bi-arrow-left"></i>
         </button>
         <div class="fb-logo-wrap" style="background: {facCfg.bg}; border-color: {facCfg.border};">
-          <img src={facCfg.logo} alt="Logo {facCfg.siglas}" class="fb-logo-img" />
+          <img 
+            src={facCfg.logo} 
+            alt="Logo {facCfg.siglas}" 
+            class="fb-logo-img" 
+            onerror={(e) => {
+              if (!e.currentTarget.dataset.fallback) {
+                e.currentTarget.dataset.fallback = '1';
+                e.currentTarget.src = facCfg.logoSvg;
+              }
+            }}
+          />
         </div>
         <div class="fb-info">
           <span class="fb-pre" style="color: {facCfg.color};">{facCfg.siglas} • Facultad</span>
