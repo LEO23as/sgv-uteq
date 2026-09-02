@@ -168,3 +168,33 @@ Universidad Técnica Estatal de Quevedo (UTEQ)
     except Exception as e:
         print(f'Error enviando correo: {e}')
         return False
+
+
+def validar_cedula_ecuador(cedula):
+    """Valida cédula ecuatoriana de 10 dígitos con algoritmo Módulo 10."""
+    import re
+    if not cedula or not re.match(r'^\d{10}$', str(cedula).strip()):
+        return False
+    cedula = str(cedula).strip()
+    provincia = int(cedula[:2])
+    if provincia < 1 or provincia > 24:
+        return False
+    digitos = [int(d) for d in cedula]
+    coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2]
+    total = 0
+    for i in range(9):
+        val = digitos[i] * coeficientes[i]
+        total += val if val < 10 else val - 9
+    digito_verificador = (10 - (total % 10)) % 10
+    return digito_verificador == digitos[9]
+
+
+def validar_ruc_ecuador(ruc):
+    """Valida RUC ecuatoriano de 13 dígitos (Persona natural termina en 001)."""
+    import re
+    ruc = str(ruc).strip()
+    if not re.match(r'^\d{13}$', ruc):
+        return False
+    if not ruc.endswith('001'):
+        return False
+    return validar_cedula_ecuador(ruc[:10])
