@@ -98,6 +98,16 @@
       bg: '#faf5ff',
       disabled: false 
     },
+    { 
+      href: '/auditoria', 
+      bi: 'bi-shield-lock', 
+      label: 'Auditoría', 
+      desc: 'Trazabilidad forense SHA-256', 
+      key: null, 
+      color: '#059669', 
+      bg: '#ecfdf5',
+      disabled: false 
+    },
   ];
 
   let filtered = $derived(

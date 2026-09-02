@@ -150,9 +150,13 @@
                    { href: '/carreras',   icon: 'bi-book', label: 'Carreras'   },
                  ]},
     reportes:  { modulo: 'Reportes',             links: [{ href: '/reportes',  icon: 'bi-graph-up', label: 'Estadísticas' }] },
+    auditoria: { modulo: 'Auditoría Forense',    links: [
+                   { href: '/auditoria', icon: 'bi-shield-lock-fill', label: 'Bitácora Criptográfica' },
+                 ]},
     configuracion: { modulo: 'Configuración',    links: [
                    { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
                    { href: '/configuracion/capas',  icon: 'bi-layers-half',    label: 'Capas del mapa'     },
+                   { href: '/auditoria',            icon: 'bi-shield-lock',    label: 'Auditoría Forense'  },
                  ]},
   };
 
@@ -161,6 +165,7 @@
     if (pathname.startsWith('/proyectos'))     return 'proyectos';
     if (pathname.startsWith('/entidades'))     return 'entidades';
     if (pathname.startsWith('/convenios'))     return 'convenios';
+    if (pathname.startsWith('/auditoria'))     return 'auditoria';
     if (pathname.startsWith('/configuracion')) return 'configuracion';
     if (pathname.startsWith('/periodos'))      return 'configuracion';
     if (pathname.startsWith('/facultades') || pathname.startsWith('/carreras')) return 'facultades';
@@ -368,6 +373,10 @@
                 <a href="/usuarios" class="pmenu-item" onclick={() => showProfileDropdown = false}>
                   <i class="bi bi-people-fill"></i>
                   <span>Gestión de Usuarios</span>
+                </a>
+                <a href="/auditoria" class="pmenu-item" onclick={() => showProfileDropdown = false}>
+                  <i class="bi bi-shield-lock-fill"></i>
+                  <span>Auditoría Forense</span>
                 </a>
               </div>
 
