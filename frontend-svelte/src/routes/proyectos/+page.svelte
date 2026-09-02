@@ -472,6 +472,9 @@
                   src={cfg.logo} 
                   alt="Logo {cfg.siglas}" 
                   class="fc-logo-img" 
+                  width="48"
+                  height="48"
+                  style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;"
                   onerror={(e) => {
                     if (!e.currentTarget.dataset.fallback) {
                       e.currentTarget.dataset.fallback = '1';
@@ -527,6 +530,9 @@
             src={facCfg.logo} 
             alt="Logo {facCfg.siglas}" 
             class="fb-logo-img" 
+            width="48"
+            height="48"
+            style="width: 48px; height: 48px; max-width: 48px; max-height: 48px; object-fit: contain;"
             onerror={(e) => {
               if (!e.currentTarget.dataset.fallback) {
                 e.currentTarget.dataset.fallback = '1';
@@ -790,6 +796,9 @@
   .fc-logo-wrap {
     width: 52px;
     height: 52px;
+    min-width: 52px;
+    max-width: 52px;
+    max-height: 52px;
     border-radius: 14px;
     background: var(--fac-bg, #f0fdf4);
     border: 1.5px solid var(--fac-border, #bbf7d0);
@@ -799,6 +808,8 @@
     padding: 3px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: transform 0.2s ease;
+    overflow: hidden;
+    flex-shrink: 0;
   }
   .fac-card:hover .fc-logo-wrap {
     transform: scale(1.06);
@@ -806,6 +817,8 @@
   .fc-logo-img {
     width: 100%;
     height: 100%;
+    max-width: 46px;
+    max-height: 46px;
     object-fit: contain;
     border-radius: 10px;
   }
@@ -878,10 +891,28 @@
     transition: all 0.15s;
   }
   .btn-volver:hover { background: #e2e8f0; color: #0f172a; }
-  .fb-icon {
-    width: 48px; height: 48px; border-radius: 12px;
-    background: #f0fdf4; color: #16a34a; border: 1.5px solid #86efac;
-    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+  .fb-logo-wrap {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    max-height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: 1.5px solid #86efac;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .fb-logo-img {
+    width: 100%;
+    height: 100%;
+    max-width: 48px;
+    max-height: 48px;
+    object-fit: contain;
+    border-radius: 10px;
   }
   .fb-info { flex: 1; min-width: 200px; }
   .fb-pre { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #15803d; letter-spacing: 0.05em; }
