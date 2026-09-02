@@ -8,7 +8,7 @@ set -euo pipefail
 
 if [ $# -lt 1 ]; then
     echo "Uso: $0 <ruta_al_archivo_backup.sql.gz>"
-    echo "Ejemplo: $0 ~/backups/sgv_db/sgv_db_20260901_220000.sql.gz"
+    echo "Ejemplo: $0 ~/backups/sgv_db/sgv_db_semanal_20260901_220000.sql.gz"
     exit 1
 fi
 
@@ -52,10 +52,11 @@ DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
 DB_HOST="${DB_HOST:-host.docker.internal}"
 DB_PORT="${DB_PORT:-5432}"
+export PGPASSWORD="${PGPASSWORD:-postgres}"
 
 echo "Restaurando base de datos en '${DB_NAME}'..."
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q "sgv_backend"; then
-    gunzip -c "${ARCHIVO_BACKUP}" | docker exec -i sgv_backend psql -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}"
+    gunzip -c "${ARCHIVO_BACKUP}" | docker exec -e PGPASSWORD="${PGPASSWORD}" -i sgv_backend psql -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}"
 elif command -v psql >/dev/null 2>&1; then
     gunzip -c "${ARCHIVO_BACKUP}" | psql -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}"
 else

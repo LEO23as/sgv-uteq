@@ -18,6 +18,7 @@ DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
 DB_HOST="${DB_HOST:-host.docker.internal}"
 DB_PORT="${DB_PORT:-5432}"
+export PGPASSWORD="${PGPASSWORD:-postgres}"
 
 mkdir -p "${BACKUP_DIR}"
 
@@ -26,7 +27,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando respaldo semanal institucional de
 # 2. Extraer y Comprimir con gzip (nivel 9 máximo)
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q "sgv_backend"; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Modo: Extracción a través de contenedor Docker 'sgv_backend'..."
-    docker exec -i sgv_backend pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists | gzip -9 > "${ARCHIVO_BACKUP}"
+    docker exec -e PGPASSWORD="${PGPASSWORD}" -i sgv_backend pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists | gzip -9 > "${ARCHIVO_BACKUP}"
 elif command -v pg_dump >/dev/null 2>&1; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Modo: Extracción mediante cliente nativo 'pg_dump'..."
     pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists | gzip -9 > "${ARCHIVO_BACKUP}"
