@@ -1,8 +1,23 @@
 <script>
   import { onMount } from 'svelte';
   import { fetchAPI, capaNBIActiva } from '$lib/stores';
+  import { toast } from '$lib/toast';
   import { get } from 'svelte/store';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
+
+  function copiarCoordenadas(lat, lng) {
+    if (!lat || !lng) return;
+    const coords = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(coords).then(() => {
+        toast.success(`Coordenadas GPS copiadas: ${coords}`);
+      }).catch(() => {
+        toast.info(`Coordenadas: ${coords}`);
+      });
+    } else {
+      toast.info(`Coordenadas: ${coords}`);
+    }
+  }
 
   let facultades   = $state([]);
   let carreras     = $state([]);
@@ -67,6 +82,29 @@
   ];
 
   let map, markersLayer, redesLayer;
+  let capaBaseActual = $state('osm'); // 'osm' | 'satelite' | 'hibrido'
+  let tileLayerOSM, tileLayerSat, tileLayerLabels;
+
+  function setCapaBase(tipo) {
+    if (!map) return;
+    capaBaseActual = tipo;
+
+    if (tileLayerOSM && map.hasLayer(tileLayerOSM)) map.removeLayer(tileLayerOSM);
+    if (tileLayerSat && map.hasLayer(tileLayerSat)) map.removeLayer(tileLayerSat);
+    if (tileLayerLabels && map.hasLayer(tileLayerLabels)) map.removeLayer(tileLayerLabels);
+
+    if (tipo === 'osm') {
+      if (tileLayerOSM) tileLayerOSM.addTo(map);
+    } else if (tipo === 'satelite') {
+      if (tileLayerSat) tileLayerSat.addTo(map);
+    } else if (tipo === 'hibrido') {
+      if (tileLayerSat) tileLayerSat.addTo(map);
+      if (tileLayerLabels) tileLayerLabels.addTo(map);
+    }
+
+    if (markersLayer) markersLayer.bringToFront();
+    if (redesLayer) redesLayer.bringToFront();
+  }
 
   function desplegarRedNodos(p, L) {
     if (!redesLayer || !map) return;
@@ -371,9 +409,25 @@
 
     window._L = L;
     map = L.map('map', { zoomControl: false }).setView([-1.5, -78.5], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+
+    // Configuración de Capas Base Oficiales (Callejero OpenStreetMap, Satelital Esri y Etiquetas Híbridas)
+    tileLayerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    });
+
+    tileLayerSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; High-Resolution Satellite',
+      maxZoom: 19
+    });
+
+    tileLayerLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Esri Labels',
+      maxZoom: 19,
+      pane: 'overlayPane'
+    });
+
+    tileLayerOSM.addTo(map);
     L.control.zoom({ position: 'topleft' }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     redesLayer = L.layerGroup().addTo(map);
@@ -503,6 +557,37 @@
         <InstitutionalLoader fullscreen={false} texto="ACTUALIZANDO MAPA" subtexto="Georreferenciando proyectos..." />
       {/if}
       <div id="map" style="width:100%;height:100%;"></div>
+
+      <!-- SELECTOR DE CAPA BASE PROFESIONAL (CALLEJERO / SATELITAL / HÍBRIDO) -->
+      <div class="map-layer-selector">
+        <button 
+          type="button"
+          class="layer-btn" 
+          class:active={capaBaseActual === 'osm'} 
+          onclick={() => setCapaBase('osm')}
+          title="Vista de mapa callejero vectorial (OpenStreetMap)"
+        >
+          <i class="bi bi-map"></i> Callejero
+        </button>
+        <button 
+          type="button"
+          class="layer-btn" 
+          class:active={capaBaseActual === 'satelite'} 
+          onclick={() => setCapaBase('satelite')}
+          title="Vista satelital aérea de alta resolución (Esri Imagery)"
+        >
+          <i class="bi bi-globe-americas"></i> Satelital
+        </button>
+        <button 
+          type="button"
+          class="layer-btn" 
+          class:active={capaBaseActual === 'hibrido'} 
+          onclick={() => setCapaBase('hibrido')}
+          title="Vista satelital con nombres de cantones, vías y referencias"
+        >
+          <i class="bi bi-layers-fill"></i> Híbrido
+        </button>
+      </div>
 
       <div class="map-hud-bar">
         <div class="hud-item"><i class="bi bi-geo-alt-fill text-verde"></i> <strong>{total}</strong> Proyectos ubicados</div>
@@ -658,11 +743,19 @@
                             {u.es_principal ? 'Ubicación Principal' : `Ubicación Alterna #${idx + 1}`}
                           {/if}
                         </span>
-                        <button class="btn-flyto" onclick={() => {
-                          if (map) { map.flyTo([u.latitud, u.longitud], 15); proySeleccionado = null; }
-                        }} title="Centrar en el mapa">
-                          <i class="bi bi-crosshair"></i> Ver en mapa
-                        </button>
+                        <div class="uc-actions-bar">
+                          <button class="btn-flyto" onclick={() => {
+                            if (map) { map.flyTo([u.latitud, u.longitud], 15); proySeleccionado = null; }
+                          }} title="Centrar en el mapa">
+                            <i class="bi bi-crosshair"></i> Ver en mapa
+                          </button>
+                          <button class="btn-copy-gps" onclick={() => copiarCoordenadas(u.latitud, u.longitud)} title="Copiar coordenadas GPS al portapapeles">
+                            <i class="bi bi-clipboard"></i> Copiar GPS
+                          </button>
+                          <a href="https://www.google.com/maps?q={u.latitud},{u.longitud}" target="_blank" rel="noopener noreferrer" class="btn-gmaps" title="Abrir en Google Maps">
+                            <i class="bi bi-box-arrow-up-right"></i> Maps
+                          </a>
+                        </div>
                       </div>
                       <div class="uc-title">{u.nombre_lugar || 'Ubicación de ejecución'}</div>
                       <div class="uc-meta">
@@ -680,6 +773,18 @@
                 <div class="mi"><i class="bi bi-pin-map-fill"></i><div><span class="mi-l">Cantón</span><span class="mi-v">{p.canton || '—'}</span></div></div>
                 {#if p.parroquia}<div class="mi"><i class="bi bi-signpost"></i><div><span class="mi-l">Parroquia</span><span class="mi-v">{p.parroquia}</span></div></div>{/if}
                 {#if p.sector}<div class="mi"><i class="bi bi-house"></i><div><span class="mi-l">Sector</span><span class="mi-v">{p.sector}</span></div></div>{/if}
+                {#if p.latitud && p.longitud}
+                  <div class="mi" style="grid-column: 1 / -1; display:flex; align-items:center; justify-content:space-between; background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+                    <div>
+                      <span class="mi-l">Coordenadas GPS</span>
+                      <span class="mi-v" style="font-family:monospace; font-weight:700;">{Number(p.latitud).toFixed(6)}, {Number(p.longitud).toFixed(6)}</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                      <button class="btn-copy-gps" onclick={() => copiarCoordenadas(p.latitud, p.longitud)}><i class="bi bi-clipboard"></i> Copiar GPS</button>
+                      <a href="https://www.google.com/maps?q={p.latitud},{p.longitud}" target="_blank" rel="noopener noreferrer" class="btn-gmaps"><i class="bi bi-box-arrow-up-right"></i> Maps</a>
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/if}
 
@@ -885,6 +990,54 @@
   min-height: 300px;
   display: flex;
   flex-direction: column;
+}
+
+/* Selector Flotante de Capa Base (Callejero / Satelital / Híbrido) */
+.map-layer-selector {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  display: flex;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.12);
+  gap: 4px;
+}
+
+.layer-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.layer-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.layer-btn.active {
+  background: var(--verde, #1b5e20);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.3);
+}
+
+.layer-btn i {
+  font-size: 0.85rem;
 }
 .map-hud-bar {
   position: absolute;
@@ -1399,6 +1552,45 @@
 .btn-flyto:hover {
   background: #e0f2fe;
   border-color: #bae6fd;
+}
+
+.uc-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-copy-gps, .btn-gmaps {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-copy-gps {
+  color: #16a34a;
+}
+.btn-copy-gps:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.btn-gmaps {
+  color: #ea580c;
+}
+.btn-gmaps:hover {
+  background: #fff7ed;
+  border-color: #fed7aa;
 }
 
 .uc-title {
