@@ -116,6 +116,42 @@
 
   function limpiar() { q = ''; filtEst = ''; filtPer = ''; cargar(); }
 
+  let filtroAlerta = $state(''); // '' | 'vigentes' | 'por_vencer' | 'vencidos'
+
+  let statsConvenios = $derived.by(() => {
+    let vigentes = 0;
+    let porVencer = 0;
+    let vencidos = 0;
+    for (const c of items) {
+      const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin, c.duracion_anios);
+      if (c.estado === 'VENCIDO' || (vig.dias !== null && vig.dias <= 0)) {
+        vencidos++;
+      } else if (vig.dias !== null && vig.dias <= 60) {
+        porVencer++;
+      } else {
+        vigentes++;
+      }
+    }
+    return { vigentes, porVencer, vencidos, total: items.length };
+  });
+
+  let conveniosFiltrados = $derived.by(() => {
+    if (!filtroAlerta) return items;
+    return items.filter(c => {
+      const vig = calcularVigencia(c.fecha_inicio || c.fecha_firma, c.fecha_fin, c.duracion_anios);
+      if (filtroAlerta === 'vencidos') {
+        return c.estado === 'VENCIDO' || (vig.dias !== null && vig.dias <= 0);
+      }
+      if (filtroAlerta === 'por_vencer') {
+        return c.estado !== 'VENCIDO' && vig.dias !== null && vig.dias > 0 && vig.dias <= 60;
+      }
+      if (filtroAlerta === 'vigentes') {
+        return c.estado === 'VIGENTE' && (vig.dias === null || vig.dias > 60);
+      }
+      return true;
+    });
+  });
+
   function abrirDetalle(id) {
     modalDetalleId = id;
     modalDetalleOpen = true;
@@ -123,7 +159,7 @@
 
   // Elementos paginados
   const paginatedItems = $derived(
-    items.slice((page - 1) * pageSize, page * pageSize)
+    conveniosFiltrados.slice((page - 1) * pageSize, page * pageSize)
   );
 
   async function eliminar(c) {
@@ -167,6 +203,61 @@
       <h2 class="page-title"><i class="bi bi-file-earmark-text"></i> Gestión de Convenios</h2>
       <p class="page-sub">Acuerdos interinstitucionales y monitoreo de plazos de vigencia</p>
     </div>
+  </div>
+
+  <!-- KPI CARDS INSTITUCIONALES DE ALERTA DE CONVENIOS -->
+  <div class="kpis-banner">
+    <button
+      type="button"
+      class="kpi-mini-card"
+      class:active={filtroAlerta === ''}
+      onclick={() => { filtroAlerta = ''; page = 1; }}
+    >
+      <div class="kmc-icon azul"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="kmc-info">
+        <span class="kmc-num">{statsConvenios.total}</span>
+        <span class="kmc-label">Total Convenios</span>
+      </div>
+    </button>
+
+    <button
+      type="button"
+      class="kpi-mini-card"
+      class:active={filtroAlerta === 'vigentes'}
+      onclick={() => { filtroAlerta = filtroAlerta === 'vigentes' ? '' : 'vigentes'; page = 1; }}
+    >
+      <div class="kmc-icon verde"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="kmc-info">
+        <span class="kmc-num">{statsConvenios.vigentes}</span>
+        <span class="kmc-label">Vigentes al Día</span>
+      </div>
+    </button>
+
+    <button
+      type="button"
+      class="kpi-mini-card"
+      class:active={filtroAlerta === 'por_vencer'}
+      onclick={() => { filtroAlerta = filtroAlerta === 'por_vencer' ? '' : 'por_vencer'; page = 1; }}
+    >
+      <div class="kmc-icon amarillo"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <div class="kmc-info">
+        <span class="kmc-num">{statsConvenios.porVencer}</span>
+        <span class="kmc-label">Por Vencer (&le; 60 días)</span>
+      </div>
+    </button>
+
+    <button
+      type="button"
+      class="kpi-mini-card"
+      class:active={filtroAlerta === 'vencidos'}
+      onclick={() => { filtroAlerta = filtroAlerta === 'vencidos' ? '' : 'vencidos'; page = 1; }}
+    >
+      <div class="kmc-icon rojo"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="kmc-info">
+        <span class="kmc-num">{statsConvenios.vencidos}</span>
+        <span class="kmc-label">Vencidos / Por Renovar</span>
+      </div>
+    </button>
   </div>
 
   <div class="filtros-row">
@@ -254,14 +345,14 @@
               </td>
             </tr>
           {/each}
-          {#if items.length === 0}
-            <tr><td colspan="8" class="empty">No se encontraron convenios</td></tr>
+          {#if conveniosFiltrados.length === 0}
+            <tr><td colspan="8" class="empty">No se encontraron convenios con el filtro seleccionado</td></tr>
           {/if}
         </tbody>
       </table>
 
-      {#if items.length > 0}
-        <Pagination totalItems={items.length} bind:page bind:pageSize itemLabel="convenios" />
+      {#if conveniosFiltrados.length > 0}
+        <Pagination totalItems={conveniosFiltrados.length} bind:page bind:pageSize itemLabel="convenios" />
       {/if}
     </div>
   {/if}
@@ -275,6 +366,55 @@
 />
 
 <style>
+.kpis-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-mini-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all .15s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+}
+.kpi-mini-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-color: #cbd5e1;
+}
+.kpi-mini-card.active {
+  border-color: var(--verde, #1b7505);
+  background: #fdfefe;
+  box-shadow: 0 0 0 2px rgba(27, 117, 5, 0.15);
+}
+.kmc-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+.kmc-icon.azul { background: #eff6ff; color: #2563eb; }
+.kmc-icon.verde { background: #f0fdf4; color: #16a34a; }
+.kmc-icon.amarillo { background: #fefce8; color: #ca8a04; }
+.kmc-icon.rojo { background: #fef2f2; color: #dc2626; }
+
+.kmc-info { display: flex; flex-direction: column; gap: 1px; }
+.kmc-num { font-size: 1.3rem; font-weight: 900; color: #0f172a; line-height: 1; }
+.kmc-label { font-size: .72rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+
 .subbar { display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#fff;border-bottom:1px solid #e2e8f0; }
 .btn-nuevo { display:inline-flex;align-items:center;gap:6px;background:#1b7505;color:#fff;padding:8px 16px;border-radius:9px;font-weight:700;font-size:.85rem;text-decoration:none;transition:background .15s ease; }
 .btn-nuevo:hover { background:#145c04; }

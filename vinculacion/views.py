@@ -1911,67 +1911,68 @@ def api_proyecto_create(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'method'}, status=405)
     try:
-        codigo = request.POST.get('codigo', '').strip()
-        nombre = request.POST.get('nombre', '').strip()
-        if not codigo or not nombre:
-            return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
-        if Proyecto.objects.filter(codigo=codigo).exists():
-            return JsonResponse({'error': f'Ya existe un proyecto con el código {codigo}'}, status=400)
-        lat = request.POST.get('latitud', '').strip() or None
-        lng = request.POST.get('longitud', '').strip() or None
-        # nombre_corto se autogenera del título (se quitó como campo redundante)
-        nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
-        proyecto = Proyecto.objects.create(
-            codigo=codigo,
-            nombre=nombre,
-            nombre_corto=nombre_corto,
-            id_facultad=Facultad.objects.get(id_facultad=request.POST['id_facultad']),
-            id_carrera=Carrera.objects.get(id_carrera=request.POST['id_carrera']),
-            id_periodo_inicio=PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio']),
-            estado=request.POST.get('estado', 'EN_EJECUCION'),
-            programa=request.POST.get('programa', '').strip() or None,
-            linea_vinculacion=request.POST.get('linea_vinculacion', '').strip() or None,
-            area_conocimiento=request.POST.get('area_conocimiento', '').strip() or None,
-            sub_area_conocimiento=request.POST.get('sub_area_conocimiento', '').strip() or None,
-            director_nombre=request.POST.get('director_nombre', '').strip() or None,
-            director_correo=request.POST.get('director_correo', '').strip() or None,
-            provincia=request.POST.get('provincia', '').strip() or None,
-            canton=request.POST.get('canton', '').strip() or None,
-            parroquia=request.POST.get('parroquia', '').strip() or None,
-            sector=request.POST.get('sector', '').strip() or None,
-            descripcion=request.POST.get('descripcion', '').strip() or None,
-            objetivo_general=request.POST.get('objetivo_general', '').strip() or None,
-            fecha_inicio=request.POST.get('fecha_inicio', '').strip() or None,
-            fecha_fin_planificada=request.POST.get('fecha_fin_planificada', '').strip() or None,
-            ods=request.POST.get('ods', '').strip() or None,
-            observaciones=request.POST.get('observaciones', '').strip() or None,
-            presupuesto_planificado=request.POST.get('presupuesto_planificado', '').strip() or None,
-            terminos_negociacion=request.POST.get('terminos_negociacion', '').strip() or None,
-            latitud=lat,
-            longitud=lng,
-            creado_en=timezone.now(),
-            actualizado_en=timezone.now(),
-        )
-        # Multi-ubicación: guardar puntos y reflejar el principal en el proyecto
-        principal = _guardar_ubicaciones(request, proyecto)
-        if principal:
-            proyecto.latitud = principal.latitud
-            proyecto.longitud = principal.longitud
-            proyecto.provincia = principal.provincia if principal.provincia != 'N/D' else proyecto.provincia
-            proyecto.canton = principal.canton or proyecto.canton
-            proyecto.parroquia = principal.parroquia or proyecto.parroquia
-            proyecto.sector = principal.sector or proyecto.sector
-            proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
-        _guardar_fotos(request, proyecto)
-        from vinculacion.auditoria import registrar_auditoria
-        registrar_auditoria(
-            entidad='PROYECTO',
-            id_registro=proyecto.id_proyecto,
-            accion='CREACION_PROYECTO',
-            detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
-            request=request,
-        )
-        return JsonResponse(ProyectoSerializer(proyecto).data, status=201)
+        with transaction.atomic():
+            codigo = request.POST.get('codigo', '').strip()
+            nombre = request.POST.get('nombre', '').strip()
+            if not codigo or not nombre:
+                return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
+            if Proyecto.objects.filter(codigo=codigo).exists():
+                return JsonResponse({'error': f'Ya existe un proyecto con el código {codigo}'}, status=400)
+            lat = request.POST.get('latitud', '').strip() or None
+            lng = request.POST.get('longitud', '').strip() or None
+            # nombre_corto se autogenera del título (se quitó como campo redundante)
+            nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
+            proyecto = Proyecto.objects.create(
+                codigo=codigo,
+                nombre=nombre,
+                nombre_corto=nombre_corto,
+                id_facultad=Facultad.objects.get(id_facultad=request.POST['id_facultad']),
+                id_carrera=Carrera.objects.get(id_carrera=request.POST['id_carrera']),
+                id_periodo_inicio=PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio']),
+                estado=request.POST.get('estado', 'EN_EJECUCION'),
+                programa=request.POST.get('programa', '').strip() or None,
+                linea_vinculacion=request.POST.get('linea_vinculacion', '').strip() or None,
+                area_conocimiento=request.POST.get('area_conocimiento', '').strip() or None,
+                sub_area_conocimiento=request.POST.get('sub_area_conocimiento', '').strip() or None,
+                director_nombre=request.POST.get('director_nombre', '').strip() or None,
+                director_correo=request.POST.get('director_correo', '').strip() or None,
+                provincia=request.POST.get('provincia', '').strip() or None,
+                canton=request.POST.get('canton', '').strip() or None,
+                parroquia=request.POST.get('parroquia', '').strip() or None,
+                sector=request.POST.get('sector', '').strip() or None,
+                descripcion=request.POST.get('descripcion', '').strip() or None,
+                objetivo_general=request.POST.get('objetivo_general', '').strip() or None,
+                fecha_inicio=request.POST.get('fecha_inicio', '').strip() or None,
+                fecha_fin_planificada=request.POST.get('fecha_fin_planificada', '').strip() or None,
+                ods=request.POST.get('ods', '').strip() or None,
+                observaciones=request.POST.get('observaciones', '').strip() or None,
+                presupuesto_planificado=request.POST.get('presupuesto_planificado', '').strip() or None,
+                terminos_negociacion=request.POST.get('terminos_negociacion', '').strip() or None,
+                latitud=lat,
+                longitud=lng,
+                creado_en=timezone.now(),
+                actualizado_en=timezone.now(),
+            )
+            # Multi-ubicación: guardar puntos y reflejar el principal en el proyecto
+            principal = _guardar_ubicaciones(request, proyecto)
+            if principal:
+                proyecto.latitud = principal.latitud
+                proyecto.longitud = principal.longitud
+                proyecto.provincia = principal.provincia if principal.provincia != 'N/D' else proyecto.provincia
+                proyecto.canton = principal.canton or proyecto.canton
+                proyecto.parroquia = principal.parroquia or proyecto.parroquia
+                proyecto.sector = principal.sector or proyecto.sector
+                proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
+            _guardar_fotos(request, proyecto)
+            from vinculacion.auditoria import registrar_auditoria
+            registrar_auditoria(
+                entidad='PROYECTO',
+                id_registro=proyecto.id_proyecto,
+                accion='CREACION_PROYECTO',
+                detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
+                request=request,
+            )
+            return JsonResponse(ProyectoSerializer(proyecto).data, status=201)
     except Exception as e:
         return JsonResponse({'error': _error_amigable(e)}, status=400)
 
@@ -2170,64 +2171,65 @@ def api_proyecto_update(request, id):
         return JsonResponse(data)
     if request.method == 'POST':
         try:
-            codigo = request.POST.get('codigo', '').strip()
-            nombre = request.POST.get('nombre', '').strip()
-            if not codigo or not nombre:
-                return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
-            if Proyecto.objects.filter(codigo=codigo).exclude(id_proyecto=id).exists():
-                return JsonResponse({'error': f'Ya existe otro proyecto con el código {codigo}'}, status=400)
-            proyecto.codigo = codigo
-            proyecto.nombre = nombre
-            proyecto.nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
-            proyecto.id_facultad = Facultad.objects.get(id_facultad=request.POST['id_facultad'])
-            proyecto.id_carrera = Carrera.objects.get(id_carrera=request.POST['id_carrera'])
-            proyecto.id_periodo_inicio = PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio'])
-            proyecto.estado = request.POST.get('estado', proyecto.estado)
-            proyecto.director_nombre = request.POST.get('director_nombre', '').strip() or None
-            proyecto.director_correo = request.POST.get('director_correo', '').strip() or None
-            proyecto.linea_vinculacion = request.POST.get('linea_vinculacion', '').strip() or None
-            proyecto.programa = request.POST.get('programa', '').strip() or None
-            proyecto.area_conocimiento = request.POST.get('area_conocimiento', '').strip() or None
-            proyecto.sub_area_conocimiento = request.POST.get('sub_area_conocimiento', '').strip() or None
-            proyecto.provincia = request.POST.get('provincia', '').strip() or None
-            proyecto.canton = request.POST.get('canton', '').strip() or None
-            proyecto.parroquia = request.POST.get('parroquia', '').strip() or None
-            proyecto.sector = request.POST.get('sector', '').strip() or None
-            proyecto.descripcion = request.POST.get('descripcion', '').strip() or None
-            proyecto.objetivo_general = request.POST.get('objetivo_general', '').strip() or None
-            proyecto.ods = request.POST.get('ods', '').strip() or None
-            proyecto.fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
-            proyecto.fecha_fin_planificada = request.POST.get('fecha_fin_planificada', '').strip() or None
-            proyecto.observaciones = request.POST.get('observaciones', '').strip() or None
-            proyecto.presupuesto_planificado = request.POST.get('presupuesto_planificado', '').strip() or None
-            proyecto.terminos_negociacion = request.POST.get('terminos_negociacion', '').strip() or None
-            lat = request.POST.get('latitud', '').strip()
-            lng = request.POST.get('longitud', '').strip()
-            proyecto.latitud = lat or None
-            proyecto.longitud = lng or None
-            proyecto.actualizado_en = timezone.now()
-            proyecto.save()
-            # Multi-ubicación: reemplazar el conjunto de puntos y reflejar el principal
-            if request.POST.get('ubicaciones'):
-                principal = _guardar_ubicaciones(request, proyecto, reemplazar=True)
-                if principal:
-                    proyecto.latitud = principal.latitud
-                    proyecto.longitud = principal.longitud
-                    proyecto.provincia = principal.provincia if principal.provincia != 'N/D' else proyecto.provincia
-                    proyecto.canton = principal.canton or proyecto.canton
-                    proyecto.parroquia = principal.parroquia or proyecto.parroquia
-                    proyecto.sector = principal.sector or proyecto.sector
-                    proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
-            _guardar_fotos(request, proyecto)
-            from vinculacion.auditoria import registrar_auditoria
-            registrar_auditoria(
-                entidad='PROYECTO',
-                id_registro=proyecto.id_proyecto,
-                accion='MODIFICACION_PROYECTO',
-                detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
-                request=request,
-            )
-            return JsonResponse(ProyectoSerializer(proyecto).data)
+            with transaction.atomic():
+                codigo = request.POST.get('codigo', '').strip()
+                nombre = request.POST.get('nombre', '').strip()
+                if not codigo or not nombre:
+                    return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
+                if Proyecto.objects.filter(codigo=codigo).exclude(id_proyecto=id).exists():
+                    return JsonResponse({'error': f'Ya existe otro proyecto con el código {codigo}'}, status=400)
+                proyecto.codigo = codigo
+                proyecto.nombre = nombre
+                proyecto.nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
+                proyecto.id_facultad = Facultad.objects.get(id_facultad=request.POST['id_facultad'])
+                proyecto.id_carrera = Carrera.objects.get(id_carrera=request.POST['id_carrera'])
+                proyecto.id_periodo_inicio = PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio'])
+                proyecto.estado = request.POST.get('estado', proyecto.estado)
+                proyecto.director_nombre = request.POST.get('director_nombre', '').strip() or None
+                proyecto.director_correo = request.POST.get('director_correo', '').strip() or None
+                proyecto.linea_vinculacion = request.POST.get('linea_vinculacion', '').strip() or None
+                proyecto.programa = request.POST.get('programa', '').strip() or None
+                proyecto.area_conocimiento = request.POST.get('area_conocimiento', '').strip() or None
+                proyecto.sub_area_conocimiento = request.POST.get('sub_area_conocimiento', '').strip() or None
+                proyecto.provincia = request.POST.get('provincia', '').strip() or None
+                proyecto.canton = request.POST.get('canton', '').strip() or None
+                proyecto.parroquia = request.POST.get('parroquia', '').strip() or None
+                proyecto.sector = request.POST.get('sector', '').strip() or None
+                proyecto.descripcion = request.POST.get('descripcion', '').strip() or None
+                proyecto.objetivo_general = request.POST.get('objetivo_general', '').strip() or None
+                proyecto.ods = request.POST.get('ods', '').strip() or None
+                proyecto.fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
+                proyecto.fecha_fin_planificada = request.POST.get('fecha_fin_planificada', '').strip() or None
+                proyecto.observaciones = request.POST.get('observaciones', '').strip() or None
+                proyecto.presupuesto_planificado = request.POST.get('presupuesto_planificado', '').strip() or None
+                proyecto.terminos_negociacion = request.POST.get('terminos_negociacion', '').strip() or None
+                lat = request.POST.get('latitud', '').strip()
+                lng = request.POST.get('longitud', '').strip()
+                proyecto.latitud = lat or None
+                proyecto.longitud = lng or None
+                proyecto.actualizado_en = timezone.now()
+                proyecto.save()
+                # Multi-ubicación: reemplazar el conjunto de puntos y reflejar el principal
+                if request.POST.get('ubicaciones'):
+                    principal = _guardar_ubicaciones(request, proyecto, reemplazar=True)
+                    if principal:
+                        proyecto.latitud = principal.latitud
+                        proyecto.longitud = principal.longitud
+                        proyecto.provincia = principal.provincia if principal.provincia != 'N/D' else proyecto.provincia
+                        proyecto.canton = principal.canton or proyecto.canton
+                        proyecto.parroquia = principal.parroquia or proyecto.parroquia
+                        proyecto.sector = principal.sector or proyecto.sector
+                        proyecto.save(update_fields=['latitud', 'longitud', 'provincia', 'canton', 'parroquia', 'sector'])
+                _guardar_fotos(request, proyecto)
+                from vinculacion.auditoria import registrar_auditoria
+                registrar_auditoria(
+                    entidad='PROYECTO',
+                    id_registro=proyecto.id_proyecto,
+                    accion='MODIFICACION_PROYECTO',
+                    detalles={'codigo': proyecto.codigo, 'nombre': proyecto.nombre, 'estado': proyecto.estado},
+                    request=request,
+                )
+                return JsonResponse(ProyectoSerializer(proyecto).data)
         except Exception as e:
             return JsonResponse({'error': _error_amigable(e)}, status=400)
     return JsonResponse({'error': 'method'}, status=405)
@@ -2355,26 +2357,31 @@ def api_convenio_detail(request, id):
         })
     if request.method in ('PUT', 'PATCH'):
         try:
-            data = json.loads(request.body)
-        except Exception:
-            data = {}
-        for field in ['numero_memorando', 'fecha_firma', 'fecha_inicio', 'fecha_fin',
-                      'duracion_anios', 'estudiantes_asignados', 'estado', 'observaciones']:
-            if field in data:
-                setattr(convenio, field, data[field] or None)
-        if 'id_periodo' in data and data['id_periodo']:
-            convenio.id_periodo = get_object_or_404(PeriodoAcademico, pk=data['id_periodo'])
-        if 'estado' in data:
-            convenio.estado = data['estado']
-        convenio.save()
-        return JsonResponse({'ok': True})
+            with transaction.atomic():
+                data = json.loads(request.body)
+                for field in ['numero_memorando', 'fecha_firma', 'fecha_inicio', 'fecha_fin',
+                              'duracion_anios', 'estudiantes_asignados', 'estado', 'observaciones']:
+                    if field in data:
+                        setattr(convenio, field, data[field] or None)
+                if 'id_periodo' in data and data['id_periodo']:
+                    convenio.id_periodo = get_object_or_404(PeriodoAcademico, pk=data['id_periodo'])
+                if 'estado' in data:
+                    convenio.estado = data['estado']
+                convenio.save()
+                return JsonResponse({'ok': True})
+        except Exception as e:
+            return JsonResponse({'error': _error_amigable(e)}, status=400)
     if request.method == 'DELETE':
-        for anexo in convenio.anexos.all():
-            ruta = os.path.join(settings.MEDIA_ROOT, anexo.ruta_archivo)
-            if os.path.exists(ruta):
-                os.remove(ruta)
-        convenio.delete()
-        return JsonResponse({'ok': True})
+        try:
+            with transaction.atomic():
+                for anexo in convenio.anexos.all():
+                    ruta = os.path.join(settings.MEDIA_ROOT, anexo.ruta_archivo)
+                    if os.path.exists(ruta):
+                        os.remove(ruta)
+                convenio.delete()
+                return JsonResponse({'ok': True})
+        except Exception as e:
+            return JsonResponse({'error': _error_amigable(e)}, status=400)
     return JsonResponse({'error': 'method'}, status=405)
 
 
