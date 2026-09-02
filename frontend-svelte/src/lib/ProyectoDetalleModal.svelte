@@ -438,18 +438,16 @@
     <span>Sistema de Gestión y Georreferenciación de Vinculación (SGV UTEQ)</span>
     <span>Acreditación Institucional CACES • Página 1 de 1</span>
   </div>
-
-  <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 400);
-    };
-  </script>
 </body>
 </html>`;
 
     win.document.open();
     win.document.write(html);
     win.document.close();
+    win.focus();
+    setTimeout(() => {
+      try { win.print(); } catch {}
+    }, 500);
   }
 
   function onKeydown(e) {
