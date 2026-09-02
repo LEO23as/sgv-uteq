@@ -902,7 +902,13 @@ def api_mapa_proyectos(request):
     if anio:
         qs = qs.filter(fecha_inicio__year=anio)
     if buscar:
-        qs = qs.filter(Q(nombre__icontains=buscar) | Q(codigo__icontains=buscar))
+        qs = qs.filter(
+            Q(nombre__icontains=buscar) |
+            Q(codigo__icontains=buscar) |
+            Q(director_nombre__icontains=buscar) |
+            Q(canton__icontains=buscar) |
+            Q(parroquia__icontains=buscar)
+        )
 
     COLORES = {
         'EN_EJECUCION': '#1b7505',

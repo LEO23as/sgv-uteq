@@ -6,7 +6,7 @@
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
 
-  const API = 'http://127.0.0.1:8000';
+  const API = '';
   const id = $derived($page.params.id);
   let c = $state(null);
   let loading = $state(true);

@@ -5,7 +5,7 @@
 
   let { idConvenio = null, isOpen = false, onClose } = $props();
 
-  const API = 'http://127.0.0.1:8000';
+  const API = '';
   let c = $state(null);
   let loading = $state(true);
   let subiendoAnexo = $state(false);

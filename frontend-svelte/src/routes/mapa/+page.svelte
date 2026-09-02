@@ -19,8 +19,6 @@
   let modalDocs = $state([]);       // documentos cacheados por proyecto id
   let modalDocsLoad = $state(false);
   let docAbierto = $state(null);    // {url, nombre, extension}
-
-  const API_BASE = 'http://127.0.0.1:8000';
   function extractUrl(item) {
     if (!item) return '';
     let url = typeof item === 'string' ? item : (item.url || item.ruta_foto || item.foto_url || item.src || '');
@@ -158,6 +156,10 @@
 
     (data.features || []).forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
+      // Validación defensiva: ignorar coordenadas nulas, NaN o en el océano (0, 0)
+      if (lat == null || lng == null || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
+        return;
+      }
       const p = f.properties;
       const L = window._L;
       const numUbis = p.ubicaciones?.length || 1;
@@ -455,7 +457,12 @@
 
         <div class="buscar-wrap">
           <i class="bi bi-search buscar-ico"></i>
-          <input class="fbuscar" bind:value={filtros.buscar} placeholder="Buscar proyecto..." />
+          <input
+            class="fbuscar"
+            bind:value={filtros.buscar}
+            onkeydown={(e) => { if (e.key === 'Enter') filtrar(); }}
+            placeholder="Buscar proyecto, cantón..."
+          />
         </div>
 
         <button class="btn-quevedo" onclick={centrarEnQuevedo} title="Centrar mapa en Quevedo">
