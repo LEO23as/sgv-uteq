@@ -13,7 +13,7 @@ services:
       # Habilitar WAL Streaming Replication para alta disponibilidad
       POSTGRES_EXTRA_PARAMS: "-c wal_level=replica -c max_wal_senders=10 -c max_replication_slots=10"
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata_primary:/var/lib/postgresql/data
 
