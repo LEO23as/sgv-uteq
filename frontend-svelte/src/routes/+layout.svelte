@@ -212,9 +212,9 @@
     if (pathname.startsWith('/proyectos'))     return 'proyectos';
     if (pathname.startsWith('/entidades'))     return 'entidades';
     if (pathname.startsWith('/convenios'))     return 'convenios';
-    if (pathname.startsWith('/auditoria'))     return 'auditoria';
     if (pathname.startsWith('/configuracion')) return 'configuracion';
-    if (pathname.startsWith('/periodos'))      return 'periodos';
+    if (pathname.startsWith('/periodos'))      return 'configuracion';
+    if (pathname.startsWith('/auditoria'))     return 'configuracion';
     if (pathname.startsWith('/facultades') || pathname.startsWith('/carreras')) return 'facultades';
     if (pathname.startsWith('/reportes'))      return 'reportes';
     return 'dashboard';

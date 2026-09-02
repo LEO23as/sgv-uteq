@@ -48,6 +48,8 @@
   <nav class="breadcrumb">
     <a href="/dashboard">Inicio</a>
     <span class="sep">/</span>
+    <a href="/configuracion">Configuración</a>
+    <span class="sep">/</span>
     <span class="current">Períodos Académicos</span>
   </nav>
   <a href="/periodos/nuevo" class="btn-nuevo"><i class="bi bi-plus-lg"></i> Nuevo período</a>
