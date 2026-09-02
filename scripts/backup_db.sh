@@ -1,67 +1,50 @@
 #!/bin/bash
 # ==============================================================================
 # SGV-UTEQ: Script de Respaldo Automatizado y Rotación de Base de Datos
-# Estándar de Disponibilidad y Gobernanza de Datos (CACES / LOES)
+# Estándar de Disponibilidad, Resiliencia y Gobernanza de Datos (CACES / LOES)
 # ==============================================================================
 
 set -euo pipefail
 
 # 1. Configuración de Directorios y Variables
 BACKUP_DIR="${HOME}/backups/sgv_db"
-LOG_FILE="${BACKUP_DIR}/backup.log"
 FECHA=$(date +"%Y%m%d_%H%M%S")
 ARCHIVO_BACKUP="${BACKUP_DIR}/sgv_db_${FECHA}.sql.gz"
 DIAS_RETENCION=7
 
-# Parámetros de conexión a la Base de Datos (toma del entorno o defaults)
+# Parámetros de conexión a la Base de Datos
 DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
-DB_HOST="${DB_HOST:-localhost}"
+DB_HOST="${DB_HOST:-host.docker.internal}"
 DB_PORT="${DB_PORT:-5432}"
 
 mkdir -p "${BACKUP_DIR}"
 
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"
-}
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Iniciando respaldo institucional de base de datos '${DB_NAME}'..."
 
-log "=========================================================="
-log "Iniciando respaldo de base de datos '${DB_NAME}'..."
-
-# 2. Ejecución del Respaldo Comprimido
-# Si corre dentro del servidor con Docker, usa el contenedor si está activo
+# 2. Extraer y Comprimir con gzip (nivel 9 máximo)
 if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q "sgv_backend"; then
-    log "Modo: Extracción a través de contenedor Docker 'sgv_backend'..."
-    docker exec -i sgv_backend pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists --no-owner --no-privileges | gzip -9 > "${ARCHIVO_BACKUP}"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Modo: Extracción a través de contenedor Docker 'sgv_backend'..."
+    docker exec -i sgv_backend pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists | gzip -9 > "${ARCHIVO_BACKUP}"
 elif command -v pg_dump >/dev/null 2>&1; then
-    log "Modo: Extracción mediante cliente nativo 'pg_dump'..."
-    pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists --no-owner --no-privileges | gzip -9 > "${ARCHIVO_BACKUP}"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Modo: Extracción mediante cliente nativo 'pg_dump'..."
+    pg_dump -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" --clean --if-exists | gzip -9 > "${ARCHIVO_BACKUP}"
 else
-    log "ERROR CRÍTICO: No se encontró 'pg_dump' ni contenedor Docker activo."
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR CRÍTICO: No se encontró 'pg_dump' ni contenedor Docker activo."
     exit 1
 fi
 
-# 3. Validación de Integridad del Archivo Generado
+# 3. Firma Criptográfica SHA-256 (Integridad Forense CACES)
 if [ -f "${ARCHIVO_BACKUP}" ] && [ -s "${ARCHIVO_BACKUP}" ]; then
-    TAMANIO=$(du -h "${ARCHIVO_BACKUP}" | cut -f1)
-    # Generar Hash SHA-256 para verificación criptográfica de integridad forense
-    HASH_SHA256=$(sha256sum "${ARCHIVO_BACKUP}" | cut -d' ' -f1)
-    echo "${HASH_SHA256}  $(basename "${ARCHIVO_BACKUP}")" > "${ARCHIVO_BACKUP}.sha256"
-    
-    log "✅ Respaldo generado con éxito: ${ARCHIVO_BACKUP}"
-    log "   Tamaño: ${TAMANIO}"
-    log "   Hash SHA-256: ${HASH_SHA256}"
+    sha256sum "${ARCHIVO_BACKUP}" > "${ARCHIVO_BACKUP}.sha256"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Respaldo generado con éxito: ${ARCHIVO_BACKUP}"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')]    Firma SHA-256 calculada y certificada exitosamente."
 else
-    log "❌ ERROR: El archivo de respaldo se generó vacío o no existe."
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ ERROR: El archivo de respaldo se generó vacío o no existe."
     exit 1
 fi
 
-# 4. Política de Retención y Poda (Auto-rotación de 7 días)
-log "Aplicando política de retención (eliminando respaldos > ${DIAS_RETENCION} días)..."
-BORRADOS=$(find "${BACKUP_DIR}" -type f \( -name "*.sql.gz" -o -name "*.sha256" \) -mtime +${DIAS_RETENCION} -print -delete | wc -l)
-log "Respaldos antiguos depurados: ${BORRADOS} archivo(s)."
-
-TOTAL_RESPALDOS=$(find "${BACKUP_DIR}" -type f -name "*.sql.gz" | wc -l)
-log "Total de respaldos vigentes en disco: ${TOTAL_RESPALDOS}"
-log "Respaldo concluido satisfactoriamente."
-log "=========================================================="
+# 4. Poda automática (Política de retención de 7 días para no saturar disco)
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Aplicando política de retención (eliminando respaldos > ${DIAS_RETENCION} días)..."
+find "${BACKUP_DIR}" -type f \( -name "*.sql.gz" -o -name "*.sha256" \) -mtime +${DIAS_RETENCION} -delete
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ Política de retención de 7 días aplicada correctamente."

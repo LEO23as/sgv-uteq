@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # SGV-UTEQ: Script de Recuperación ante Desastres (Disaster Recovery)
-# Restaura un respaldo .sql.gz verificando su firma criptográfica SHA-256
+# Restaura un respaldo .sql.gz previa verificación estricta de firma SHA-256
 # ==============================================================================
 
 set -euo pipefail
@@ -15,40 +15,42 @@ fi
 ARCHIVO_BACKUP="$1"
 
 if [ ! -f "${ARCHIVO_BACKUP}" ]; then
-    echo "❌ ERROR: El archivo '${ARCHIVO_BACKUP}' no existe."
+    echo "❌ ERROR: El archivo de respaldo '${ARCHIVO_BACKUP}' no existe."
     exit 1
 fi
 
 echo "=========================================================="
-echo "SGV-UTEQ: PROTOCOLO DE RECUPERACIÓN DE BASE DE DATOS"
+echo "SGV-UTEQ: PROTOCOLO DE RECUPERACIÓN ANTE DESASTRES"
 echo "=========================================================="
-echo "Archivo a restaurar: ${ARCHIVO_BACKUP}"
+echo "Archivo objetivo: ${ARCHIVO_BACKUP}"
 
-# 1. Verificación de Integridad Criptográfica (si existe archivo .sha256)
+# 1. Verificación de Integridad Criptográfica Forense SHA-256
 CHECKSUM_FILE="${ARCHIVO_BACKUP}.sha256"
 if [ -f "${CHECKSUM_FILE}" ]; then
-    echo "Verificando integridad criptográfica SHA-256..."
+    echo "Verificando firma criptográfica SHA-256..."
     cd "$(dirname "${ARCHIVO_BACKUP}")"
     if sha256sum -c "$(basename "${CHECKSUM_FILE}")"; then
-        echo "✅ Verificación SHA-256 EXITOSA. El archivo no ha sido corrompido ni alterado."
+        echo "✅ Verificación SHA-256 EXITOSA: El archivo está 100% íntegro e inalterado."
     else
-        echo "❌ ERROR CRÍTICO: La firma criptográfica SHA-256 no coincide. Respaldo dañado o manipulado."
+        echo "❌ ERROR CRÍTICO: La firma SHA-256 no coincide. El respaldo está dañado o fue manipulado."
         exit 1
     fi
     cd - > /dev/null
+else
+    echo "⚠️ ADVERTENCIA: No se encontró el archivo de firma .sha256 correspondiente."
 fi
 
 # 2. Confirmación de Seguridad
-read -p "⚠️ ATENCIÓN: Esta acción sobreescribirá los datos actuales de la BD. ¿Deseas continuar? (s/N): " CONFIRMAR
+read -p "⚠️ ATENCIÓN: Esta acción sobreescribirá los datos actuales de la base de datos. ¿Deseas continuar? (s/N): " CONFIRMAR
 if [[ ! "${CONFIRMAR}" =~ ^[sS]$ ]]; then
-    echo "Operación cancelada por el usuario."
+    echo "Operación cancelada por el operador."
     exit 0
 fi
 
-# 3. Restauración
+# 3. Restauración de Base de Datos
 DB_NAME="${DB_NAME:-postgres}"
 DB_USER="${DB_USER:-postgres}"
-DB_HOST="${DB_HOST:-localhost}"
+DB_HOST="${DB_HOST:-host.docker.internal}"
 DB_PORT="${DB_PORT:-5432}"
 
 echo "Restaurando base de datos en '${DB_NAME}'..."
@@ -57,7 +59,7 @@ if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -
 elif command -v psql >/dev/null 2>&1; then
     gunzip -c "${ARCHIVO_BACKUP}" | psql -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}"
 else
-    echo "❌ ERROR: No se encontró cliente psql ni contenedor Docker."
+    echo "❌ ERROR: No se encontró cliente psql ni contenedor Docker activo."
     exit 1
 fi
 

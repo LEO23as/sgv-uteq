@@ -1,6 +1,45 @@
 version: '3.8'
 
 services:
+  # ── NODO 1: PRIMARIO (LEADER) ──
+  db_primary:
+    image: postgres:15-alpine
+    container_name: sgv_db_primary
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Habilitar WAL Streaming Replication para alta disponibilidad
+      POSTGRES_EXTRA_PARAMS: "-c wal_level=replica -c max_wal_senders=10 -c max_replication_slots=10"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_primary:/var/lib/postgresql/data
+
+  # ── NODO 2: RÉPLICA STANDBY (FOLLOWER) ──
+  db_replica:
+    image: postgres:15-alpine
+    container_name: sgv_db_replica
+    restart: always
+    environment:
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    ports:
+      - "5433:5432"
+    depends_on:
+      - db_primary
+    command: |
+      bash -c "
+      until pg_isready -h db_primary -p 5432; do sleep 2; done;
+      if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
+        pg_basebackup -h db_primary -D /var/lib/postgresql/data -U postgres -Fp -Xs -R
+      fi;
+      exec docker-entrypoint.sh postgres
+      "
+    volumes:
+      - pgdata_replica:/var/lib/postgresql/data
+
   backend:
     build:
       context: .
@@ -11,8 +50,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-    # Credenciales sensibles (SECRET_KEY, EMAIL_HOST_PASSWORD, etc.) se leen
-    # desde el archivo .env de la raiz — NO se versionan en este archivo.
     env_file:
       - .env
     environment:
@@ -24,6 +61,8 @@ services:
       - DB_OPTIONS=-c search_path=public,sga_principal
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - db_primary
 
   frontend:
     build:
@@ -41,3 +80,7 @@ services:
       - VITE_BACKEND_URL=http://backend:8000
     depends_on:
       - backend
+
+volumes:
+  pgdata_primary:
+  pgdata_replica:
