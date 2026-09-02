@@ -178,6 +178,22 @@
   let moduloData  = $derived(SIDEBAR_LINKS[moduloKey]);
   let isDashboard = $derived($page.url.pathname === '/dashboard');
   let isMapa      = $derived($page.url.pathname.startsWith('/mapa'));
+
+  // Transición suave entre módulos
+  let pageTransitionLoading = $state(false);
+  let lastPathname = '';
+
+  $effect(() => {
+    const current = $page.url.pathname;
+    if (lastPathname && lastPathname !== current) {
+      pageTransitionLoading = true;
+      const t = setTimeout(() => {
+        pageTransitionLoading = false;
+      }, 450);
+      return () => clearTimeout(t);
+    }
+    lastPathname = current;
+  });
 </script>
 
 <svelte:window onclick={closeAllDropdowns} />
@@ -185,7 +201,7 @@
 <Toasts />
 <ConfirmDialog />
 
-{#if $navigating || $loading}
+{#if $navigating || $loading || pageTransitionLoading}
   <InstitutionalLoader texto="CARGANDO MÓDULO" subtexto="Sistema de Gestión de Vinculación UTEQ" />
 {/if}
 

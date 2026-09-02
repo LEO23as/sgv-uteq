@@ -53,35 +53,37 @@
   .sgv-loader-backdrop.fullscreen {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.48);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    animation: fadeIn .25s ease-out forwards;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: fadeIn .2s ease-out forwards;
   }
 
   .sgv-loader-backdrop:not(.fullscreen) {
     position: absolute;
     inset: 0;
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border-radius: inherit;
+    min-height: 260px;
   }
 
+  /* ── MOVIMIENTO DE ARRIBA PARA ABAJO (BOBBING) ── */
   .sgv-loader-card {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 18px;
-    animation: floatCard 3s ease-in-out infinite alternate;
+    gap: 16px;
+    animation: floatUpDown 2.4s ease-in-out infinite alternate;
   }
 
-  /* ── ÓRBITAS GIRATORIAS ── */
+  /* ── ÓRBITAS GIRATORIAS FINAS Y ELEGANTES ── */
   .sgv-orbit-wrap {
     position: relative;
-    width: 130px;
-    height: 130px;
+    width: 120px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -93,62 +95,72 @@
     box-sizing: border-box;
   }
 
-  /* Anillo exterior Dorado UTEQ */
+  /* Pista circular sutil de fondo */
+  .sgv-orbit-wrap::before {
+    content: '';
+    position: absolute;
+    width: 114px;
+    height: 114px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  /* Arco exterior Dorado UTEQ */
   .ring-outer-gold {
-    width: 124px;
-    height: 124px;
-    border: 3.5px solid transparent;
+    width: 114px;
+    height: 114px;
+    border: 2.5px solid transparent;
     border-top-color: #f59e0b;
-    border-bottom-color: #eab308;
-    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.45));
-    animation: spinClockwise 2.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    border-left-color: #f59e0b;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
+    animation: spinClockwise 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 
-  /* Anillo interior Verde UTEQ */
+  /* Arco interior Verde UTEQ */
   .ring-inner-green {
-    width: 96px;
-    height: 96px;
-    border: 3px solid transparent;
-    border-left-color: #10b981;
-    border-right-color: #059669;
-    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.45));
-    animation: spinCounter 1.8s linear infinite;
+    width: 88px;
+    height: 88px;
+    border: 2.5px solid transparent;
+    border-bottom-color: #22c55e;
+    border-right-color: #16a34a;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.45));
+    animation: spinCounter 1.7s linear infinite;
   }
 
-  /* ── SIGLAS CENTRALES FLOTANTES CON DEGRADADO METÁLICO ── */
+  /* ── TIPOGRAFÍA EXACTA SGA/SGV UTEQ (DORADO SUAVE GEOMÉTRICO) ── */
   .sgv-siglas-box {
     position: relative;
     z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: pulseSiglas 2s ease-in-out infinite alternate;
   }
 
   .sgv-siglas {
-    font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 2.25rem;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef08a 25%, #f59e0b 60%, #b45309 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
-    padding-left: 0.12em; /* Compensa el letter-spacing */
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: #f2c94c;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    padding-left: 0.16em; /* Equilibrio visual del letter-spacing */
   }
 
-  /* ── CAPTION "CARGANDO" ── */
+  /* ── CAPTION "C A R G A N D O" ── */
   .sgv-loader-caption {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
-    font-size: 0.88rem;
-    font-weight: 800;
-    letter-spacing: 0.28em;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.32em;
     text-transform: uppercase;
-    color: #ffffff;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    color: #e2e8f0;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    padding-left: 0.32em;
   }
 
   .animated-dots {
@@ -158,21 +170,23 @@
 
   .dot {
     opacity: 0;
+    color: #f59e0b;
     animation: dotPulse 1.4s infinite;
   }
   .dot.d1 { animation-delay: 0.0s; }
-  .dot.d2 { animation-delay: 0.2s; }
-  .dot.d3 { animation-delay: 0.4s; }
+  .dot.d2 { animation-delay: 0.25s; }
+  .dot.d3 { animation-delay: 0.5s; }
 
   .sgv-loader-sub {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.82);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
     font-weight: 500;
-    margin-top: -8px;
+    margin-top: -6px;
+    letter-spacing: 0.06em;
   }
 
-  /* ── KEYFRAME ANIMATIONS ── */
+  /* ── ANIMACIONES CSS PURAS A 60 FPS ── */
   @keyframes spinClockwise {
     0%   { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -183,24 +197,19 @@
     100% { transform: rotate(0deg); }
   }
 
-  @keyframes floatCard {
-    0%   { transform: translateY(-5px); }
-    100% { transform: translateY(5px); }
-  }
-
-  @keyframes pulseSiglas {
-    0%   { transform: scale(0.96); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
-    100% { transform: scale(1.04); filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.5)); }
+  @keyframes floatUpDown {
+    0%   { transform: translateY(-7px); }
+    100% { transform: translateY(7px); }
   }
 
   @keyframes dotPulse {
     0%, 20% { opacity: 0; transform: translateY(0); }
-    50%     { opacity: 1; transform: translateY(-2px); }
+    50%     { opacity: 1; transform: translateY(-3px); }
     80%, 100% { opacity: 0; transform: translateY(0); }
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from { opacity: 0; transform: scale(0.98); }
+    to   { opacity: 1; transform: scale(1); }
   }
 </style>

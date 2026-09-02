@@ -4,6 +4,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import Pagination from '$lib/Pagination.svelte';
+  import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
 
   let usuarios = $state([]);
   let roles = $state([]);
@@ -301,7 +302,9 @@
 
     <!-- TABLA ESTILO VERDE SGA -->
     {#if cargando}
-      <div class="empty-state"><i class="bi bi-arrow-repeat spin"></i> Cargando usuarios...</div>
+      <div style="position: relative; min-height: 280px; width: 100%;">
+        <InstitutionalLoader fullscreen={false} texto="CARGANDO USUARIOS" subtexto="Consultando directorio institucional UTEQ..." />
+      </div>
     {:else if !usuariosFiltrados.length}
       <div class="empty-state">
         <i class="bi bi-search" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
