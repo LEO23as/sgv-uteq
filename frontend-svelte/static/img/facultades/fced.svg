@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="fcedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#064e3b" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="112" height="112" x="4" y="4" rx="28" fill="url(#fcedGrad)" />
+  <rect width="108" height="108" x="6" y="6" rx="26" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" opacity="0.8" />
+  <!-- Ícono Educación (Birrete & Libro) -->
+  <g fill="#ffffff" transform="translate(30, 20)">
+    <polygon points="30,12 8,24 30,36 52,24" fill="#fcd34d" />
+    <path d="M18 30 V44 C18 48 24 52 30 52 C36 52 42 48 42 44 V30" fill="none" stroke="#ffffff" stroke-width="3" />
+    <path d="M50 26 V42 C50 44 48 46 46 46" fill="none" stroke="#fcd34d" stroke-width="2" />
+    <circle cx="46" cy="48" r="2.5" fill="#fcd34d" />
+  </g>
+  <text x="60" y="104" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-weight="900" font-size="14" fill="#ffffff" letter-spacing="1.5">FCED</text>
+</svg>

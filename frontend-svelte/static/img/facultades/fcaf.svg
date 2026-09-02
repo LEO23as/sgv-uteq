@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="fcafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="112" height="112" x="4" y="4" rx="28" fill="url(#fcafGrad)" />
+  <rect width="108" height="108" x="6" y="6" rx="26" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" opacity="0.8" />
+  <!-- Ícono Agrario & Forestal -->
+  <g fill="#ffffff" transform="translate(30, 20)">
+    <path d="M30 4 L14 26 L24 26 L8 46 L24 46 L10 66 L50 66 L36 46 L52 46 L36 26 L46 26 Z" opacity="0.95" />
+    <rect x="26" y="66" width="8" height="10" rx="2" fill="#dcfce7" />
+  </g>
+  <text x="60" y="104" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-weight="900" font-size="14" fill="#ffffff" letter-spacing="1.5">FCAF</text>
+</svg>

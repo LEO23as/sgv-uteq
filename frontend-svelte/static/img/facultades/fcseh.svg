@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="fcsehGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#4c1d95" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="112" height="112" x="4" y="4" rx="28" fill="url(#fcsehGrad)" />
+  <rect width="108" height="108" x="6" y="6" rx="26" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" opacity="0.8" />
+  <!-- Ícono Ciencias Sociales & Filosofía (Columnas & Libro Abierto) -->
+  <g fill="#ffffff" transform="translate(30, 22)">
+    <path d="M8 20 L30 8 L52 20 Z" fill="#fde68a" />
+    <rect x="12" y="22" width="5" height="24" rx="1.5" />
+    <rect x="23" y="22" width="5" height="24" rx="1.5" />
+    <rect x="33" y="22" width="5" height="24" rx="1.5" />
+    <rect x="43" y="22" width="5" height="24" rx="1.5" />
+    <rect x="8" y="46" width="44" height="6" rx="2" fill="#ffffff" />
+    <!-- Antorcha/libro -->
+    <path d="M14 56 C22 52 28 54 30 57 C32 54 38 52 46 56" fill="none" stroke="#fde68a" stroke-width="2.5" />
+  </g>
+  <text x="60" y="104" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-weight="900" font-size="13" fill="#ffffff" letter-spacing="1">FCSEH</text>
+</svg>

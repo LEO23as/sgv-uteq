@@ -43,22 +43,78 @@
     RECHAZADO:    { label:'Rechazado',    cls:'rechazado'  },
   };
 
-  const ICONOS_FACULTAD = {
-    'CIENCIAS AGRARIAS': 'bi-tree-fill',
-    'CIENCIAS DE LA INGENIERIA': 'bi-cpu-fill',
-    'CIENCIAS EMPRESARIALES': 'bi-briefcase-fill',
-    'CIENCIAS SOCIALES': 'bi-bank2',
-    'CIENCIAS DE LA SALUD': 'bi-heart-pulse-fill',
-    'CIENCIAS DE LA COMPUTACION': 'bi-laptop-fill',
-    'CIENCIAS AMBIENTALES': 'bi-globe-americas',
+  const FACULTADES_CONFIG = {
+    'AGRARIAS': {
+      siglas: 'FCAF',
+      color: '#16a34a',
+      bg: '#f0fdf4',
+      border: '#86efac',
+      logo: '/img/facultades/fcaf.svg',
+      glow: 'rgba(22, 163, 74, 0.18)'
+    },
+    'EMPRESARIALES': {
+      siglas: 'FCE',
+      color: '#2563eb',
+      bg: '#eff6ff',
+      border: '#93c5fd',
+      logo: '/img/facultades/fce.svg',
+      glow: 'rgba(37, 99, 235, 0.18)'
+    },
+    'PECUARIAS': {
+      siglas: 'FCP',
+      color: '#d97706',
+      bg: '#fffbeb',
+      border: '#fde68a',
+      logo: '/img/facultades/fcp.svg',
+      glow: 'rgba(217, 119, 6, 0.18)'
+    },
+    'SOCIALES': {
+      siglas: 'FCSEH',
+      color: '#7c3aed',
+      bg: '#f5f3ff',
+      border: '#ddd6fe',
+      logo: '/img/facultades/fcseh.svg',
+      glow: 'rgba(124, 58, 237, 0.18)'
+    },
+    'COMPUTACION': {
+      siglas: 'FCCD',
+      color: '#0284c7',
+      bg: '#f0f9ff',
+      border: '#7dd3fc',
+      logo: '/img/facultades/fccd.svg',
+      glow: 'rgba(2, 132, 199, 0.18)'
+    },
+    'INGENIERIA': {
+      siglas: 'FCI',
+      color: '#0284c7',
+      bg: '#f0f9ff',
+      border: '#7dd3fc',
+      logo: '/img/facultades/fccd.svg',
+      glow: 'rgba(2, 132, 199, 0.18)'
+    },
+    'EDUCACION': {
+      siglas: 'FCED',
+      color: '#059669',
+      bg: '#ecfdf5',
+      border: '#a7f3d0',
+      logo: '/img/facultades/fced.svg',
+      glow: 'rgba(5, 150, 105, 0.18)'
+    },
   };
 
-  function obtenerIconoFac(nombre) {
+  function getFacConfig(nombre) {
     const n = (nombre || '').toUpperCase();
-    for (const [key, ic] of Object.entries(ICONOS_FACULTAD)) {
-      if (n.includes(key)) return ic;
+    for (const [k, cfg] of Object.entries(FACULTADES_CONFIG)) {
+      if (n.includes(k)) return cfg;
     }
-    return 'bi-building-fill';
+    return {
+      siglas: 'UTEQ',
+      color: '#16a34a',
+      bg: '#f0fdf4',
+      border: '#86efac',
+      logo: '/img/facultades/fcaf.svg',
+      glow: 'rgba(22, 163, 74, 0.15)'
+    };
   }
 
   function parsearFecha(f) {
@@ -363,19 +419,30 @@
 
       <div class="facultades-grid">
         {#each statsFacultades as fac}
-          <div class="fac-card" onclick={() => seleccionarFacultad(fac)}>
+          {@const cfg = getFacConfig(fac.nombre)}
+          <div 
+            class="fac-card" 
+            style="--fac-color: {cfg.color}; --fac-bg: {cfg.bg}; --fac-border: {cfg.border}; --fac-glow: {cfg.glow};"
+            onclick={() => seleccionarFacultad(fac)}
+          >
+            <!-- Acento de color superior -->
+            <div class="fc-top-accent" style="background: {cfg.color};"></div>
+
             <div class="fc-head">
-              <div class="fc-icon">
-                <i class="bi {obtenerIconoFac(fac.nombre)}"></i>
+              <div class="fc-logo-wrap" style="background: {cfg.bg}; border-color: {cfg.border};">
+                <img src={cfg.logo} alt="Logo {cfg.siglas}" class="fc-logo-img" />
               </div>
-              <span class="fc-badge-carrs">{fac.totalCarreras} {fac.totalCarreras === 1 ? 'Carrera' : 'Carreras'}</span>
+              <div class="fc-badges">
+                <span class="fc-badge-siglas" style="color: {cfg.color}; background: {cfg.bg}; border-color: {cfg.border};">{cfg.siglas}</span>
+                <span class="fc-badge-carrs">{fac.totalCarreras} {fac.totalCarreras === 1 ? 'Carrera' : 'Carreras'}</span>
+              </div>
             </div>
             
             <h4 class="fc-title">{fac.nombre}</h4>
             
             <div class="fc-stats">
               <div class="fcs-item">
-                <span class="fcs-val text-verde">{fac.totalProyectos}</span>
+                <span class="fcs-val" style="color: {cfg.color};">{fac.totalProyectos}</span>
                 <span class="fcs-lbl">Proyectos</span>
               </div>
               <div class="fcs-sep"></div>
@@ -390,7 +457,7 @@
               </div>
             </div>
 
-            <div class="fc-footer">
+            <div class="fc-footer" style="color: {cfg.color};">
               <span>Explorar carreras y proyectos</span>
               <i class="bi bi-arrow-right"></i>
             </div>
@@ -402,17 +469,20 @@
          NIVEL 2: TARJETAS DE CARRERAS DE LA FACULTAD SELECCIONADA
     ═══════════════════════════════════════════════════════════════ -->
     {:else if vistaModo === 'carreras' && facSeleccionada}
-      <div class="fac-banner">
+      {@const facCfg = getFacConfig(facSeleccionada.nombre)}
+      <div class="fac-banner" style="border-color: {facCfg.border};">
         <button class="btn-volver" onclick={irAFacultades} title="Volver a todas las facultades">
           <i class="bi bi-arrow-left"></i>
         </button>
-        <div class="fb-icon"><i class="bi {obtenerIconoFac(facSeleccionada.nombre)}"></i></div>
+        <div class="fb-logo-wrap" style="background: {facCfg.bg}; border-color: {facCfg.border};">
+          <img src={facCfg.logo} alt="Logo {facCfg.siglas}" class="fb-logo-img" />
+        </div>
         <div class="fb-info">
-          <span class="fb-pre">Facultad</span>
+          <span class="fb-pre" style="color: {facCfg.color};">{facCfg.siglas} • Facultad</span>
           <h3>{facSeleccionada.nombre}</h3>
           <span class="fb-sub">{carrerasDeFacultad.length} Carreras académicas registradas</span>
         </div>
-        <button class="btn-ver-todos-fac" onclick={verTodosFacultad}>
+        <button class="btn-ver-todos-fac" onclick={verTodosFacultad} style="background: {facCfg.bg}; border-color: {facCfg.border}; color: {facCfg.color};">
           <i class="bi bi-eye-fill"></i> Ver todos los proyectos de la facultad
         </button>
       </div>
@@ -626,32 +696,112 @@
 
   /* CUADRÍCULA DE FACULTADES */
   .facultades-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-bottom: 24px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;
   }
   .fac-card {
-    background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px;
-    padding: 20px; cursor: pointer; display: flex; flex-direction: column; gap: 14px;
-    transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1.5px solid var(--fac-border, #e2e8f0);
+    border-radius: 16px;
+    padding: 22px 20px 18px 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
   }
   .fac-card:hover {
-    border-color: #86efac; transform: translateY(-3px); box-shadow: 0 10px 24px rgba(22, 163, 74, 0.1);
+    border-color: var(--fac-color, #16a34a);
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px var(--fac-glow, rgba(22, 163, 74, 0.14));
   }
+
+  .fc-top-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--fac-color, #16a34a);
+  }
+
   .fc-head { display: flex; align-items: center; justify-content: space-between; }
-  .fc-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
-    display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
+  
+  .fc-logo-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--fac-bg, #f0fdf4);
+    border: 1.5px solid var(--fac-border, #bbf7d0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease;
   }
-  .fc-badge-carrs { font-size: 0.74rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; }
-  .fc-title { font-size: 0.98rem; font-weight: 800; color: #0f172a; line-height: 1.35; margin: 0; min-height: 42px; }
+  .fac-card:hover .fc-logo-wrap {
+    transform: scale(1.06);
+  }
+  .fc-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .fc-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fc-badge-siglas {
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 4px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--fac-border, #e2e8f0);
+    background: var(--fac-bg, #f8fafc);
+    letter-spacing: 0.04em;
+  }
+
+  .fc-badge-carrs {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .fc-title {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.35;
+    margin: 0;
+    min-height: 44px;
+    transition: color 0.15s ease;
+  }
+  .fac-card:hover .fc-title {
+    color: var(--fac-color, #0f172a);
+  }
   
   .fc-stats {
-    display: flex; align-items: center; justify-content: space-around;
-    background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 10px; padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 10px 8px;
   }
   .fcs-item { display: flex; flex-direction: column; align-items: center; }
   .fcs-val { font-size: 1.15rem; font-weight: 900; }
-  .fcs-lbl { font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+  .fcs-lbl { font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; }
   .fcs-sep { width: 1px; height: 24px; background: #e2e8f0; }
 
   .fc-footer {
