@@ -457,10 +457,6 @@
                   <i class="bi bi-people-fill"></i>
                   <span>Gestión de Usuarios</span>
                 </a>
-                <a href="/auditoria" class="pmenu-item" onclick={() => showProfileDropdown = false}>
-                  <i class="bi bi-shield-lock-fill"></i>
-                  <span>Auditoría Forense</span>
-                </a>
                 <a href="/configuracion" class="pmenu-item" onclick={() => showProfileDropdown = false}>
                   <i class="bi bi-gear-fill"></i>
                   <span>Configuración</span>
