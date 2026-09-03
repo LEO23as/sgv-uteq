@@ -584,42 +584,51 @@
                 {#if $capaODSActiva}
                   <div class="fc-ods-selector-box">
                     <div class="fc-ods-header">
-                      <span>Filtrar por ODS:</span>
+                      <span>Metas ODS (Agenda 2030):</span>
                       {#if $odsSeleccionadoMapa}
                         <button type="button" class="fc-ods-reset-btn" onclick={() => odsSeleccionadoMapa.set(null)}>
-                          Todos
+                          Ver todos
                         </button>
                       {/if}
                     </div>
-                    <div class="fc-ods-grid">
+                    <div class="fc-ods-list">
+                      <button
+                        type="button"
+                        class="fc-ods-row-item"
+                        class:active={!$odsSeleccionadoMapa}
+                        onclick={() => odsSeleccionadoMapa.set(null)}
+                      >
+                        <span class="for-num for-all"><i class="bi bi-globe-americas"></i></span>
+                        <span class="for-name">Todos los ODS</span>
+                      </button>
+
                       {#each [
-                        {num: 1, c: '#E5243B', n: '1. Fin Pobreza'},
-                        {num: 2, c: '#DDA63A', n: '2. Hambre Cero'},
-                        {num: 3, c: '#4C9F38', n: '3. Salud'},
-                        {num: 4, c: '#C5192D', n: '4. Educación'},
-                        {num: 5, c: '#FF3A21', n: '5. Género'},
-                        {num: 6, c: '#26BDE2', n: '6. Agua'},
-                        {num: 7, c: '#FCC30B', n: '7. Energía'},
-                        {num: 8, c: '#A21942', n: '8. Trabajo'},
-                        {num: 9, c: '#FD6925', n: '9. Industria'},
-                        {num: 10, c: '#DD1367', n: '10. Desigualdad'},
-                        {num: 11, c: '#FD9D24', n: '11. Ciudades'},
-                        {num: 12, c: '#BF8B2E', n: '12. Producción'},
-                        {num: 13, c: '#3F7E44', n: '13. Clima'},
-                        {num: 14, c: '#0A97D9', n: '14. Submarina'},
-                        {num: 15, c: '#56C02B', n: '15. Terrestre'},
-                        {num: 16, c: '#00689D', n: '16. Paz/Justicia'},
-                        {num: 17, c: '#19486A', n: '17. Alianzas'}
+                        {num: 1, c: '#E5243B', n: 'Fin de la Pobreza'},
+                        {num: 2, c: '#DDA63A', n: 'Hambre Cero'},
+                        {num: 3, c: '#4C9F38', n: 'Salud y Bienestar'},
+                        {num: 4, c: '#C5192D', n: 'Educación de Calidad'},
+                        {num: 5, c: '#FF3A21', n: 'Igualdad de Género'},
+                        {num: 6, c: '#26BDE2', n: 'Agua Limpia y Saneamiento'},
+                        {num: 7, c: '#FCC30B', n: 'Energía Asequible'},
+                        {num: 8, c: '#A21942', n: 'Trabajo Decente y Crecimiento'},
+                        {num: 9, c: '#FD6925', n: 'Industria e Innovación'},
+                        {num: 10, c: '#DD1367', n: 'Reducción de Desigualdades'},
+                        {num: 11, c: '#FD9D24', n: 'Ciudades Sostenibles'},
+                        {num: 12, c: '#BF8B2E', n: 'Producción y Consumo'},
+                        {num: 13, c: '#3F7E44', n: 'Acción por el Clima'},
+                        {num: 14, c: '#0A97D9', n: 'Vida Submarina'},
+                        {num: 15, c: '#56C02B', n: 'Vida de Ecosistemas'},
+                        {num: 16, c: '#00689D', n: 'Paz, Justicia e Instituciones'},
+                        {num: 17, c: '#19486A', n: 'Alianzas para los Objetivos'}
                       ] as ods}
                         <button
                           type="button"
-                          class="fc-ods-chip"
+                          class="fc-ods-row-item"
                           class:active={$odsSeleccionadoMapa === ods.num}
-                          style="--ods-bg: {ods.c};"
                           onclick={() => odsSeleccionadoMapa.set($odsSeleccionadoMapa === ods.num ? null : ods.num)}
-                          title="{ods.n}"
                         >
-                          {ods.num}
+                          <span class="for-num" style="background: {ods.c};">ODS {ods.num}</span>
+                          <span class="for-name">{ods.n}</span>
                         </button>
                       {/each}
                     </div>
@@ -636,25 +645,6 @@
             <span>Volver al inicio</span>
           </a>
         </div>
-
-        <!-- ESTADOS: solo en mapa, debajo del menú (Acordeón colapsable) -->
-        {#if isMapa}
-        <div class="estados-card">
-          <button type="button" class="sc-header-btn" onclick={() => estadosAbierto = !estadosAbierto}>
-            <span class="sc-label"><i class="bi bi-palette-fill" style="color:var(--verde);margin-right:4px;"></i> ESTADOS ({ESTADOS.length})</span>
-            <i class="bi {estadosAbierto ? 'bi-chevron-up' : 'bi-chevron-down'} sc-chev"></i>
-          </button>
-          {#if estadosAbierto}
-            <div class="sc-pills">
-              {#each ESTADOS as e}
-                <span class="sc-pill" style="--c:{e.color}">
-                  <span class="sc-dot"></span>{e.label}
-                </span>
-              {/each}
-            </div>
-          {/if}
-        </div>
-        {/if}
 
       </div>
       {/if}
@@ -1529,19 +1519,21 @@
 
 .fc-ods-selector-box {
   margin-top: 6px;
-  padding: 8px 10px;
+  padding: 8px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .fc-ods-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
   color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin-bottom: 6px;
 }
 .fc-ods-reset-btn {
@@ -1554,35 +1546,68 @@
   text-decoration: underline;
   padding: 0;
 }
-.fc-ods-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+.fc-ods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
-.fc-ods-chip {
-  aspect-ratio: 1;
-  border: 1px solid transparent;
+.fc-ods-list::-webkit-scrollbar {
+  width: 4px;
+}
+.fc-ods-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
   border-radius: 4px;
-  background: var(--ods-bg);
-  color: #ffffff;
-  font-size: 0.65rem;
-  font-weight: 800;
+}
+.fc-ods-row-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  border-radius: 6px;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  width: 100%;
 }
-.fc-ods-chip:hover {
-  transform: scale(1.15);
-  z-index: 2;
+.fc-ods-row-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
-.fc-ods-chip.active {
-  outline: 2px solid #0f172a;
-  box-shadow: 0 0 0 2px #ffffff, 0 2px 5px rgba(0,0,0,0.3);
-  transform: scale(1.18);
+.fc-ods-row-item.active {
+  background: #ffffff;
+  border-color: var(--verde, #16a34a);
+  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.15);
+}
+.for-num {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.for-all {
+  background: #0f172a;
+}
+.for-name {
   font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.fc-ods-row-item.active .for-name {
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .fc-divider { height: 1px; background: #f0f0f0; margin: 8px 16px; }

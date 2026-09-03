@@ -612,6 +612,28 @@
 
     tileLayerOSM.addTo(map);
     L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    // Botón institucional para centrar mapa en Quevedo (Sede Central)
+    const CenterQuevedoControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        const btn = L.DomUtil.create('a', 'leaflet-control-btn-quevedo', container);
+        btn.href = '#';
+        btn.title = 'Centrar mapa en Quevedo (Sede Central UTEQ)';
+        btn.innerHTML = '<i class="bi bi-crosshair" style="font-size:15px;color:#15803d;display:flex;align-items:center;justify-content:center;height:100%;"></i>';
+        btn.setAttribute('role', 'button');
+        btn.setAttribute('aria-label', 'Centrar mapa en Quevedo');
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(btn, 'click', (e) => {
+          L.DomEvent.preventDefault(e);
+          centrarEnQuevedo();
+        });
+        return container;
+      }
+    });
+    new CenterQuevedoControl().addTo(map);
+
     markersLayer = L.layerGroup().addTo(map);
     redesLayer = L.layerGroup().addTo(map);
 
@@ -728,10 +750,6 @@
             placeholder="Buscar proyecto, cantón, responsable..."
           />
         </div>
-
-        <button class="btn-quevedo" onclick={centrarEnQuevedo} title="Centrar mapa en Quevedo">
-          <i class="bi bi-geo-alt-fill"></i> Quevedo
-        </button>
 
         {#if nbiAviso}
           <span class="nbi-aviso">{nbiAviso}</span>
@@ -1361,25 +1379,21 @@
   width: 100%;
 }
 
-.btn-quevedo {
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 5px 12px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #15803d;
-  cursor: pointer;
-  display: inline-flex;
+:global(.leaflet-control-btn-quevedo) {
+  display: flex !important;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  width: 30px !important;
+  height: 30px !important;
+  background-color: #ffffff !important;
+  color: #15803d !important;
+  cursor: pointer;
   transition: all 0.15s ease;
-  font-family: inherit;
 }
 
-.btn-quevedo:hover {
-  background: #f0fdf4;
-  border-color: #86efac;
+:global(.leaflet-control-btn-quevedo:hover) {
+  background-color: #f0fdf4 !important;
+  color: #166534 !important;
 }
 
 .factions { 
