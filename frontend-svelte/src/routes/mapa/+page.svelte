@@ -560,6 +560,13 @@
         </div>
 
       </div>
+
+      {#if filtros.facultad && facultades.find(f => String(f.id_facultad) === String(filtros.facultad) && (f.codigo === 'FCC' || f.nombre?.includes('Computación')))}
+        <div class="fcc-mapa-banner">
+          <i class="bi bi-info-circle-fill"></i>
+          <span><strong>FCC:</strong> Facultad de reciente creación institucional. Sin proyectos asignados en este ciclo académico. Sus carreras históricas constan amparadas bajo FCI.</span>
+        </div>
+      {/if}
     </div>
 
     <!-- MAPA CON WIDGET HUD FLOTANTE -->
@@ -992,6 +999,22 @@
   color: #fff; cursor: pointer; transition: background .2s; font-family: inherit;
 }
 .btn-filtrar:hover { background: #155e04; }
+
+.fcc-mapa-banner {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-left: 4px solid #0284c7;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: .8rem;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.fcc-mapa-banner i { font-size: 1.15rem; flex-shrink: 0; color: #0284c7; }
+.fcc-mapa-banner strong { color: #0c4a6e; }
 
 /* ── MAPA ── */
 .map-container-wrap {

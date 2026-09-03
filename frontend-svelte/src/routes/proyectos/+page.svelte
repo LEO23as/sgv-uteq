@@ -560,6 +560,18 @@
         </button>
       </div>
 
+      {#if facSeleccionada.totalProyectos === 0 || facSeleccionada.codigo === 'FCC' || facSeleccionada.nombre?.includes('Computación')}
+        <div class="fcc-transicion-banner">
+          <div class="fcc-tb-icon"><i class="bi bi-info-circle-fill"></i></div>
+          <div class="fcc-tb-content">
+            <strong>Facultad de reciente creación institucional (Estatuto Orgánico UTEQ)</strong>
+            <p>
+              Esta facultad no cuenta con proyectos asignados en este ciclo académico. Los proyectos históricos de vinculación de las carreras de Software, Sistemas y Telemática se encuentran registrados y amparados bajo la <strong>Facultad de Ciencias de la Ingeniería (FCI)</strong>. Su cohorte de proyectos propios se encuentra en proceso de formulación.
+            </p>
+          </div>
+        </div>
+      {/if}
+
       <div class="section-sub-header">
         <h4><i class="bi bi-mortarboard-fill" style="color: {facCfg.color};"></i> Selecciona una Carrera:</h4>
       </div>
@@ -722,8 +734,20 @@
             {#if filtered.length === 0}
               <tr>
                 <td colspan="7" class="empty">
-                  <i class="bi bi-folder-x" style="font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 6px;"></i>
-                  No se encontraron proyectos con los filtros seleccionados
+                  {#if facSeleccionada && (facSeleccionada.totalProyectos === 0 || facSeleccionada.codigo === 'FCC' || facSeleccionada.nombre?.includes('Computación'))}
+                    <div class="fcc-transicion-banner" style="margin: 20px auto; max-width: 800px; text-align: left;">
+                      <div class="fcc-tb-icon"><i class="bi bi-info-circle-fill"></i></div>
+                      <div class="fcc-tb-content">
+                        <strong>Facultad de reciente creación institucional (Estatuto Orgánico UTEQ)</strong>
+                        <p>
+                          Esta facultad no cuenta con proyectos asignados en este ciclo académico. Los proyectos históricos de vinculación de las carreras de Software, Sistemas y Telemática se encuentran registrados y amparados bajo la <strong>Facultad de Ciencias de la Ingeniería (FCI)</strong>. Su cohorte de proyectos propios se encuentra en proceso de formulación.
+                        </p>
+                      </div>
+                    </div>
+                  {:else}
+                    <i class="bi bi-folder-x" style="font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 6px;"></i>
+                    No se encontraron proyectos con los filtros seleccionados
+                  {/if}
                 </td>
               </tr>
             {/if}
@@ -1057,4 +1081,20 @@
   .text-verde { color: #16a34a; }
   .text-blue  { color: #0284c7; }
   .text-gray  { color: #64748b; }
+
+  .fcc-transicion-banner {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 5px solid #0284c7;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.06);
+  }
+  .fcc-tb-icon { font-size: 1.4rem; color: #0284c7; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+  .fcc-tb-content strong { color: #0369a1; font-size: 0.94rem; display: block; margin-bottom: 4px; }
+  .fcc-tb-content p { color: #334155; font-size: 0.86rem; line-height: 1.5; margin: 0; }
 </style>
