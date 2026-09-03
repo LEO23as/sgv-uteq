@@ -208,6 +208,7 @@
                  ]},
     configuracion: { modulo: 'Configuración',    links: [
                    { href: '/configuracion',        icon: 'bi-phone',          label: 'Mis dispositivos' },
+                   { href: '/usuarios',             icon: 'bi-people-fill',    label: 'Gestión de usuarios' },
                    { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
                    { href: '/auditoria',            icon: 'bi-shield-check',   label: 'Bitácora de Auditoría' },
                  ]},
@@ -219,6 +220,7 @@
     if (pathname.startsWith('/entidades'))     return 'entidades';
     if (pathname.startsWith('/convenios'))     return 'convenios';
     if (pathname.startsWith('/configuracion')) return 'configuracion';
+    if (pathname.startsWith('/usuarios'))      return 'configuracion';
     if (pathname.startsWith('/periodos'))      return 'configuracion';
     if (pathname.startsWith('/auditoria'))     return 'configuracion';
     if (pathname.startsWith('/facultades') || pathname.startsWith('/carreras')) return 'facultades';

@@ -248,7 +248,9 @@
 <!-- BARRA SUBBAR -->
 <div class="subbar">
   <nav class="breadcrumb">
-    <a href="/dashboard">Inicio</a>
+    <a href="/dashboard"><i class="bi bi-house-door-fill"></i> Inicio</a>
+    <span class="sep">/</span>
+    <a href="/configuracion">Configuración</a>
     <span class="sep">/</span>
     <span class="current">Gestión de Usuarios</span>
   </nav>
@@ -262,6 +264,26 @@
 
 <!-- CUERPO PRINCIPAL -->
 <div class="page-body">
+
+  <!-- PESTAÑAS DE CONFIGURACIÓN -->
+  <div class="config-tabs-nav">
+    <a href="/configuracion" class="cfg-tab">
+      <i class="bi bi-phone"></i>
+      <span>Mis dispositivos</span>
+    </a>
+    <a href="/usuarios" class="cfg-tab active">
+      <i class="bi bi-people-fill"></i>
+      <span>Gestión de usuarios</span>
+    </a>
+    <a href="/periodos" class="cfg-tab">
+      <i class="bi bi-calendar3"></i>
+      <span>Períodos académicos</span>
+    </a>
+    <a href="/auditoria" class="cfg-tab">
+      <i class="bi bi-shield-check"></i>
+      <span>Bitácora de Auditoría</span>
+    </a>
+  </div>
 
   <!-- CARD CONTENEDORA -->
   <div class="main-card">
@@ -1068,4 +1090,38 @@
     padding: 14px 16px;
   }
 }
+
+  /* Pestañas de Configuración */
+  .config-tabs-nav {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 6px 16px 0;
+    border-radius: 12px 12px 0 0;
+  }
+  .cfg-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #64748b;
+    text-decoration: none;
+    border-bottom: 2.5px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+  }
+  .cfg-tab:hover {
+    color: #1b7505;
+    background: #f8fafc;
+    border-radius: 6px 6px 0 0;
+  }
+  .cfg-tab.active {
+    color: #1b7505;
+    border-bottom-color: #1b7505;
+  }
 </style>
