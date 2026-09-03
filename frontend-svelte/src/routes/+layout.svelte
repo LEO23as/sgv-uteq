@@ -207,10 +207,11 @@
                    { href: '/auditoria', icon: 'bi-shield-check', label: 'Bitácora de Auditoría' },
                  ]},
     configuracion: { modulo: 'Configuración',    links: [
-                   { href: '/configuracion',        icon: 'bi-phone',          label: 'Mis dispositivos' },
-                   { href: '/usuarios',             icon: 'bi-people-fill',    label: 'Gestión de usuarios' },
-                   { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
-                   { href: '/auditoria',            icon: 'bi-shield-check',   label: 'Bitácora de Auditoría' },
+                   { href: '/configuracion',        icon: 'bi-phone',            label: 'Mis dispositivos' },
+                   { href: '/configuracion/capas',  icon: 'bi-layers-fill',      label: 'Gestión de Capas' },
+                   { href: '/usuarios',             icon: 'bi-people-fill',      label: 'Gestión de usuarios' },
+                   { href: '/periodos',             icon: 'bi-calendar3',        label: 'Períodos académicos' },
+                   { href: '/auditoria',            icon: 'bi-shield-check',     label: 'Bitácora de Auditoría' },
                  ]},
   };
 

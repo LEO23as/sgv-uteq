@@ -15,6 +15,31 @@
   let page = $state(1);
   let pageSize = $state(10);
 
+  const OPCIONES_INDICADORES = [
+    { codigo: 'NBI', nombre: 'INEC - Necesidades Básicas Insatisfechas (Pobreza NBI)', fuente: 'INEC - Censo de Población y Vivienda 2022', unidad: '%' },
+    { codigo: 'POBREZA_ING', nombre: 'INEC - Pobreza por Ingresos (ENEMDU)', fuente: 'INEC - ENEMDU Ecuador', unidad: '%' },
+    { codigo: 'ODS_1', nombre: 'ODS 1: Fin de la Pobreza', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_2', nombre: 'ODS 2: Hambre Cero (Seguridad Alimentaria)', fuente: 'CEPAL / FAO / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_3', nombre: 'ODS 3: Salud y Bienestar', fuente: 'CEPAL / OMS / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_4', nombre: 'ODS 4: Educación de Calidad', fuente: 'CEPAL / UNESCO / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_5', nombre: 'ODS 5: Igualdad de Género', fuente: 'CEPAL / ONU Mujeres - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_6', nombre: 'ODS 6: Agua Limpia y Saneamiento', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_7', nombre: 'ODS 7: Energía Asequible y No Contaminante', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_8', nombre: 'ODS 8: Trabajo Decente y Crecimiento Económico', fuente: 'CEPAL / OIT / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_9', nombre: 'ODS 9: Industria, Innovación e Infraestructura', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_10', nombre: 'ODS 10: Reducción de las Desigualdades', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_11', nombre: 'ODS 11: Ciudades y Comunidades Sostenibles', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_12', nombre: 'ODS 12: Producción y Consumo Responsables', fuente: 'CEPAL / PNUMA / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_13', nombre: 'ODS 13: Acción por el Clima', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_14', nombre: 'ODS 14: Vida Submarina', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_15', nombre: 'ODS 15: Vida de Ecosistemas Terrestres', fuente: 'CEPAL / PNUMA / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_16', nombre: 'ODS 16: Paz, Justicia e Instituciones Sólidas', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'ODS_17', nombre: 'ODS 17: Alianzas para Lograr los Objetivos', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
+    { codigo: 'OTRO', nombre: 'Otro indicador personalizado...', fuente: '', unidad: '%' },
+  ];
+
+  let selectorIndicador = $state('NBI');
+
   let form = $state({
     tipo_indicador: 'NBI',
     anio: 2022,
@@ -25,6 +50,21 @@
 
   let preview = $state(null);
   let errores = $state([]);
+
+  function onCambioIndicador(e) {
+    const val = e.target.value;
+    selectorIndicador = val;
+    const item = OPCIONES_INDICADORES.find(x => x.codigo === val);
+    if (item) {
+      if (val !== 'OTRO') {
+        form.tipo_indicador = item.codigo;
+      } else {
+        form.tipo_indicador = '';
+      }
+      if (item.fuente) form.fuente = item.fuente;
+      if (item.unidad) form.unidad = item.unidad;
+    }
+  }
 
   async function cargar() {
     cargando = true;
@@ -51,31 +91,57 @@
   function parseCSV(txt) {
     errores = [];
     const lines = txt.split(/\r?\n/).filter(l => l.trim());
-    if (!lines.length) { errores = ['Archivo vacío']; preview = null; return; }
-    const header = lines[0].split(',').map(s => s.trim().toLowerCase());
+    if (!lines.length) { errores = ['El archivo CSV está completamente vacío']; preview = null; return; }
+    
+    // Detectar separador coma o punto y coma
+    const firstLine = lines[0];
+    const sep = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
+    
+    const header = firstLine.split(sep).map(s => s.trim().toLowerCase().replace(/^["']|["']$/g, ''));
     const iDpa = header.indexOf('dpa_canton');
     const iVal = header.indexOf('valor');
+    
     if (iDpa < 0 || iVal < 0) {
-      errores = ['Faltan columnas requeridas: dpa_canton, valor'];
+      errores = [
+        'Faltan columnas requeridas en el encabezado: "dpa_canton" y "valor"',
+        `Columnas detectadas: [${header.join(', ')}]`
+      ];
       preview = null;
       return;
     }
+    
     const rows = [];
+    const vistos = new Set();
     for (let i = 1; i < lines.length; i++) {
-      const c = lines[i].split(',').map(s => s.trim());
-      const dpa = c[iDpa];
-      const val = parseFloat(c[iVal]);
-      if (!/^\d{4}$/.test(dpa)) { errores.push(`Fila ${i+1}: dpa_canton inválido "${dpa}"`); continue; }
-      if (isNaN(val))           { errores.push(`Fila ${i+1}: valor inválido "${c[iVal]}"`);   continue; }
+      const line = lines[i].trim();
+      if (!line) continue;
+      const c = line.split(sep).map(s => s.trim().replace(/^["']|["']$/g, ''));
+      const dpa = c[iDpa]?.padStart(4, '0');
+      const valRaw = c[iVal]?.replace(',', '.');
+      const val = parseFloat(valRaw);
+      
+      if (!dpa || !/^\d{4}$/.test(dpa)) { 
+        errores.push(`Fila ${i+1}: código DPA inválido "${c[iDpa]}" (debe ser código de 4 dígitos, ej: 1201 para Babahoyo, 1205 para Quevedo)`); 
+        continue; 
+      }
+      if (isNaN(val)) { 
+        errores.push(`Fila ${i+1}: valor numérico inválido "${c[iVal]}"`); 
+        continue; 
+      }
+      if (vistos.has(dpa)) {
+        errores.push(`Fila ${i+1}: cantón DPA "${dpa}" duplicado en el archivo (se usará la última fila)`);
+      }
+      vistos.add(dpa);
       rows.push({ dpa_canton: dpa, valor: val });
     }
     preview = rows;
   }
 
   async function subir() {
+    if (!form.tipo_indicador.trim()) { toast.error('Indica el tipo de indicador u ODS'); return; }
     if (!form.archivo)      { toast.error('Selecciona un archivo CSV'); return; }
-    if (!preview?.length)   { toast.error('CSV sin filas válidas');     return; }
-    if (!form.fuente.trim()){ toast.error('Indica la fuente');          return; }
+    if (!preview?.length)   { toast.error('El archivo CSV no contiene filas válidas'); return; }
+    if (!form.fuente.trim()){ toast.error('Indica la fuente oficial (INEC, CEPAL, etc.)'); return; }
     
     subiendo = true;
     progreso = 15;
@@ -87,7 +153,7 @@
 
     try {
       const fd = new FormData();
-      fd.append('tipo_indicador', form.tipo_indicador);
+      fd.append('tipo_indicador', form.tipo_indicador.trim().toUpperCase());
       fd.append('anio', form.anio);
       fd.append('unidad', form.unidad);
       fd.append('fuente', form.fuente);
@@ -112,8 +178,9 @@
 
       if (!r.ok) throw new Error(data.error || 'Error al subir la capa');
 
-      toast.success(`¡Capa guardada con éxito! ${data.insertados} registros (${data.tipo_indicador} ${data.anio})`);
+      toast.success(`¡Capa guardada con éxito! ${data.insertados} cantones actualizados (${data.tipo_indicador} ${data.anio})`);
       form = { tipo_indicador: 'NBI', anio: 2022, unidad: '%', fuente: 'INEC - Censo de Población y Vivienda 2022', archivo: null };
+      selectorIndicador = 'NBI';
       preview = null; 
       errores = [];
       const fileInput = document.getElementById('csvinput');
@@ -154,7 +221,7 @@
   }
 </script>
 
-<svelte:head><title>Capas del mapa — SGV UTEQ</title></svelte:head>
+<svelte:head><title>Gestión de Capas e Indicadores — SGV UTEQ</title></svelte:head>
 
 <div class="subbar">
   <nav class="breadcrumb">
@@ -162,7 +229,7 @@
     <span class="sep">/</span>
     <a href="/configuracion">Configuración</a>
     <span class="sep">/</span>
-    <span class="current">Capas del mapa</span>
+    <span class="current">Gestión de Capas</span>
   </nav>
 </div>
 
@@ -172,37 +239,49 @@
   <section class="cap-card">
     <header class="cap-h">
       <div class="cap-h-icon">
-        <i class="bi bi-cloud-upload"></i>
+        <i class="bi bi-layers-fill"></i>
       </div>
       <div>
-        <h3>Cargar nueva capa</h3>
-        <p>Sube un archivo CSV con los valores de un indicador por cantón para alimentar la visualización interactiva del mapa.</p>
+        <h3>Cargar capa territorial (INEC / ODS Agenda 2030)</h3>
+        <p>Sube un archivo CSV con los indicadores oficiales por cantón (NBI, Pobreza o cualquiera de los 17 ODS) para alimentar el mapa interactivo del SGV.</p>
       </div>
     </header>
 
     <div class="cap-form">
-      <div class="fg">
-        <label>Tipo de indicador</label>
-        <input type="text" bind:value={form.tipo_indicador} maxlength="30" placeholder="NBI, IDH, POBLACION..." />
+      <div class="fg wide">
+        <label>Indicador oficial / ODS</label>
+        <select value={selectorIndicador} onchange={onCambioIndicador} class="form-select-sga">
+          {#each OPCIONES_INDICADORES as opc}
+            <option value={opc.codigo}>{opc.nombre}</option>
+          {/each}
+        </select>
       </div>
+
+      {#if selectorIndicador === 'OTRO'}
+        <div class="fg">
+          <label>Código del indicador personalizado</label>
+          <input type="text" bind:value={form.tipo_indicador} maxlength="30" placeholder="Ej: IDH, DESNUTRICION..." />
+        </div>
+      {/if}
+
       <div class="fg">
-        <label>Año</label>
+        <label>Año de la medición</label>
         <input type="number" bind:value={form.anio} min="1990" max="2100" />
       </div>
       <div class="fg">
-        <label>Unidad</label>
-        <input type="text" bind:value={form.unidad} maxlength="20" placeholder="%" />
+        <label>Unidad de medida</label>
+        <input type="text" bind:value={form.unidad} maxlength="20" placeholder="%, personas, índice..." />
       </div>
       <div class="fg wide">
-        <label>Fuente</label>
-        <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC - Censo de Población y Vivienda 2022" />
+        <label>Fuente oficial</label>
+        <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC Censo 2022 / CEPAL Agenda 2030" />
       </div>
       <div class="fg wide">
-        <label>Archivo CSV <span class="hint">(columnas: <code>dpa_canton</code>, <code>valor</code>)</span></label>
+        <label>Archivo CSV de cantones <span class="hint">(Columnas requeridas: <code>dpa_canton</code>, <code>valor</code>)</span></label>
         <div class="file-uploader-box">
           <input id="csvinput" type="file" accept=".csv,text/csv" onchange={onFile} class="file-hidden-input" />
           <label for="csvinput" class="file-browse-btn">
-            <i class="bi bi-folder2-open"></i> Seleccionar archivo
+            <i class="bi bi-folder2-open"></i> Seleccionar archivo CSV
           </label>
           <span class="file-selected-name" title={form.archivo?.name || ''}>
             {#if form.archivo}
@@ -448,7 +527,7 @@
   color: #1e293b;
 }
 
-.fg input {
+.fg input, .fg select {
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 9px 14px;
@@ -461,7 +540,7 @@
   transition: all 0.2s ease;
 }
 
-.fg input:focus {
+.fg input:focus, .fg select:focus {
   border-color: #1b7a2b;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(27, 122, 43, 0.1);
