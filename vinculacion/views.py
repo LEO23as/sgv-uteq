@@ -3408,6 +3408,13 @@ def api_auditoria_listar(request):
             uname = usuarios_map[b.usuario_id]
         if not uname:
             uname = 'SISTEMA'
+        creado_en_str = ''
+        if b.creado_en:
+            dt = b.creado_en
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt, timezone.utc)
+            creado_en_str = timezone.localtime(dt).strftime('%Y-%m-%d %H:%M:%S')
+
         items.append({
             'id': b.id_bitacora,
             'entidad': b.entidad,
@@ -3418,7 +3425,7 @@ def api_auditoria_listar(request):
             'ip_origen': b.ip_origen or '127.0.0.1',
             'hash_anterior': b.hash_anterior,
             'hash_actual': b.hash_actual,
-            'creado_en': timezone.localtime(b.creado_en).strftime('%Y-%m-%d %H:%M:%S') if b.creado_en else '',
+            'creado_en': creado_en_str,
             'detalles': json.loads(b.detalles_json) if b.detalles_json else {},
         })
     return JsonResponse({
