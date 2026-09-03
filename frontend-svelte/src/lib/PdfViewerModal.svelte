@@ -185,11 +185,18 @@
     height: 90vh;
     background: #ffffff;
     border-radius: 16px;
+    border: 1px solid rgba(27, 117, 5, 0.25);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
     transition: all 0.25s ease-in-out;
+    animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from { transform: scale(0.96) translateY(12px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
   }
 
   .pdf-modal-container.fullscreen {
