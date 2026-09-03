@@ -109,7 +109,6 @@
           <tr>
             <th>Código</th>
             <th>Nombre de la Facultad</th>
-            <th>Nombre corto</th>
             <th>Campus</th>
             <th>Estado</th>
             <th style="text-align: center;">Acciones</th>
@@ -120,7 +119,6 @@
             <tr>
               <td><span class="code">{f.codigo}</span></td>
               <td class="nombre-p">{f.nombre}</td>
-              <td class="txt-sm">{f.nombre_corto || '—'}</td>
               <td class="txt-sm">{f.campus || '—'}</td>
               <td>
                 <span class="badge" class:activo={f.activo} class:inactivo={!f.activo}>
@@ -142,7 +140,7 @@
             </tr>
           {/each}
           {#if filtFacs.length === 0}
-            <tr><td colspan="6" class="empty">No se encontraron facultades</td></tr>
+            <tr><td colspan="5" class="empty">No se encontraron facultades</td></tr>
           {/if}
         </tbody>
       </table>
