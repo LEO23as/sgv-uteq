@@ -360,11 +360,16 @@
       if (isNaN(lat) || isNaN(lng)) return;
       const color = u.es_principal ? '#1b7505' : '#0284c7';
       const icon = L.divIcon({
-        className: '',
-        html: `<div style="width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;">
-                 <span style="transform:rotate(45deg);color:#fff;font-size:11px;font-weight:900;">${i + 1}</span>
+        className: 'ms-marker-pin-wrap',
+        html: `<div style="width:26px;height:34px;position:relative;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.45));cursor:move;">
+                 <svg viewBox="0 0 26 34" width="26" height="34" style="position:absolute;top:0;left:0;">
+                   <path d="M13 1 C6.37 1 1 6.37 1 13 C1 22.5 13 33 13 33 C13 33 25 22.5 25 13 C25 6.37 19.63 1 13 1 Z" fill="${color}" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>
+                   <circle cx="13" cy="13" r="6.5" fill="#ffffff"/>
+                 </svg>
+                 <span style="position:relative;z-index:2;color:${color};font-size:11px;font-weight:900;margin-top:-8px;">${i + 1}</span>
                </div>`,
-        iconSize: [24, 24], iconAnchor: [12, 24],
+        iconSize: [26, 34],
+        iconAnchor: [13, 33],
       });
       const marker = L.marker([lat, lng], { icon, draggable: true });
       marker.on('dragend', async (e) => {
@@ -623,8 +628,33 @@
   .file-sub { font-size: 0.72rem; color: #64748b; }
   .loading-file { font-size: 0.78rem; font-weight: 600; color: #15803d; margin-top: 8px; }
 
-  /* MAPA */
-  .ms-map { width: 100%; height: 350px; border-radius: 12px; overflow: hidden; border: 1px solid #cbd5e1; position: relative; z-index: 0; }
+  /* MAPA SELECTOR: PUNTERO DE PRECISIÓN MILIMÉTRICA TIPO PIN / GLOBITO */
+  .ms-map {
+    width: 100%;
+    height: 360px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1.5px solid #cbd5e1;
+    position: relative;
+    z-index: 0;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='34' viewBox='0 0 26 34'%3E%3Cdefs%3E%3Cfilter id='s' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeDropShadow dx='0' dy='2' stdDeviation='1.5' flood-color='%23000' flood-opacity='0.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M13 1 C6.37 1 1 6.37 1 13 C1 22.5 13 33 13 33 C13 33 25 22.5 25 13 C25 6.37 19.63 1 13 1 Z' fill='%2315803d' stroke='%23ffffff' stroke-width='2' filter='url(%23s)'/%3E%3Ccircle cx='13' cy='13' r='5' fill='%23ffffff'/%3E%3Ccircle cx='13' cy='13' r='2.5' fill='%2315803d'/%3E%3C/svg%3E") 13 33, crosshair !important;
+  }
+
+  :global(.ms-map .leaflet-container),
+  :global(.ms-map .leaflet-grab),
+  :global(.ms-map.leaflet-container) {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='34' viewBox='0 0 26 34'%3E%3Cdefs%3E%3Cfilter id='s' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeDropShadow dx='0' dy='2' stdDeviation='1.5' flood-color='%23000' flood-opacity='0.45'/%3E%3C/filter%3E%3C/defs%3E%3Cpath d='M13 1 C6.37 1 1 6.37 1 13 C1 22.5 13 33 13 33 C13 33 25 22.5 25 13 C25 6.37 19.63 1 13 1 Z' fill='%2315803d' stroke='%23ffffff' stroke-width='2' filter='url(%23s)'/%3E%3Ccircle cx='13' cy='13' r='5' fill='%23ffffff'/%3E%3Ccircle cx='13' cy='13' r='2.5' fill='%2315803d'/%3E%3C/svg%3E") 13 33, crosshair !important;
+  }
+
+  :global(.ms-map .leaflet-marker-icon),
+  :global(.ms-map .leaflet-marker-draggable) {
+    cursor: move !important;
+  }
+
+  :global(.ms-marker-pin-wrap) {
+    background: transparent !important;
+    border: none !important;
+  }
   .ms-hint { font-size: .74rem; color: #64748b; font-weight: 600; display: flex; align-items: center; gap: 6px; margin: 0; }
 
   /* LISTA DE UBICACIONES */
