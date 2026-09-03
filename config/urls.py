@@ -40,6 +40,9 @@ urlpatterns = [
     path('api/capas-indicador/',                          views.api_capas_indicador_list,   name='api_capas_indicador_list'),
     path('api/capas-indicador/upload/',                   views.api_capas_indicador_upload, name='api_capas_indicador_upload'),
     path('api/capas-indicador/<str:tipo>/<int:anio>/',    views.api_capas_indicador_delete, name='api_capas_indicador_delete'),
+    path('api/capas-ods/',                                views.api_capas_ods_list,         name='api_capas_ods_list'),
+    path('api/capas-ods/batch-upload/',                   views.api_capas_ods_batch_upload, name='api_capas_ods_batch_upload'),
+    path('api/capas-ods/<int:ods_num>/delete/',           views.api_capas_ods_delete,       name='api_capas_ods_delete'),
 
     # Usuarios y Roles
     path('api/roles/',                                views.api_roles_list,             name='api_roles_list'),

@@ -3066,6 +3066,179 @@ def api_capas_indicador_delete(request, tipo, anio):
     return JsonResponse({'ok': True, 'eliminados': n})
 
 
+# ═══════════════════════════════════════════════════════════════════
+# GESTIÓN DE CAPAS E INDICADORES ODS (AGENDA 2030 CEPAL/ONU)
+# ═══════════════════════════════════════════════════════════════════
+
+CATALOGO_OFICIAL_ODS = [
+    {"num": 1, "nombre": "Fin de la Pobreza", "color": "#E5243B", "icono": "bi-cash-coin"},
+    {"num": 2, "nombre": "Hambre Cero", "color": "#DDA63A", "icono": "bi-egg-fried"},
+    {"num": 3, "nombre": "Salud y Bienestar", "color": "#4C9F38", "icono": "bi-heart-pulse-fill"},
+    {"num": 4, "nombre": "Educación de Calidad", "color": "#C5192D", "icono": "bi-book-fill"},
+    {"num": 5, "nombre": "Igualdad de Género", "color": "#FF3A21", "icono": "bi-gender-ambiguous"},
+    {"num": 6, "nombre": "Agua Limpia y Saneamiento", "color": "#26BDE2", "icono": "bi-droplet-fill"},
+    {"num": 7, "nombre": "Energía Asequible y No Contaminante", "color": "#FCC30B", "icono": "bi-lightning-charge-fill"},
+    {"num": 8, "nombre": "Trabajo Decente y Crecimiento Económico", "color": "#A21942", "icono": "bi-briefcase-fill"},
+    {"num": 9, "nombre": "Industria, Innovación e Infraestructura", "color": "#FD6925", "icono": "bi-building-gear"},
+    {"num": 10, "nombre": "Reducción de las Desigualdades", "color": "#DD1367", "icono": "bi-distribute-vertical"},
+    {"num": 11, "nombre": "Ciudades y Comunidades Sostenibles", "color": "#FD9D24", "icono": "bi-houses-fill"},
+    {"num": 12, "nombre": "Producción y Consumo Responsables", "color": "#BF8B2E", "icono": "bi-arrow-repeat"},
+    {"num": 13, "nombre": "Acción por el Clima", "color": "#3F7E44", "icono": "bi-tree-fill"},
+    {"num": 14, "nombre": "Vida Submarina", "color": "#0A97D9", "icono": "bi-water"},
+    {"num": 15, "nombre": "Vida de Ecosistemas Terrestres", "color": "#56C02B", "icono": "bi-flower1"},
+    {"num": 16, "nombre": "Paz, Justicia e Instituciones Sólidas", "color": "#00689D", "icono": "bi-shield-check"},
+    {"num": 17, "nombre": "Alianzas para Lograr los Objetivos", "color": "#19486A", "icono": "bi-people-fill"},
+]
+
+def _asegurar_tabla_ods():
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS capa_indicador_ods (
+                id_ods_indicador SERIAL PRIMARY KEY,
+                ods_num INTEGER NOT NULL UNIQUE,
+                nombre_ods VARCHAR(120) NOT NULL,
+                codigo_indicador VARCHAR(60) NOT NULL,
+                nombre_indicador TEXT NOT NULL,
+                anio_reciente INTEGER NOT NULL,
+                valor_reciente NUMERIC(10,2) NOT NULL,
+                unidad VARCHAR(40) DEFAULT '%',
+                fuente VARCHAR(200) NOT NULL,
+                serie_historica JSONB DEFAULT '[]'::jsonb,
+                activo BOOLEAN DEFAULT TRUE,
+                fecha_carga TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_capa_ods_num ON capa_indicador_ods(ods_num);
+        """)
+
+def api_capas_ods_list(request):
+    """Devuelve la lista de los 17 ODS y su estado de indicador cargado en la base de datos."""
+    import json
+    from django.db import connection
+    _asegurar_tabla_ods()
+
+    cargados_map = {}
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT ods_num, nombre_ods, codigo_indicador, nombre_indicador,
+                   anio_reciente, valor_reciente, unidad, fuente, serie_historica, fecha_carga
+            FROM capa_indicador_ods
+        """)
+        for row in cursor.fetchall():
+            cargados_map[row[0]] = {
+                'ods_num': row[0],
+                'nombre_ods': row[1],
+                'codigo_indicador': row[2],
+                'nombre_indicador': row[3],
+                'anio_reciente': row[4],
+                'valor_reciente': float(row[5]) if row[5] is not None else None,
+                'unidad': row[6],
+                'fuente': row[7],
+                'serie_historica': row[8] if isinstance(row[8], list) else (json.loads(row[8]) if isinstance(row[8], str) else []),
+                'fecha_carga': row[9].isoformat() if row[9] else None,
+                'cargado': True,
+            }
+
+    resultado = []
+    for o in CATALOGO_OFICIAL_ODS:
+        num = o['num']
+        if num in cargados_map:
+            item = {**o, **cargados_map[num]}
+        else:
+            item = {
+                **o,
+                'ods_num': num,
+                'nombre_ods': o['nombre'],
+                'codigo_indicador': '',
+                'nombre_indicador': '',
+                'anio_reciente': None,
+                'valor_reciente': None,
+                'unidad': '%',
+                'fuente': '',
+                'serie_historica': [],
+                'fecha_carga': None,
+                'cargado': False,
+            }
+        resultado.append(item)
+
+    return JsonResponse(resultado, safe=False)
+
+
+@csrf_exempt
+def api_capas_ods_batch_upload(request):
+    """Carga masiva por lotes de uno o multiples indicadores ODS (formato JSON de auto-detección)."""
+    import json
+    from django.db import connection
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    _asegurar_tabla_ods()
+
+    try:
+        payload = json.loads(request.body)
+        items = payload if isinstance(payload, list) else payload.get('items', [])
+    except Exception:
+        return JsonResponse({'error': 'Formato JSON inválido'}, status=400)
+
+    if not items:
+        return JsonResponse({'error': 'No se enviaron indicadores para procesar'}, status=400)
+
+    actualizados = 0
+    with connection.cursor() as cursor:
+        for it in items:
+            ods_num = it.get('ods_num')
+            nombre_ods = it.get('nombre_ods', f'ODS {ods_num}')
+            codigo_ind = (it.get('codigo_indicador') or '').strip()
+            nombre_ind = (it.get('nombre_indicador') or '').strip()
+            anio_reciente = int(it.get('anio_reciente', 2023))
+            valor_reciente = float(it.get('valor_reciente', 0))
+            unidad = (it.get('unidad') or '%').strip()
+            fuente = (it.get('fuente') or 'CEPAL / ONU - Agenda 2030 Ecuador').strip()
+            serie = it.get('serie_historica') or []
+            serie_json = json.dumps(serie)
+
+            if not ods_num or ods_num < 1 or ods_num > 17:
+                continue
+
+            cursor.execute("""
+                INSERT INTO capa_indicador_ods (
+                    ods_num, nombre_ods, codigo_indicador, nombre_indicador,
+                    anio_reciente, valor_reciente, unidad, fuente, serie_historica, fecha_carga
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, CURRENT_TIMESTAMP)
+                ON CONFLICT (ods_num) DO UPDATE SET
+                    nombre_ods = EXCLUDED.nombre_ods,
+                    codigo_indicador = EXCLUDED.codigo_indicador,
+                    nombre_indicador = EXCLUDED.nombre_indicador,
+                    anio_reciente = EXCLUDED.anio_reciente,
+                    valor_reciente = EXCLUDED.valor_reciente,
+                    unidad = EXCLUDED.unidad,
+                    fuente = EXCLUDED.fuente,
+                    serie_historica = EXCLUDED.serie_historica,
+                    fecha_carga = CURRENT_TIMESTAMP;
+            """, [ods_num, nombre_ods, codigo_ind, nombre_ind, anio_reciente, valor_reciente, unidad, fuente, serie_json])
+            actualizados += 1
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Se procesaron y guardaron {actualizados} indicadores ODS correctamente.',
+        'procesados': actualizados,
+    })
+
+
+@csrf_exempt
+def api_capas_ods_delete(request, ods_num):
+    """Elimina el indicador cargado de un ODS específico."""
+    from django.db import connection
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    _asegurar_tabla_ods()
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM capa_indicador_ods WHERE ods_num = %s;", [int(ods_num)])
+        n = cursor.rowcount
+    return JsonResponse({'ok': True, 'eliminados': n})
+
+
 # ── MÓDULO DE USUARIOS & ROLES ──
 
 @api_view(['GET'])

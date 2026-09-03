@@ -5,40 +5,18 @@
   import { confirmDialog } from '$lib/confirm';
   import Pagination from '$lib/Pagination.svelte';
 
+  // ── ESTADO GENERAL Y PESTAÑAS ──────────────────────────────────────────
+  let tabActiva = $state('inec'); // 'inec' | 'ods'
+
+  // ── ESTADO DE CAPAS TERRITORIALES INEC ────────────────────────────────
   let capas = $state([]);
   let cargando = $state(true);
   let subiendo = $state(false);
   let progreso = $state(0);
   let progresoInterval;
 
-  // Paginación
   let page = $state(1);
   let pageSize = $state(10);
-
-  const OPCIONES_INDICADORES = [
-    { codigo: 'NBI', nombre: 'INEC - Necesidades Básicas Insatisfechas (Pobreza NBI)', fuente: 'INEC - Censo de Población y Vivienda 2022', unidad: '%' },
-    { codigo: 'POBREZA_ING', nombre: 'INEC - Pobreza por Ingresos (ENEMDU)', fuente: 'INEC - ENEMDU Ecuador', unidad: '%' },
-    { codigo: 'ODS_1', nombre: 'ODS 1: Fin de la Pobreza', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_2', nombre: 'ODS 2: Hambre Cero (Seguridad Alimentaria)', fuente: 'CEPAL / FAO / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_3', nombre: 'ODS 3: Salud y Bienestar', fuente: 'CEPAL / OMS / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_4', nombre: 'ODS 4: Educación de Calidad', fuente: 'CEPAL / UNESCO / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_5', nombre: 'ODS 5: Igualdad de Género', fuente: 'CEPAL / ONU Mujeres - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_6', nombre: 'ODS 6: Agua Limpia y Saneamiento', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_7', nombre: 'ODS 7: Energía Asequible y No Contaminante', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_8', nombre: 'ODS 8: Trabajo Decente y Crecimiento Económico', fuente: 'CEPAL / OIT / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_9', nombre: 'ODS 9: Industria, Innovación e Infraestructura', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_10', nombre: 'ODS 10: Reducción de las Desigualdades', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_11', nombre: 'ODS 11: Ciudades y Comunidades Sostenibles', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_12', nombre: 'ODS 12: Producción y Consumo Responsables', fuente: 'CEPAL / PNUMA / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_13', nombre: 'ODS 13: Acción por el Clima', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_14', nombre: 'ODS 14: Vida Submarina', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_15', nombre: 'ODS 15: Vida de Ecosistemas Terrestres', fuente: 'CEPAL / PNUMA / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_16', nombre: 'ODS 16: Paz, Justicia e Instituciones Sólidas', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'ODS_17', nombre: 'ODS 17: Alianzas para Lograr los Objetivos', fuente: 'CEPAL / ONU - Agenda 2030 Ecuador', unidad: '%' },
-    { codigo: 'OTRO', nombre: 'Otro indicador personalizado...', fuente: '', unidad: '%' },
-  ];
-
-  let selectorIndicador = $state('NBI');
 
   let form = $state({
     tipo_indicador: 'NBI',
@@ -51,59 +29,96 @@
   let preview = $state(null);
   let errores = $state([]);
 
-  function onCambioIndicador(e) {
-    const val = e.target.value;
-    selectorIndicador = val;
-    const item = OPCIONES_INDICADORES.find(x => x.codigo === val);
-    if (item) {
-      if (val !== 'OTRO') {
-        form.tipo_indicador = item.codigo;
-      } else {
-        form.tipo_indicador = '';
-      }
-      if (item.fuente) form.fuente = item.fuente;
-      if (item.unidad) form.unidad = item.unidad;
-    }
+  // ── ESTADO DE CAPAS E INDICADORES ODS ─────────────────────────────────
+  let listaOds = $state([]);
+  let cargandoOds = $state(false);
+  let subiendoLoteOds = $state(false);
+  let progresoLote = $state(0);
+  let loteDetectado = $state({}); // { 1: { ods_num, nombre_indicador, anio_reciente, valor_reciente, ... }, ... }
+  let archivosProcesados = $state(0);
+  let totalArchivosLote = $state(0);
+  let odsModalDetalle = $state(null); // ODS seleccionado para ver serie histórica
+
+  // Catálogo Maestro de los 17 ODS
+  const CATALOGO_17_ODS = [
+    { num: 1, nombre: "Fin de la Pobreza", color: "#E5243B", icono: "bi-cash-coin", desc: "Poner fin a la pobreza en todas sus formas en todo el mundo." },
+    { num: 2, nombre: "Hambre Cero", color: "#DDA63A", icono: "bi-egg-fried", desc: "Poner fin al hambre, lograr la seguridad alimentaria y mejorar la nutrición." },
+    { num: 3, nombre: "Salud y Bienestar", color: "#4C9F38", icono: "bi-heart-pulse-fill", desc: "Garantizar una vida sana y promover el bienestar para todos en todas las edades." },
+    { num: 4, nombre: "Educación de Calidad", color: "#C5192D", icono: "bi-book-fill", desc: "Garantizar una educación inclusiva, equitativa y de calidad." },
+    { num: 5, nombre: "Igualdad de Género", color: "#FF3A21", icono: "bi-gender-ambiguous", desc: "Lograr la igualdad entre los géneros y empoderar a todas las mujeres y las niñas." },
+    { num: 6, nombre: "Agua Limpia y Saneamiento", color: "#26BDE2", icono: "bi-droplet-fill", desc: "Garantizar la disponibilidad de agua y su gestión sostenible y el saneamiento." },
+    { num: 7, nombre: "Energía Asequible y No Contaminante", color: "#FCC30B", icono: "bi-lightning-charge-fill", desc: "Garantizar el acceso a una energía asequible, segura, sostenible y moderna." },
+    { num: 8, nombre: "Trabajo Decente y Crecimiento Económico", color: "#A21942", icono: "bi-briefcase-fill", desc: "Promover el crecimiento económico inclusivo y sostenible, el empleo y el trabajo decente." },
+    { num: 9, nombre: "Industria, Innovación e Infraestructura", color: "#FD6925", icono: "bi-building-gear", desc: "Construir infraestructuras resilientes, promover la industrialización sostenible y fomentar la innovación." },
+    { num: 10, nombre: "Reducción de las Desigualdades", color: "#DD1367", icono: "bi-distribute-vertical", desc: "Reducir la desigualdad en y entre los países." },
+    { num: 11, nombre: "Ciudades y Comunidades Sostenibles", color: "#FD9D24", icono: "bi-houses-fill", desc: "Lograr que las ciudades y los asentamientos humanos sean inclusivos, seguros, resilientes y sostenibles." },
+    { num: 12, nombre: "Producción y Consumo Responsables", color: "#BF8B2E", icono: "bi-arrow-repeat", desc: "Garantizar modalidades de consumo y producción sostenibles." },
+    { num: 13, nombre: "Acción por el Clima", color: "#3F7E44", icono: "bi-tree-fill", desc: "Adoptar medidas urgentes para combatir el cambio climático y sus efectos." },
+    { num: 14, nombre: "Vida Submarina", color: "#0A97D9", icono: "bi-water", desc: "Conservar y utilizar sosteniblemente los océanos, los mares y los recursos marinos." },
+    { num: 15, nombre: "Vida de Ecosistemas Terrestres", color: "#56C02B", icono: "bi-flower1", desc: "Gestionar sosteniblemente los bosques, luchar contra la desertificación y detener la pérdida de biodiversidad." },
+    { num: 16, nombre: "Paz, Justicia e Instituciones Sólidas", color: "#00689D", icono: "bi-shield-check", desc: "Promover sociedades pacíficas e inclusivas para el desarrollo sostenible." },
+    { num: 17, nombre: "Alianzas para Lograr los Objetivos", color: "#19486A", icono: "bi-people-fill", desc: "Revitalizar la Alianza Mundial para el Desarrollo Sostenible." },
+  ];
+
+  let odsCargadosCount = $derived(listaOds.filter(o => o.cargado).length);
+  let odsDetectadosCount = $derived(Object.keys(loteDetectado).length);
+
+  // ── CARGA INICIAL ─────────────────────────────────────────────────────
+  async function cargarTodo() {
+    await Promise.all([cargarCapasINEC(), cargarCapasODS()]);
   }
 
-  async function cargar() {
+  async function cargarCapasINEC() {
     cargando = true;
     try { 
       capas = await fetchAPI('/api/capas-indicador/'); 
     } catch (e) { 
-      toast.error('No se pudieron cargar las capas'); 
+      toast.error('No se pudieron cargar las capas territoriales'); 
     } finally { 
       cargando = false; 
     }
   }
 
-  onMount(cargar);
+  async function cargarCapasODS() {
+    cargandoOds = true;
+    try {
+      const data = await fetchAPI('/api/capas-ods/');
+      listaOds = data;
+    } catch (e) {
+      toast.error('No se pudieron cargar los indicadores ODS');
+    } finally {
+      cargandoOds = false;
+    }
+  }
 
-  function onFile(e) {
+  onMount(cargarTodo);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 1. LÓGICA CAPA TERRITORIAL INEC (NBI ORIGINAL)
+  // ═══════════════════════════════════════════════════════════════════════
+  function onFileINEC(e) {
     const f = e.target.files?.[0];
     if (!f) return;
     form.archivo = f;
     const reader = new FileReader();
-    reader.onload = () => parseCSV(reader.result);
+    reader.onload = () => parseCSVINEC(reader.result);
     reader.readAsText(f, 'utf-8');
   }
 
-  function parseCSV(txt) {
+  function parseCSVINEC(txt) {
     errores = [];
     const lines = txt.split(/\r?\n/).filter(l => l.trim());
     if (!lines.length) { errores = ['El archivo CSV está completamente vacío']; preview = null; return; }
     
-    // Detectar separador coma o punto y coma
     const firstLine = lines[0];
-    const sep = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
-    
+    const sep = firstLine.includes(';') && !firstLine.includes(',') ? ';' : (firstLine.includes('\t') ? '\t' : ',');
     const header = firstLine.split(sep).map(s => s.trim().toLowerCase().replace(/^["']|["']$/g, ''));
     const iDpa = header.indexOf('dpa_canton');
     const iVal = header.indexOf('valor');
     
     if (iDpa < 0 || iVal < 0) {
       errores = [
-        'Faltan columnas requeridas en el encabezado: "dpa_canton" y "valor"',
+        'Faltan columnas requeridas: "dpa_canton" y "valor"',
         `Columnas detectadas: [${header.join(', ')}]`
       ];
       preview = null;
@@ -121,15 +136,12 @@
       const val = parseFloat(valRaw);
       
       if (!dpa || !/^\d{4}$/.test(dpa)) { 
-        errores.push(`Fila ${i+1}: código DPA inválido "${c[iDpa]}" (debe ser código de 4 dígitos, ej: 1201 para Babahoyo, 1205 para Quevedo)`); 
+        errores.push(`Fila ${i+1}: código DPA inválido "${c[iDpa]}"`); 
         continue; 
       }
       if (isNaN(val)) { 
         errores.push(`Fila ${i+1}: valor numérico inválido "${c[iVal]}"`); 
         continue; 
-      }
-      if (vistos.has(dpa)) {
-        errores.push(`Fila ${i+1}: cantón DPA "${dpa}" duplicado en el archivo (se usará la última fila)`);
       }
       vistos.add(dpa);
       rows.push({ dpa_canton: dpa, valor: val });
@@ -137,18 +149,16 @@
     preview = rows;
   }
 
-  async function subir() {
-    if (!form.tipo_indicador.trim()) { toast.error('Indica el tipo de indicador u ODS'); return; }
+  async function subirINEC() {
+    if (!form.tipo_indicador.trim()) { toast.error('Indica el tipo de indicador'); return; }
     if (!form.archivo)      { toast.error('Selecciona un archivo CSV'); return; }
     if (!preview?.length)   { toast.error('El archivo CSV no contiene filas válidas'); return; }
-    if (!form.fuente.trim()){ toast.error('Indica la fuente oficial (INEC, CEPAL, etc.)'); return; }
+    if (!form.fuente.trim()){ toast.error('Indica la fuente oficial'); return; }
     
     subiendo = true;
-    progreso = 15;
+    progreso = 20;
     progresoInterval = setInterval(() => {
-      if (progreso < 85) {
-        progreso += Math.floor(Math.random() * 15) + 5;
-      }
+      if (progreso < 85) progreso += Math.floor(Math.random() * 15) + 5;
     }, 200);
 
     try {
@@ -180,27 +190,23 @@
 
       toast.success(`¡Capa guardada con éxito! ${data.insertados} cantones actualizados (${data.tipo_indicador} ${data.anio})`);
       form = { tipo_indicador: 'NBI', anio: 2022, unidad: '%', fuente: 'INEC - Censo de Población y Vivienda 2022', archivo: null };
-      selectorIndicador = 'NBI';
       preview = null; 
       errores = [];
-      const fileInput = document.getElementById('csvinput');
+      const fileInput = document.getElementById('csvinput-inec');
       if (fileInput) fileInput.value = '';
-      await cargar();
+      await cargarCapasINEC();
     } catch (e) {
       clearInterval(progresoInterval);
       toast.error(e.message || 'Error al procesar el archivo');
     } finally { 
-      setTimeout(() => {
-        subiendo = false;
-        progreso = 0;
-      }, 500);
+      setTimeout(() => { subiendo = false; progreso = 0; }, 500);
     }
   }
 
-  async function eliminar(c) {
+  async function eliminarINEC(c) {
     const ok = await confirmDialog({
-      title: '¿Eliminar capa de indicadores territorial?',
-      message: `Se eliminará la capa "${c.tipo_indicador} ${c.anio}" y sus ${c.total} registros de cantones asociados en la base de datos.`,
+      title: '¿Eliminar capa territorial?',
+      message: `Se eliminará la capa "${c.tipo_indicador} ${c.anio}" y sus ${c.total} registros cantonales asociados.`,
       confirmText: 'Sí, eliminar capa',
       type: 'danger',
       icon: 'bi-map-fill'
@@ -214,15 +220,203 @@
       });
       if (!r.ok) throw new Error('No se pudo eliminar la capa');
       toast.success('Capa territorial eliminada correctamente');
-      await cargar();
+      await cargarCapasINEC();
     } catch (e) { 
       toast.error(e.message); 
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 2. LÓGICA DE DETECCIÓN Y CARGA MASIVA AUTOMÁTICA DE ODS (BATCH)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  function detectarNumeroODS(nombreArchivo, contenidoTexto) {
+    const t = (nombreArchivo + ' ' + contenidoTexto.slice(0, 1500)).toLowerCase();
+    
+    // Reglas de coincidencia por códigos CEPAL / ONU y palabras clave
+    if (t.includes('si_pov_day1') || t.includes('pobreza') || t.includes('ods_1') || t.includes('ods1') || t.includes('objetivo 1')) return 1;
+    if (t.includes('sn_itk_defc') || t.includes('subalimentacion') || t.includes('hambre') || t.includes('ag_prd_fies') || t.includes('ods_2') || t.includes('ods2') || t.includes('objetivo 2')) return 2;
+    if (t.includes('sh_') || t.includes('salud') || t.includes('mortalidad') || t.includes('vacunacion') || t.includes('ods_3') || t.includes('ods3') || t.includes('objetivo 3')) return 3;
+    if (t.includes('se_') || t.includes('educacion') || t.includes('alfabetizacion') || t.includes('escolaridad') || t.includes('ods_4') || t.includes('ods4') || t.includes('objetivo 4')) return 4;
+    if (t.includes('sg_') || t.includes('genero') || t.includes('mujeres') || t.includes('femicidio') || t.includes('ods_5') || t.includes('ods5') || t.includes('objetivo 5')) return 5;
+    if (t.includes('sh_h2o') || t.includes('agua') || t.includes('saneamiento') || t.includes('potable') || t.includes('ods_6') || t.includes('ods6') || t.includes('objetivo 6')) return 6;
+    if (t.includes('eg_') || t.includes('energia') || t.includes('electricidad') || t.includes('renovable') || t.includes('ods_7') || t.includes('ods7') || t.includes('objetivo 7')) return 7;
+    if (t.includes('sl_') || t.includes('empleo') || t.includes('trabajo') || t.includes('desempleo') || t.includes('pib') || t.includes('ods_8') || t.includes('ods8') || t.includes('objetivo 8')) return 8;
+    if (t.includes('nv_') || t.includes('industria') || t.includes('innovacion') || t.includes('investigacion') || t.includes('ods_9') || t.includes('ods9') || t.includes('objetivo 9')) return 9;
+    if (t.includes('gini') || t.includes('desigualdad') || t.includes('ingresos') || t.includes('ods_10') || t.includes('ods10') || t.includes('objetivo 10')) return 10;
+    if (t.includes('en_') || t.includes('ciudades') || t.includes('urban') || t.includes('asentamientos') || t.includes('ods_11') || t.includes('ods11') || t.includes('objetivo 11')) return 11;
+    if (t.includes('consumo') || t.includes('produccion') || t.includes('residuos') || t.includes('reciclaje') || t.includes('ods_12') || t.includes('ods12') || t.includes('objetivo 12')) return 12;
+    if (t.includes('clim') || t.includes('co2') || t.includes('emisiones') || t.includes('desastres') || t.includes('ods_13') || t.includes('ods13') || t.includes('objetivo 13')) return 13;
+    if (t.includes('mar') || t.includes('submarina') || t.includes('pesca') || t.includes('costas') || t.includes('ods_14') || t.includes('ods14') || t.includes('objetivo 14')) return 14;
+    if (t.includes('bosque') || t.includes('deforestacion') || t.includes('terrestre') || t.includes('biodiversidad') || t.includes('ods_15') || t.includes('ods15') || t.includes('objetivo 15')) return 15;
+    if (t.includes('paz') || t.includes('justicia') || t.includes('homicidio') || t.includes('instituciones') || t.includes('ods_16') || t.includes('ods16') || t.includes('objetivo 16')) return 16;
+    if (t.includes('alianza') || t.includes('cooperacion') || t.includes('asociaciones') || t.includes('ods_17') || t.includes('ods17') || t.includes('objetivo 17')) return 17;
+    
+    return null;
+  }
+
+  function procesarArchivoODSTexto(nombreArchivo, txt) {
+    const lines = txt.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return null;
+
+    const firstLine = lines[0];
+    const sep = firstLine.includes('\t') ? '\t' : (firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',');
+    const header = firstLine.split(sep).map(s => s.trim().toLowerCase().replace(/^["']|["']$/g, ''));
+    
+    const iInd = header.findIndex(h => h.includes('indicator') || h.includes('indicador'));
+    const iPais = header.findIndex(h => h.includes('país') || h.includes('pais') || h.includes('country'));
+    const iAnio = header.findIndex(h => h.includes('año') || h.includes('year') || h.includes('anios'));
+    const iVal = header.findIndex(h => h.includes('value') || h.includes('valor'));
+    const iUnit = header.findIndex(h => h.includes('unit') || h.includes('unidad'));
+
+    const odsNum = detectarNumeroODS(nombreArchivo, txt);
+    if (!odsNum) return null;
+
+    const odsInfo = CATALOGO_17_ODS.find(o => o.num === odsNum);
+    let nombreIndicador = '';
+    let codigoIndicador = '';
+    let unidad = '%';
+    const serieHistorica = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const c = line.split(sep).map(s => s.trim().replace(/^["']|["']$/g, ''));
+      
+      const pais = iPais >= 0 ? c[iPais] : 'Ecuador';
+      // Filtrar solo datos correspondientes a Ecuador
+      if (pais && !pais.toLowerCase().includes('ecuador')) continue;
+
+      const rawInd = iInd >= 0 ? c[iInd] : '';
+      if (rawInd && !nombreIndicador) {
+        nombreIndicador = rawInd;
+        // Extraer código (ej: SI_POV_DAY1 o SN_ITK_DEFC)
+        const matchCode = rawInd.match(/([A-Z0-9_]{4,})/);
+        codigoIndicador = matchCode ? matchCode[1] : `ODS_${odsNum}`;
+      }
+
+      if (iUnit >= 0 && c[iUnit] && unidad === '%') {
+        unidad = c[iUnit];
+      }
+
+      const anioStr = iAnio >= 0 ? c[iAnio] : '';
+      const anio = parseInt(anioStr);
+      const valStr = iVal >= 0 ? c[iVal]?.replace(',', '.') : '';
+      const val = parseFloat(valStr);
+
+      if (!isNaN(anio) && !isNaN(val)) {
+        serieHistorica.push({ anio, valor: val });
+      }
+    }
+
+    if (!serieHistorica.length) return null;
+
+    // Ordenar de menor a mayor año
+    serieHistorica.sort((a, b) => a.anio - b.anio);
+    const masReciente = serieHistorica[serieHistorica.length - 1];
+
+    return {
+      ods_num: odsNum,
+      nombre_ods: odsInfo ? odsInfo.nombre : `ODS ${odsNum}`,
+      codigo_indicador: codigoIndicador || `ODS_${odsNum}`,
+      nombre_indicador: nombreIndicador || `${odsInfo?.nombre || 'Indicador Oficial'} (Ecuador)`,
+      anio_reciente: masReciente.anio,
+      valor_reciente: masReciente.valor,
+      unidad: unidad || '%',
+      fuente: 'CEPAL / ONU - Agenda 2030 Ecuador',
+      serie_historica: serieHistorica,
+      nombre_archivo: nombreArchivo,
+    };
+  }
+
+  async function onArchivosLoteODS(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    totalArchivosLote = files.length;
+    archivosProcesados = 0;
+    const nuevoLote = { ...loteDetectado };
+
+    for (const f of files) {
+      const reader = new FileReader();
+      const txt = await new Promise((res) => {
+        reader.onload = () => res(reader.result);
+        reader.readAsText(f, 'utf-8');
+      });
+
+      const parsed = procesarArchivoODSTexto(f.name, txt);
+      if (parsed) {
+        nuevoLote[parsed.ods_num] = parsed;
+      }
+      archivosProcesados++;
+    }
+
+    loteDetectado = nuevoLote;
+    const count = Object.keys(loteDetectado).length;
+    if (count > 0) {
+      toast.success(`¡Se detectaron automáticamente ${count} indicadores ODS listos para guardar!`);
+    } else {
+      toast.warn('No se pudieron reconocer columnas estándar de la CEPAL/ONU en los archivos.');
+    }
+  }
+
+  async function guardarTodosLoteODS() {
+    const items = Object.values(loteDetectado);
+    if (!items.length) {
+      toast.error('No hay indicadores ODS detectados para guardar');
+      return;
+    }
+
+    subiendoLoteOds = true;
+    progresoLote = 30;
+
+    try {
+      const res = await fetch('/api/capas-ods/batch-upload/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(items),
+        credentials: 'include',
+      });
+
+      progresoLote = 100;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar el lote');
+
+      toast.success(`¡Excelente! ${data.procesados} indicadores ODS guardados y activados en el sistema.`);
+      loteDetectado = {};
+      await cargarCapasODS();
+    } catch (e) {
+      toast.error(e.message || 'Error al guardar los indicadores');
+    } finally {
+      subiendoLoteOds = false;
+      progresoLote = 0;
+    }
+  }
+
+  async function eliminarODS(num, nombre) {
+    const ok = await confirmDialog({
+      title: '¿Eliminar indicador ODS?',
+      message: `Se eliminarán los datos históricos del "ODS ${num}: ${nombre}".`,
+      confirmText: 'Sí, eliminar',
+      type: 'danger',
+      icon: 'bi-trash-fill'
+    });
+    if (!ok) return;
+
+    try {
+      const r = await fetch(`/api/capas-ods/${num}/delete/`, { method: 'DELETE', credentials: 'include' });
+      if (!r.ok) throw new Error('No se pudo eliminar el indicador');
+      toast.success(`Datos del ODS ${num} eliminados`);
+      await cargarCapasODS();
+    } catch (e) {
+      toast.error(e.message);
     }
   }
 </script>
 
 <svelte:head><title>Gestión de Capas e Indicadores — SGV UTEQ</title></svelte:head>
 
+<!-- SUBBAR SUPERIOR -->
 <div class="subbar">
   <nav class="breadcrumb">
     <a href="/dashboard">Inicio</a>
@@ -235,171 +429,395 @@
 
 <div class="cap-body">
 
-  <!-- FORM DE CARGA -->
-  <section class="cap-card">
-    <header class="cap-h">
-      <div class="cap-h-icon">
-        <i class="bi bi-layers-fill"></i>
-      </div>
-      <div>
-        <h3>Cargar capa territorial (INEC / ODS Agenda 2030)</h3>
-        <p>Sube un archivo CSV con los indicadores oficiales por cantón (NBI, Pobreza o cualquiera de los 17 ODS) para alimentar el mapa interactivo del SGV.</p>
-      </div>
-    </header>
+  <!-- SELECTOR DE SUBMÓDULOS EN TABS ELEGANTES -->
+  <div class="cap-nav-tabs">
+    <button 
+      type="button" 
+      class="nav-tab-btn" 
+      class:active={tabActiva === 'inec'} 
+      onclick={() => tabActiva = 'inec'}>
+      <i class="bi bi-geo-alt-fill"></i>
+      <span>1. Capas Territoriales INEC (NBI y Cantones)</span>
+      <span class="badge-tab">{capas.length} Activas</span>
+    </button>
+    <button 
+      type="button" 
+      class="nav-tab-btn" 
+      class:active={tabActiva === 'ods'} 
+      onclick={() => tabActiva = 'ods'}>
+      <i class="bi bi-globe-americas"></i>
+      <span>2. Gestión de Capas ODS (Agenda 2030 CEPAL/ONU)</span>
+      <span class="badge-tab highlight">{odsCargadosCount}/17 ODS</span>
+    </button>
+  </div>
 
-    <div class="cap-form">
-      <div class="fg wide">
-        <label>Indicador oficial / ODS</label>
-        <select value={selectorIndicador} onchange={onCambioIndicador} class="form-select-sga">
-          {#each OPCIONES_INDICADORES as opc}
-            <option value={opc.codigo}>{opc.nombre}</option>
-          {/each}
-        </select>
-      </div>
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA 1: CAPAS TERRITORIALES INEC (INTACTA)                          -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  {#if tabActiva === 'inec'}
+    <!-- FORM DE CARGA INEC -->
+    <section class="cap-card">
+      <header class="cap-h">
+        <div class="cap-h-icon inec-color">
+          <i class="bi bi-cloud-arrow-up-fill"></i>
+        </div>
+        <div>
+          <h3>Cargar Capa Territorial INEC</h3>
+          <p>Sube un archivo CSV con los valores oficiales de Necesidades Básicas Insatisfechas (NBI) o indicadores por cantón.</p>
+        </div>
+      </header>
 
-      {#if selectorIndicador === 'OTRO'}
+      <div class="cap-form">
         <div class="fg">
-          <label>Código del indicador personalizado</label>
-          <input type="text" bind:value={form.tipo_indicador} maxlength="30" placeholder="Ej: IDH, DESNUTRICION..." />
+          <label>Tipo de indicador</label>
+          <input type="text" bind:value={form.tipo_indicador} maxlength="30" placeholder="NBI, POBREZA..." />
+        </div>
+        <div class="fg">
+          <label>Año de la medición</label>
+          <input type="number" bind:value={form.anio} min="1990" max="2100" />
+        </div>
+        <div class="fg">
+          <label>Unidad de medida</label>
+          <input type="text" bind:value={form.unidad} maxlength="20" placeholder="%" />
+        </div>
+        <div class="fg wide">
+          <label>Fuente oficial</label>
+          <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC - Censo de Población y Vivienda 2022" />
+        </div>
+        <div class="fg wide">
+          <label>Archivo CSV de cantones <span class="hint">(Columnas requeridas: <code>dpa_canton</code>, <code>valor</code>)</span></label>
+          <div class="file-uploader-box">
+            <input id="csvinput-inec" type="file" accept=".csv,text/csv" onchange={onFileINEC} class="file-hidden-input" />
+            <label for="csvinput-inec" class="file-browse-btn">
+              <i class="bi bi-folder2-open"></i> Seleccionar archivo CSV
+            </label>
+            <span class="file-selected-name">
+              {#if form.archivo}
+                <i class="bi bi-file-earmark-check-fill text-success"></i> {form.archivo.name}
+              {:else}
+                <span class="text-muted">Ningún archivo seleccionado</span>
+              {/if}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {#if errores.length}
+        <div class="alert warn">
+          <b>{errores.length} advertencias:</b>
+          <ul>{#each errores.slice(0,5) as e}<li>{e}</li>{/each}</ul>
         </div>
       {/if}
 
-      <div class="fg">
-        <label>Año de la medición</label>
-        <input type="number" bind:value={form.anio} min="1990" max="2100" />
-      </div>
-      <div class="fg">
-        <label>Unidad de medida</label>
-        <input type="text" bind:value={form.unidad} maxlength="20" placeholder="%, personas, índice..." />
-      </div>
-      <div class="fg wide">
-        <label>Fuente oficial</label>
-        <input type="text" bind:value={form.fuente} maxlength="160" placeholder="Ej: INEC Censo 2022 / CEPAL Agenda 2030" />
-      </div>
-      <div class="fg wide">
-        <label>Archivo CSV de cantones <span class="hint">(Columnas requeridas: <code>dpa_canton</code>, <code>valor</code>)</span></label>
-        <div class="file-uploader-box">
-          <input id="csvinput" type="file" accept=".csv,text/csv" onchange={onFile} class="file-hidden-input" />
-          <label for="csvinput" class="file-browse-btn">
-            <i class="bi bi-folder2-open"></i> Seleccionar archivo CSV
-          </label>
-          <span class="file-selected-name" title={form.archivo?.name || ''}>
-            {#if form.archivo}
-              <i class="bi bi-file-earmark-check-fill text-success"></i> {form.archivo.name}
-            {:else}
-              <span class="text-muted">Ningún archivo seleccionado</span>
-            {/if}
-          </span>
+      {#if preview}
+        <div class="alert ok">
+          ✓ <b>{preview.length}</b> cantones válidos listos para indexar.
         </div>
-      </div>
-    </div>
+      {/if}
 
-    {#if errores.length}
-      <div class="alert warn">
-        <b>{errores.length} advertencias:</b>
-        <ul>{#each errores.slice(0,10) as e}<li>{e}</li>{/each}</ul>
-        {#if errores.length > 10}<small>...y {errores.length - 10} más</small>{/if}
-      </div>
-    {/if}
-
-    {#if preview}
-      <div class="alert ok">
-        ✓ <b>{preview.length}</b> filas válidas listas para insertar.
-      </div>
-    {/if}
-
-    <!-- PROGRESS BAR ELEGANTE -->
-    {#if subiendo}
-      <div class="progress-wrap">
-        <div class="progress-header">
-          <span class="progress-label"><i class="bi bi-arrow-repeat spin"></i> Procesando e indexando capa en la base de datos...</span>
-          <span class="progress-pct">{progreso}%</span>
+      {#if subiendo}
+        <div class="progress-wrap">
+          <div class="progress-header">
+            <span class="progress-label"><i class="bi bi-arrow-repeat spin"></i> Procesando datos cantonales...</span>
+            <span class="progress-pct">{progreso}%</span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {progreso}%;"></div></div>
         </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" style="width: {progreso}%;"></div>
+      {/if}
+
+      <div class="cap-actions">
+        <button class="btn-primario" onclick={subirINEC} disabled={subiendo || !preview?.length}>
+          {#if subiendo}<i class="bi bi-arrow-repeat spin"></i> Guardando...{:else}<i class="bi bi-check-lg"></i> Guardar Capa Territorial{/if}
+        </button>
+      </div>
+    </section>
+
+    <!-- LISTA DE CAPAS INEC -->
+    <section class="cap-card table-card">
+      <header class="cap-h">
+        <div class="cap-h-icon inec-color">
+          <i class="bi bi-database-fill-check"></i>
         </div>
-      </div>
-    {/if}
+        <div>
+          <h3>Capas Territoriales Activas</h3>
+          <p>Capas de polígonos disponibles para visualización en el mapa interactivo.</p>
+        </div>
+      </header>
 
-    <div class="cap-actions">
-      <button class="btn-primario" onclick={subir} disabled={subiendo || !preview?.length}>
-        {#if subiendo}
-          <i class="bi bi-arrow-repeat spin"></i> Guardando...
-        {:else}
-          <i class="bi bi-check-lg"></i> Guardar capa
-        {/if}
-      </button>
-    </div>
-  </section>
-
-  <!-- LISTA DE CAPAS EXISTENTES CON ESTILO VERDE SGA -->
-  <section class="cap-card table-card">
-    <header class="cap-h">
-      <div class="cap-h-icon">
-        <i class="bi bi-database"></i>
-      </div>
-      <div>
-        <h3>Capas cargadas en el sistema</h3>
-        <p>Indicadores actualmente activos y disponibles para visualizar en el mapa.</p>
-      </div>
-    </header>
-
-    {#if cargando}
-      <div class="empty"><i class="bi bi-arrow-repeat spin"></i> Cargando capas...</div>
-    {:else if !capas.length}
-      <div class="empty">No hay capas cargadas todavía. Sube una con el formulario superior.</div>
-    {:else}
-      <div class="table-container">
-        <table class="cap-tabla">
-          <thead>
-            <tr>
-              <th>INDICADOR</th>
-              <th>AÑO</th>
-              <th>CANTONES</th>
-              <th>RANGO (%)</th>
-              <th>UNIDAD</th>
-              <th>FUENTE</th>
-              <th>ESTADO</th>
-              <th class="text-center">ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each capas.slice((page - 1) * pageSize, page * pageSize) as c}
+      {#if cargando}
+        <div class="empty"><i class="bi bi-arrow-repeat spin"></i> Cargando capas...</div>
+      {:else if !capas.length}
+        <div class="empty">No hay capas cargadas todavía. Sube una con el formulario superior.</div>
+      {:else}
+        <div class="table-responsive">
+          <table class="cap-table">
+            <thead>
               <tr>
-                <td>
-                  <span class="indicador-badge">{c.tipo_indicador}</span>
-                </td>
-                <td class="fw-bold">{c.anio}</td>
-                <td><span class="cantones-badge">{c.total} cantones</span></td>
-                <td class="fw-semibold text-primary">{c.min?.toFixed?.(1) ?? '—'}% – {c.max?.toFixed?.(1) ?? '—'}%</td>
-                <td class="text-muted">{c.unidad}</td>
-                <td class="fuente-cell">{c.fuente}</td>
-                <td>
-                  <span class="estado-activa"><i class="bi bi-check-circle-fill"></i> Activa</span>
-                </td>
-                <td class="text-center">
-                  <div class="actions-group">
-                    <a href="/mapa" class="btn-action view" title="Ver en el mapa">
-                      <i class="bi bi-map-fill"></i>
-                    </a>
-                    <button class="btn-action delete" onclick={() => eliminar(c)} title="Eliminar capa">
-                      <i class="bi bi-trash-fill"></i>
-                    </button>
-                  </div>
-                </td>
+                <th>Indicador</th>
+                <th>Año</th>
+                <th>Cantones</th>
+                <th>Rango ({capas[0]?.unidad || '%'})</th>
+                <th>Unidad</th>
+                <th>Fuente</th>
+                <th>Estado</th>
+                <th class="text-right">Acciones</th>
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each capas.slice((page-1)*pageSize, page*pageSize) as c}
+                <tr>
+                  <td><span class="badge-indicador">{c.tipo_indicador}</span></td>
+                  <td><strong>{c.anio}</strong></td>
+                  <td>{c.total} cantones</td>
+                  <td>
+                    {#if c.min !== null && c.max !== null}
+                      <span class="rango-badge">{c.min}% — {c.max}%</span>
+                    {:else}
+                      —
+                    {/if}
+                  </td>
+                  <td>{c.unidad}</td>
+                  <td class="td-fuente" title={c.fuente}>{c.fuente}</td>
+                  <td><span class="badge-activa"><i class="bi bi-check-circle-fill"></i> Activa</span></td>
+                  <td class="text-right">
+                    <button class="btn-action-view" onclick={() => window.location.href='/mapa'} title="Ver en el Mapa">
+                      <i class="bi bi-map"></i>
+                    </button>
+                    <button class="btn-action-delete" onclick={() => eliminarINEC(c)} title="Eliminar capa">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <Pagination totalItems={capas.length} bind:currentPage={page} bind:pageSize={pageSize} />
+      {/if}
+    </section>
+  {/if}
 
-        {#if capas.length > 0}
-          <Pagination totalItems={capas.length} bind:page bind:pageSize itemLabel="capas" />
-        {/if}
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- VISTA 2: GESTIÓN DE CAPAS ODS (CARGA MASIVA AUTOMÁTICA)             -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  {#if tabActiva === 'ods'}
+    <!-- DROPZONE INTELIGENTE DE CARGA MASIVA -->
+    <section class="cap-card ods-master-card">
+      <header class="cap-h">
+        <div class="cap-h-icon ods-color">
+          <i class="bi bi-stars"></i>
+        </div>
+        <div>
+          <h3>Carga Masiva Inteligente de ODS (CEPAL / ONU)</h3>
+          <p>Suelta los archivos descargados (.csv o .xlsx) todos de golpe. El sistema identificará automáticamente el ODS, filtrará los datos de Ecuador y extraerá la serie histórica sin configuración manual.</p>
+        </div>
+      </header>
+
+      <!-- ZONA DROPZONE MULTI-ARCHIVO -->
+      <div class="ods-dropzone-wrap">
+        <input 
+          id="ods-bulk-input" 
+          type="file" 
+          multiple 
+          accept=".csv,.tsv,.txt" 
+          onchange={onArchivosLoteODS} 
+          class="file-hidden-input" />
+        <label for="ods-bulk-input" class="ods-dropzone-box">
+          <div class="odz-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+          <div class="odz-text">
+            <strong>Haz clic aquí o arrastra tus archivos de ODS en bloque</strong>
+            <p>Puedes seleccionar de 1 a 17 archivos a la vez. Detección instantánea de indicadores.</p>
+          </div>
+          <div class="odz-btn">
+            <i class="bi bi-folder-plus"></i> Seleccionar archivos en lote
+          </div>
+        </label>
       </div>
-    {/if}
-  </section>
+
+      <!-- BARRA FLOTANTE DE ACCIÓN LOTE -->
+      {#if odsDetectadosCount > 0}
+        <div class="ods-batch-action-bar">
+          <div class="ob-info">
+            <span class="ob-badge"><i class="bi bi-check-circle-fill"></i> {odsDetectadosCount} ODS detectados</span>
+            <span class="ob-sub">Listos para procesar y sincronizar con los proyectos universitarios.</span>
+          </div>
+          <button class="btn-guardar-lote" onclick={guardarTodosLoteODS} disabled={subiendoLoteOds}>
+            {#if subiendoLoteOds}
+              <i class="bi bi-arrow-repeat spin"></i> Guardando lote...
+            {:else}
+              <i class="bi bi-check2-all"></i> Guardar los {odsDetectadosCount} ODS detectados
+            {/if}
+          </button>
+        </div>
+      {/if}
+    </section>
+
+    <!-- CUADRÍCULA INTERACTIVA DE LOS 17 ODS -->
+    <section class="cap-card">
+      <header class="cap-h">
+        <div class="cap-h-icon ods-color">
+          <i class="bi bi-grid-3x3-gap-fill"></i>
+        </div>
+        <div class="cap-h-between">
+          <div>
+            <h3>Matriz de los 17 Objetivos de Desarrollo Sostenible</h3>
+            <p>Estado actual de cada ODS con los datos oficiales de Ecuador sincronizados.</p>
+          </div>
+          <div class="ods-counter-badge">
+            <strong>{odsCargadosCount}</strong> / 17 Activos
+          </div>
+        </div>
+      </header>
+
+      {#if cargandoOds}
+        <div class="empty"><i class="bi bi-arrow-repeat spin"></i> Cargando matriz ODS...</div>
+      {:else}
+        <div class="ods-grid-17">
+          {#each listaOds as ods}
+            {@const enLote = loteDetectado[ods.ods_num]}
+            {@const dato = enLote || (ods.cargado ? ods : null)}
+            <div 
+              class="ods-card" 
+              class:has-data={dato !== null}
+              class:is-pending-save={enLote !== undefined}
+              style="--ods-color: {ods.color};">
+              
+              <div class="ods-card-top" style="background-color: {ods.color};">
+                <span class="ods-num">ODS {ods.num}</span>
+                <i class="bi {ods.icono} ods-top-icon"></i>
+              </div>
+
+              <div class="ods-card-body">
+                <h4 class="ods-title">{ods.nombre}</h4>
+
+                {#if dato}
+                  <div class="ods-data-box">
+                    <div class="odb-header">
+                      <span class="odb-tag" class:odb-lote={enLote}>
+                        {enLote ? '⚡ Detectado en lote' : '✓ En Base de Datos'}
+                      </span>
+                      <span class="odb-year">{dato.anio_reciente}</span>
+                    </div>
+                    <div class="odb-value-wrap">
+                      <span class="odb-value">{dato.valor_reciente}</span>
+                      <span class="odb-unit">{dato.unidad}</span>
+                    </div>
+                    <p class="odb-ind-name" title={dato.nombre_indicador}>{dato.nombre_indicador}</p>
+                    <div class="odb-meta-row">
+                      <small><i class="bi bi-clock-history"></i> {dato.serie_historica?.length || 0} años registrados</small>
+                    </div>
+                  </div>
+                {:else}
+                  <div class="ods-empty-box">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    <p>Sin datos cargados aún.<br>Arrastra el archivo para activarlo.</p>
+                  </div>
+                {/if}
+              </div>
+
+              <div class="ods-card-footer">
+                {#if dato}
+                  <button 
+                    type="button" 
+                    class="btn-ods-mini view" 
+                    onclick={() => odsModalDetalle = dato}
+                    title="Ver evolución histórica">
+                    <i class="bi bi-graph-up"></i> Histórico
+                  </button>
+                  {#if ods.cargado}
+                    <button 
+                      type="button" 
+                      class="btn-ods-mini del" 
+                      onclick={() => eliminarODS(ods.ods_num, ods.nombre)}
+                      title="Eliminar indicador">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  {/if}
+                {:else}
+                  <label for="ods-bulk-input" class="btn-ods-mini upload-hint">
+                    <i class="bi bi-plus-circle"></i> Cargar archivo
+                  </label>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </section>
+  {/if}
 
 </div>
+
+<!-- MODAL PARA VER SERIE HISTÓRICA DE UN ODS -->
+{#if odsModalDetalle}
+  <div class="modal-overlay" onclick={() => odsModalDetalle = null}>
+    <div class="modal-box" onclick={e => e.stopPropagation()}>
+      <div class="modal-hdr" style="background-color: {odsModalDetalle.color || '#1b7a2b'};">
+        <div>
+          <h3>ODS {odsModalDetalle.ods_num}: {odsModalDetalle.nombre_ods}</h3>
+          <p>{odsModalDetalle.nombre_indicador}</p>
+        </div>
+        <button class="modal-close-btn" onclick={() => odsModalDetalle = null}>&times;</button>
+      </div>
+      <div class="modal-content-scroll">
+        <div class="m-highlight-banner">
+          <div>
+            <span class="mhb-label">Valor más reciente en Ecuador</span>
+            <div class="mhb-val">{odsModalDetalle.valor_reciente} <small>{odsModalDetalle.unidad}</small></div>
+          </div>
+          <div class="text-right">
+            <span class="mhb-label">Año de medición</span>
+            <div class="mhb-year">{odsModalDetalle.anio_reciente}</div>
+          </div>
+        </div>
+
+        <h4 class="m-sec-title"><i class="bi bi-clock-history"></i> Serie Histórica Registrada</h4>
+        {#if odsModalDetalle.serie_historica && odsModalDetalle.serie_historica.length}
+          <div class="table-responsive">
+            <table class="cap-table">
+              <thead>
+                <tr>
+                  <th>Año</th>
+                  <th>Valor</th>
+                  <th>Unidad</th>
+                  <th>Tendencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each odsModalDetalle.serie_historica as pt, idx}
+                  {@const anterior = idx > 0 ? odsModalDetalle.serie_historica[idx - 1].valor : null}
+                  <tr>
+                    <td><strong>{pt.anio}</strong></td>
+                    <td><b>{pt.valor}</b></td>
+                    <td>{odsModalDetalle.unidad}</td>
+                    <td>
+                      {#if anterior !== null}
+                        {#if pt.valor < anterior}
+                          <span class="trend down"><i class="bi bi-arrow-down-right"></i> Reducción</span>
+                        {:else if pt.valor > anterior}
+                          <span class="trend up"><i class="bi bi-arrow-up-right"></i> Incremento</span>
+                        {:else}
+                          <span class="trend equal">= Estable</span>
+                        {/if}
+                      {:else}
+                        <span class="trend base">Línea base</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p class="empty">No hay serie histórica disponible para este indicador.</p>
+        {/if}
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-sga-blue" onclick={() => odsModalDetalle = null}>Cerrar</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
 /* ── SUBBAR ── */
@@ -411,123 +829,120 @@
   background: #ffffff;
   border-bottom: 1px solid #eef2f6;
 }
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.84rem;
-}
-
-.breadcrumb a {
-  color: #1b7a2b;
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.breadcrumb a:hover {
-  text-decoration: underline;
-}
-
-.breadcrumb .sep {
-  color: #94a3b8;
-}
-
-.breadcrumb .current {
-  color: #1e293b;
-  font-weight: 800;
-}
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 0.84rem; }
+.breadcrumb a { color: #1b7a2b; text-decoration: none; font-weight: 700; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb .sep { color: #94a3b8; }
+.breadcrumb .current { color: #1e293b; font-weight: 800; }
 
 /* ── BODY ── */
-.cap-body {
-  padding: 24px 28px;
+.cap-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 24px; }
+
+/* ── PESTAÑAS SUBMÓDULO ── */
+.cap-nav-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  gap: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 4px;
 }
-
-.cap-card {
-  background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid #eef2f6;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  padding: 24px 26px;
-}
-
-.cap-h {
+.nav-tab-btn {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.nav-tab-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+.nav-tab-btn.active {
+  background: #1b7a2b;
+  color: #ffffff;
+  border-color: #1b7a2b;
+  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.25);
+}
+.badge-tab {
+  background: rgba(0,0,0,0.06);
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.nav-tab-btn.active .badge-tab {
+  background: rgba(255,255,255,0.25);
+  color: #ffffff;
 }
 
+/* ── CARDS ── */
+.cap-card {
+  background: #ffffff;
+  border: 1px solid #eef2f6;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+}
+.cap-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.cap-h-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
 .cap-h-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: #e8f5e9;
-  color: #1b7a2b;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   flex-shrink: 0;
 }
+.cap-h-icon.inec-color { background: #eaf5ea; color: #1b7a2b; }
+.cap-h-icon.ods-color { background: #e0f2fe; color: #0284c7; }
+.cap-h h3 { font-size: 1.05rem; font-weight: 800; color: #1e293b; margin: 0 0 4px; }
+.cap-h p { font-size: 0.8rem; color: #64748b; margin: 0; }
 
-.cap-h h3 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0 0 4px;
+.ods-counter-badge {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  color: #166534;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
-
-.cap-h p {
-  font-size: 0.78rem;
-  color: #64748b;
-  margin: 0;
-}
+.ods-counter-badge strong { font-size: 1.1rem; color: #15803d; }
 
 /* ── FORMULARIO ── */
 .cap-form {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px 18px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
 }
-
-.fg {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.fg.wide {
-  grid-column: span 2;
-}
-
-.fg label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.fg .hint {
-  text-transform: none;
-  font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0;
-}
-
-.fg .hint code {
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  color: #1e293b;
-}
-
-.fg input, .fg select {
+.fg { display: flex; flex-direction: column; gap: 6px; }
+.fg.wide { grid-column: span 3; }
+.fg label { font-size: 0.72rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
+.fg .hint { text-transform: none; font-weight: 600; color: #94a3b8; }
+.fg .hint code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; color: #1e293b; }
+.fg input {
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 9px 14px;
@@ -539,310 +954,308 @@
   outline: none;
   transition: all 0.2s ease;
 }
+.fg input:focus { border-color: #1b7a2b; background: #ffffff; box-shadow: 0 0 0 3px rgba(27, 122, 43, 0.1); }
 
-.fg input:focus, .fg select:focus {
-  border-color: #1b7a2b;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(27, 122, 43, 0.1);
-}
-
-@media (max-width: 900px) {
-  .cap-form { grid-template-columns: repeat(2, 1fr); }
-  .fg.wide { grid-column: span 2; }
-}
-
-/* ── CUSTOM FILE UPLOADER BOX ── */
+/* Uploader Box */
 .file-uploader-box {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  padding: 10px 14px;
   background: #f8fafc;
   border: 1.5px dashed #cbd5e1;
   border-radius: 10px;
-  padding: 6px 10px;
-  transition: all 0.2s ease;
 }
-
-.file-uploader-box:hover {
-  border-color: #1b7a2b;
-  background: #f0fdf4;
-}
-
-.file-hidden-input {
-  display: none !important;
-}
-
+.file-hidden-input { display: none; }
 .file-browse-btn {
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  color: #334155;
-  padding: 6px 14px;
+  border: 1px solid #cbd5e1;
+  padding: 7px 14px;
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 700;
+  color: #1e293b;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  transition: all 0.15s;
 }
+.file-browse-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+.file-selected-name { font-size: 0.82rem; font-weight: 600; color: #1e293b; }
 
-.file-browse-btn:hover {
-  background: #1b7a2b;
-  border-color: #1b7a2b;
-  color: #ffffff;
-}
-
-.file-selected-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #1e293b;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.text-muted { color: #94a3b8; }
-.text-success { color: #16a34a; }
-.text-primary { color: #0284c7; }
-.fw-bold { font-weight: 700; }
-.fw-semibold { font-weight: 600; }
-.text-center { text-align: center; }
-
-/* ── ALERTAS ── */
-.alert {
-  margin-top: 16px;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.alert.warn {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #92400e;
-}
-
-.alert.ok {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-}
-
-.alert ul { margin: 6px 0 0 20px; font-weight: 500; }
-
-/* ── PROGRESS BAR ── */
-.progress-wrap {
-  margin-top: 16px;
-  padding: 14px 18px;
-  background: #f8fafc;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.progress-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #1b7a2b;
-}
-
-.progress-pct {
-  color: #1b7a2b;
-  font-weight: 800;
-}
-
-.progress-bar-bg {
-  width: 100%;
-  height: 9px;
-  background: #e2e8f0;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #1b7a2b 0%, #22c55e 100%);
-  border-radius: 20px;
-  transition: width 0.25s ease-in-out;
-}
-
-.cap-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 18px;
-}
-
+/* ── BOTONES ── */
+.cap-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
 .btn-primario {
   background: #1b7a2b;
   color: #ffffff;
   border: none;
-  border-radius: 24px;
-  padding: 9px 26px;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.btn-primario:hover:not(:disabled) { background: #15803d; box-shadow: 0 4px 12px rgba(27, 122, 43, 0.3); }
+.btn-primario:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── PROGRESS BAR ── */
+.progress-wrap { margin: 16px 0; }
+.progress-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+.progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: #1b7a2b; transition: width 0.2s ease; }
+
+/* ── ALERTAS ── */
+.alert { padding: 12px 16px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 14px; }
+.alert.warn { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.alert.warn ul { margin: 6px 0 0 16px; padding: 0; }
+.alert.ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-weight: 600; }
+
+/* ── TABLA ── */
+.table-responsive { overflow-x: auto; width: 100%; }
+.cap-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; text-align: left; }
+.cap-table th { padding: 12px 14px; font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; }
+.cap-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+.cap-table tr:hover td { background: #f8fafc; }
+.badge-indicador { background: #dcfce7; color: #166534; font-weight: 800; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; }
+.rango-badge { background: #f1f5f9; font-weight: 700; padding: 3px 8px; border-radius: 6px; color: #334155; }
+.badge-activa { color: #16a34a; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.td-fuente { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; font-size: 0.78rem; }
+.btn-action-view { background: #eff6ff; color: #2563eb; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; margin-right: 4px; }
+.btn-action-delete { background: #fef2f2; color: #dc2626; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.text-right { text-align: right; }
+.empty { text-align: center; padding: 36px 20px; color: #94a3b8; font-size: 0.88rem; font-weight: 600; }
+
+/* ── ZONA DROPZONE ODS ── */
+.ods-dropzone-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: #f8fafc;
+  border: 2px dashed #0284c7;
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.ods-dropzone-box:hover {
+  background: #f0f9ff;
+  border-color: #0369a1;
+  transform: translateY(-2px);
+}
+.odz-icon { font-size: 2.8rem; color: #0284c7; margin-bottom: 8px; }
+.odz-text strong { font-size: 1rem; color: #1e293b; display: block; margin-bottom: 4px; }
+.odz-text p { font-size: 0.8rem; color: #64748b; margin: 0 0 16px; }
+.odz-btn {
+  background: #0284c7;
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* BARRA FLOTANTE DE LOTE */
+.ods-batch-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: 12px;
+}
+.ob-badge { font-weight: 800; color: #166534; font-size: 0.92rem; display: flex; align-items: center; gap: 6px; }
+.ob-sub { font-size: 0.78rem; color: #475569; display: block; }
+.btn-guardar-lote {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
   font-size: 0.88rem;
   font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(27, 122, 43, 0.25);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+  transition: all 0.2s;
 }
+.btn-guardar-lote:hover:not(:disabled) { background: #15803d; transform: scale(1.02); }
 
-.btn-primario:hover:not(:disabled) {
-  background: #155e04;
-  transform: translateY(-1px);
+/* ── GRID DE LOS 17 ODS ── */
+.ods-grid-17 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
-
-.btn-primario:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* ── TABLA ESTILO SGA (VERDE INSTITUCIONAL) ── */
-.table-container {
-  overflow-x: auto;
-  border-radius: 12px;
+.ods-card {
+  background: #ffffff;
   border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-
-.cap-tabla {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
+.ods-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+  border-color: var(--ods-color);
 }
+.ods-card.has-data {
+  border-color: #cbd5e1;
+}
+.ods-card.is-pending-save {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px #86efac;
+}
+.ods-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  color: #ffffff;
+}
+.ods-num { font-size: 0.84rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+.ods-top-icon { font-size: 1.15rem; }
 
-.cap-tabla thead {
+.ods-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+.ods-title { font-size: 0.9rem; font-weight: 800; color: #1e293b; margin: 0 0 10px; line-height: 1.25; }
+
+.ods-data-box {
   background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.cap-tabla th {
-  color: #475569;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 13px 14px;
-  text-align: left;
-  border: none;
-  white-space: nowrap;
-}
-
-.cap-tabla td {
-  padding: 14px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
-  vertical-align: middle;
-}
-
-.cap-tabla tbody tr:hover {
-  background: #f8fafc;
-}
-
-.indicador-badge {
-  background: #e8f5e9;
-  color: #1b7a2b;
-  font-weight: 800;
-  font-size: 0.78rem;
-  padding: 4px 12px;
-  border-radius: 20px;
-  border: 1px solid #c8e6c9;
-  display: inline-block;
-}
-
-.cantones-badge {
-  background: #f1f5f9;
-  color: #475569;
-  font-weight: 700;
-  font-size: 0.76rem;
-  padding: 3px 10px;
   border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #eef2f6;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
+.odb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.odb-tag { font-size: 0.68rem; font-weight: 800; color: #16a34a; }
+.odb-tag.odb-lote { color: #d97706; }
+.odb-year { font-size: 0.72rem; font-weight: 700; color: #64748b; background: #e2e8f0; padding: 1px 6px; border-radius: 4px; }
+.odb-value-wrap { display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px; }
+.odb-value { font-size: 1.4rem; font-weight: 900; color: #1e293b; line-height: 1; }
+.odb-unit { font-size: 0.8rem; font-weight: 700; color: #64748b; }
+.odb-ind-name { font-size: 0.72rem; color: #475569; margin: 0 0 6px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.odb-meta-row { margin-top: auto; font-size: 0.68rem; color: #94a3b8; font-weight: 600; }
 
-.fuente-cell {
-  color: #475569;
-  font-weight: 500;
-  font-size: 0.8rem;
-  max-width: 250px;
+.ods-empty-box {
+  text-align: center;
+  padding: 16px 8px;
+  color: #94a3b8;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
+.ods-empty-box i { font-size: 1.5rem; color: #cbd5e1; }
+.ods-empty-box p { font-size: 0.72rem; margin: 0; line-height: 1.3; }
 
-.estado-activa {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-  padding: 3px 10px;
-  border-radius: 20px;
+.ods-card-footer {
+  padding: 8px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-ods-mini {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s;
 }
+.btn-ods-mini.view { background: #e0f2fe; color: #0369a1; }
+.btn-ods-mini.view:hover { background: #bae6fd; }
+.btn-ods-mini.del { flex: 0 0 auto; background: #fee2e2; color: #dc2626; padding: 6px 10px; }
+.btn-ods-mini.del:hover { background: #fecaca; }
+.btn-ods-mini.upload-hint { background: #f1f5f9; color: #475569; cursor: pointer; }
+.btn-ods-mini.upload-hint:hover { background: #e2e8f0; color: #1e293b; }
 
-/* Acciones */
-.actions-group {
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  padding: 20px;
 }
-
-.btn-action {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+.modal-box {
   background: #ffffff;
-  display: inline-flex;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+.modal-hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px;
+  color: #ffffff;
+}
+.modal-hdr h3 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 800; }
+.modal-hdr p { margin: 0; font-size: 0.8rem; opacity: 0.9; }
+.modal-close-btn { background: transparent; border: none; font-size: 1.6rem; color: #ffffff; cursor: pointer; line-height: 1; }
+.modal-content-scroll { padding: 20px 24px; overflow-y: auto; }
+.m-highlight-banner {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.2s ease;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 14px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
+.mhb-label { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+.mhb-val { font-size: 1.8rem; font-weight: 900; color: #1e293b; }
+.mhb-year { font-size: 1.4rem; font-weight: 800; color: #1b7a2b; }
+.m-sec-title { font-size: 0.92rem; font-weight: 800; color: #1e293b; margin: 0 0 12px; display: flex; align-items: center; gap: 6px; }
+.trend { font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+.trend.down { color: #16a34a; background: #dcfce7; }
+.trend.up { color: #dc2626; background: #fee2e2; }
+.trend.equal { color: #64748b; background: #f1f5f9; }
+.trend.base { color: #0284c7; background: #e0f2fe; }
+.modal-ftr { padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; }
+.btn-sga-blue { background: #0284c7; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
-.btn-action.view {
-  color: #0284c7;
-  border-color: #bae6fd;
+@media (max-width: 900px) {
+  .cap-form { grid-template-columns: 1fr; }
+  .fg.wide { grid-column: span 1; }
+  .cap-nav-tabs { flex-direction: column; }
 }
-.btn-action.view:hover {
-  background: #e0f2fe;
-}
-
-.btn-action.delete {
-  color: #e11d48;
-  border-color: #fecdd3;
-}
-.btn-action.delete:hover {
-  background: #ffe4e6;
-}
-
-.empty {
-  padding: 36px 20px;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.88rem;
-  font-weight: 500;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-.spin { display: inline-block; animation: spin 0.7s linear infinite; }
 </style>
