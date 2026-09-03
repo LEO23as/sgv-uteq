@@ -342,17 +342,42 @@
     [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].filter(num => !loteDetectado[num] && !listaOds.find(o => o.num === num && o.cargado))
   );
 
+  async function extraerFilasDeArchivo(f) {
+    if (f.name.endsWith('.json')) {
+      const txt = await f.text();
+      const parsed = JSON.parse(txt);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.data)) return parsed.data;
+        if (Array.isArray(parsed.items)) return parsed.items;
+        if (Array.isArray(parsed.serie_historica)) {
+          return parsed.serie_historica.map(s => ({
+            ...s,
+            indicator: parsed.nombre_indicador || parsed.codigo_indicador,
+            País__ESTANDAR: 'Ecuador',
+            Años__ESTANDAR: s.anio,
+            value: s.valor,
+            unit: parsed.unidad || '%'
+          }));
+        }
+        return [parsed];
+      }
+      return [];
+    } else {
+      const buffer = await f.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      return XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+    }
+  }
+
   async function onArchivoIndividualODS(odsNum, e) {
     const f = e.target.files?.[0];
     if (!f) return;
 
     try {
-      const buffer = await f.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
-
+      const rows = await extraerFilasDeArchivo(f);
       let parsed = procesarFilasODS(f.name, rows);
       if (!parsed) {
         // Asignar directamente al ODS del cuadro
@@ -408,12 +433,7 @@
 
     for (const f of files) {
       try {
-        const buffer = await f.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
-
+        const rows = await extraerFilasDeArchivo(f);
         const parsed = procesarFilasODS(f.name, rows);
         if (parsed) {
           const yaExiste = nuevoLote[parsed.ods_num];
@@ -727,7 +747,7 @@
               <input 
                 id="file-ods-{ods.num}" 
                 type="file" 
-                accept=".xlsx,.xls,.csv,.tsv,.txt,.ods" 
+                accept=".xlsx,.xls,.csv,.tsv,.json,.txt,.ods" 
                 onchange={(e) => onArchivoIndividualODS(ods.num, e)} 
                 class="file-hidden-input" />
 
