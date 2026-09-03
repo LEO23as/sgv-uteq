@@ -4,6 +4,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import Pagination from '$lib/Pagination.svelte';
+  import * as XLSX from 'xlsx';
 
   // ── ESTADO GENERAL Y PESTAÑAS ──────────────────────────────────────────
   let tabActiva = $state('inec'); // 'inec' | 'ods'
@@ -231,45 +232,35 @@
   // ═══════════════════════════════════════════════════════════════════════
 
   function detectarNumeroODS(nombreArchivo, contenidoTexto) {
-    const t = (nombreArchivo + ' ' + contenidoTexto.slice(0, 1500)).toLowerCase();
+    const t = (nombreArchivo + ' ' + contenidoTexto.slice(0, 2000)).toLowerCase();
     
     // Reglas de coincidencia por códigos CEPAL / ONU y palabras clave
-    if (t.includes('si_pov_day1') || t.includes('pobreza') || t.includes('ods_1') || t.includes('ods1') || t.includes('objetivo 1')) return 1;
-    if (t.includes('sn_itk_defc') || t.includes('subalimentacion') || t.includes('hambre') || t.includes('ag_prd_fies') || t.includes('ods_2') || t.includes('ods2') || t.includes('objetivo 2')) return 2;
-    if (t.includes('sh_') || t.includes('salud') || t.includes('mortalidad') || t.includes('vacunacion') || t.includes('ods_3') || t.includes('ods3') || t.includes('objetivo 3')) return 3;
-    if (t.includes('se_') || t.includes('educacion') || t.includes('alfabetizacion') || t.includes('escolaridad') || t.includes('ods_4') || t.includes('ods4') || t.includes('objetivo 4')) return 4;
-    if (t.includes('sg_') || t.includes('genero') || t.includes('mujeres') || t.includes('femicidio') || t.includes('ods_5') || t.includes('ods5') || t.includes('objetivo 5')) return 5;
-    if (t.includes('sh_h2o') || t.includes('agua') || t.includes('saneamiento') || t.includes('potable') || t.includes('ods_6') || t.includes('ods6') || t.includes('objetivo 6')) return 6;
-    if (t.includes('eg_') || t.includes('energia') || t.includes('electricidad') || t.includes('renovable') || t.includes('ods_7') || t.includes('ods7') || t.includes('objetivo 7')) return 7;
-    if (t.includes('sl_') || t.includes('empleo') || t.includes('trabajo') || t.includes('desempleo') || t.includes('pib') || t.includes('ods_8') || t.includes('ods8') || t.includes('objetivo 8')) return 8;
-    if (t.includes('nv_') || t.includes('industria') || t.includes('innovacion') || t.includes('investigacion') || t.includes('ods_9') || t.includes('ods9') || t.includes('objetivo 9')) return 9;
-    if (t.includes('gini') || t.includes('desigualdad') || t.includes('ingresos') || t.includes('ods_10') || t.includes('ods10') || t.includes('objetivo 10')) return 10;
-    if (t.includes('en_') || t.includes('ciudades') || t.includes('urban') || t.includes('asentamientos') || t.includes('ods_11') || t.includes('ods11') || t.includes('objetivo 11')) return 11;
-    if (t.includes('consumo') || t.includes('produccion') || t.includes('residuos') || t.includes('reciclaje') || t.includes('ods_12') || t.includes('ods12') || t.includes('objetivo 12')) return 12;
-    if (t.includes('clim') || t.includes('co2') || t.includes('emisiones') || t.includes('desastres') || t.includes('ods_13') || t.includes('ods13') || t.includes('objetivo 13')) return 13;
-    if (t.includes('mar') || t.includes('submarina') || t.includes('pesca') || t.includes('costas') || t.includes('ods_14') || t.includes('ods14') || t.includes('objetivo 14')) return 14;
-    if (t.includes('bosque') || t.includes('deforestacion') || t.includes('terrestre') || t.includes('biodiversidad') || t.includes('ods_15') || t.includes('ods15') || t.includes('objetivo 15')) return 15;
-    if (t.includes('paz') || t.includes('justicia') || t.includes('homicidio') || t.includes('instituciones') || t.includes('ods_16') || t.includes('ods16') || t.includes('objetivo 16')) return 16;
-    if (t.includes('alianza') || t.includes('cooperacion') || t.includes('asociaciones') || t.includes('ods_17') || t.includes('ods17') || t.includes('objetivo 17')) return 17;
+    if (t.includes('si_pov_day1') || t.includes('pobreza') || t.includes('ods_1') || t.includes('ods1') || t.includes('objetivo 1') || t.includes('goal 1') || t.includes('poverty')) return 1;
+    if (t.includes('sn_itk_defc') || t.includes('subalimentacion') || t.includes('hambre') || t.includes('ag_prd_fies') || t.includes('ods_2') || t.includes('ods2') || t.includes('objetivo 2') || t.includes('hunger')) return 2;
+    if (t.includes('sh_') || t.includes('salud') || t.includes('mortalidad') || t.includes('vacunacion') || t.includes('ods_3') || t.includes('ods3') || t.includes('objetivo 3') || t.includes('health')) return 3;
+    if (t.includes('se_') || t.includes('educacion') || t.includes('alfabetizacion') || t.includes('escolaridad') || t.includes('ods_4') || t.includes('ods4') || t.includes('objetivo 4') || t.includes('education')) return 4;
+    if (t.includes('sg_') || t.includes('genero') || t.includes('mujeres') || t.includes('femicidio') || t.includes('ods_5') || t.includes('ods5') || t.includes('objetivo 5') || t.includes('gender')) return 5;
+    if (t.includes('sh_h2o') || t.includes('agua') || t.includes('saneamiento') || t.includes('potable') || t.includes('ods_6') || t.includes('ods6') || t.includes('objetivo 6') || t.includes('water')) return 6;
+    if (t.includes('eg_') || t.includes('energia') || t.includes('electricidad') || t.includes('renovable') || t.includes('ods_7') || t.includes('ods7') || t.includes('objetivo 7') || t.includes('energy')) return 7;
+    if (t.includes('sl_') || t.includes('empleo') || t.includes('trabajo') || t.includes('desempleo') || t.includes('pib') || t.includes('ods_8') || t.includes('ods8') || t.includes('objetivo 8') || t.includes('decent work')) return 8;
+    if (t.includes('nv_') || t.includes('industria') || t.includes('innovacion') || t.includes('investigacion') || t.includes('ods_9') || t.includes('ods9') || t.includes('objetivo 9') || t.includes('industry')) return 9;
+    if (t.includes('gini') || t.includes('desigualdad') || t.includes('ingresos') || t.includes('ods_10') || t.includes('ods10') || t.includes('objetivo 10') || t.includes('inequality')) return 10;
+    if (t.includes('en_') || t.includes('ciudades') || t.includes('urban') || t.includes('asentamientos') || t.includes('ods_11') || t.includes('ods11') || t.includes('objetivo 11') || t.includes('cities')) return 11;
+    if (t.includes('consumo') || t.includes('produccion') || t.includes('residuos') || t.includes('reciclaje') || t.includes('ods_12') || t.includes('ods12') || t.includes('objetivo 12') || t.includes('consumption')) return 12;
+    if (t.includes('clim') || t.includes('co2') || t.includes('emisiones') || t.includes('desastres') || t.includes('ods_13') || t.includes('ods13') || t.includes('objetivo 13') || t.includes('climate')) return 13;
+    if (t.includes('mar') || t.includes('submarina') || t.includes('pesca') || t.includes('costas') || t.includes('ods_14') || t.includes('ods14') || t.includes('objetivo 14') || t.includes('ocean')) return 14;
+    if (t.includes('bosque') || t.includes('deforestacion') || t.includes('terrestre') || t.includes('biodiversidad') || t.includes('ods_15') || t.includes('ods15') || t.includes('objetivo 15') || t.includes('biodiversity')) return 15;
+    if (t.includes('paz') || t.includes('justicia') || t.includes('homicidio') || t.includes('instituciones') || t.includes('ods_16') || t.includes('ods16') || t.includes('objetivo 16') || t.includes('peace')) return 16;
+    if (t.includes('alianza') || t.includes('cooperacion') || t.includes('asociaciones') || t.includes('ods_17') || t.includes('ods17') || t.includes('objetivo 17') || t.includes('partnership')) return 17;
     
     return null;
   }
 
-  function procesarArchivoODSTexto(nombreArchivo, txt) {
-    const lines = txt.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) return null;
+  function procesarFilasODS(nombreArchivo, rows) {
+    if (!rows || !rows.length) return null;
 
-    const firstLine = lines[0];
-    const sep = firstLine.includes('\t') ? '\t' : (firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',');
-    const header = firstLine.split(sep).map(s => s.trim().toLowerCase().replace(/^["']|["']$/g, ''));
-    
-    const iInd = header.findIndex(h => h.includes('indicator') || h.includes('indicador'));
-    const iPais = header.findIndex(h => h.includes('país') || h.includes('pais') || h.includes('country'));
-    const iAnio = header.findIndex(h => h.includes('año') || h.includes('year') || h.includes('anios'));
-    const iVal = header.findIndex(h => h.includes('value') || h.includes('valor'));
-    const iUnit = header.findIndex(h => h.includes('unit') || h.includes('unidad'));
-
-    const odsNum = detectarNumeroODS(nombreArchivo, txt);
+    const firstRowsStr = JSON.stringify(rows.slice(0, 10));
+    const odsNum = detectarNumeroODS(nombreArchivo, firstRowsStr);
     if (!odsNum) return null;
 
     const odsInfo = CATALOGO_17_ODS.find(o => o.num === odsNum);
@@ -278,31 +269,41 @@
     let unidad = '%';
     const serieHistorica = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const c = line.split(sep).map(s => s.trim().replace(/^["']|["']$/g, ''));
-      
-      const pais = iPais >= 0 ? c[iPais] : 'Ecuador';
-      // Filtrar solo datos correspondientes a Ecuador
-      if (pais && !pais.toLowerCase().includes('ecuador')) continue;
+    for (const r of rows) {
+      // Normalizar nombres de columnas a minúsculas sin acentos ni espacios
+      const norm = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (!k) continue;
+        const kn = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s_]+/g, "");
+        norm[kn] = v;
+      }
 
-      const rawInd = iInd >= 0 ? c[iInd] : '';
-      if (rawInd && !nombreIndicador) {
-        nombreIndicador = rawInd;
-        // Extraer código (ej: SI_POV_DAY1 o SN_ITK_DEFC)
-        const matchCode = rawInd.match(/([A-Z0-9_]{4,})/);
+      // 1. Filtrar solo filas correspondientes a Ecuador
+      const paisVal = String(norm['paisestandar'] || norm['pais'] || norm['country'] || norm['location'] || norm['area'] || '');
+      if (paisVal && !paisVal.toLowerCase().includes('ecuador')) {
+        continue;
+      }
+
+      // 2. Extraer nombre de indicador
+      const indVal = String(norm['indicator'] || norm['indicador'] || norm['meta'] || norm['series'] || '');
+      if (indVal && !nombreIndicador) {
+        nombreIndicador = indVal;
+        const matchCode = indVal.match(/([A-Z0-9_]{4,})/);
         codigoIndicador = matchCode ? matchCode[1] : `ODS_${odsNum}`;
       }
 
-      if (iUnit >= 0 && c[iUnit] && unidad === '%') {
-        unidad = c[iUnit];
+      // 3. Extraer unidad
+      const unitVal = String(norm['unit'] || norm['unidad'] || norm['measure'] || '');
+      if (unitVal && unidad === '%') {
+        unidad = unitVal;
       }
 
-      const anioStr = iAnio >= 0 ? c[iAnio] : '';
-      const anio = parseInt(anioStr);
-      const valStr = iVal >= 0 ? c[iVal]?.replace(',', '.') : '';
-      const val = parseFloat(valStr);
+      // 4. Extraer año y valor
+      const anioRaw = String(norm['anosestandar'] || norm['aniosestandar'] || norm['ano'] || norm['anio'] || norm['year'] || norm['timeperiod'] || '');
+      const anio = parseInt(anioRaw);
+      
+      const valRaw = String(norm['value'] || norm['valor'] || norm['dato'] || norm['val'] || '').replace(',', '.');
+      const val = parseFloat(valRaw);
 
       if (!isNaN(anio) && !isNaN(val)) {
         serieHistorica.push({ anio, valor: val });
@@ -311,9 +312,16 @@
 
     if (!serieHistorica.length) return null;
 
-    // Ordenar de menor a mayor año
-    serieHistorica.sort((a, b) => a.anio - b.anio);
-    const masReciente = serieHistorica[serieHistorica.length - 1];
+    // Deduplicar años y ordenar ascendentemente
+    const mapaAnios = new Map();
+    for (const item of serieHistorica) {
+      mapaAnios.set(item.anio, item.valor);
+    }
+    const serieLimpia = Array.from(mapaAnios.entries())
+      .map(([anio, valor]) => ({ anio, valor }))
+      .sort((a, b) => a.anio - b.anio);
+
+    const masReciente = serieLimpia[serieLimpia.length - 1];
 
     return {
       ods_num: odsNum,
@@ -324,7 +332,7 @@
       valor_reciente: masReciente.valor,
       unidad: unidad || '%',
       fuente: 'CEPAL / ONU - Agenda 2030 Ecuador',
-      serie_historica: serieHistorica,
+      serie_historica: serieLimpia,
       nombre_archivo: nombreArchivo,
     };
   }
@@ -338,15 +346,19 @@
     const nuevoLote = { ...loteDetectado };
 
     for (const f of files) {
-      const reader = new FileReader();
-      const txt = await new Promise((res) => {
-        reader.onload = () => res(reader.result);
-        reader.readAsText(f, 'utf-8');
-      });
+      try {
+        const buffer = await f.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
 
-      const parsed = procesarArchivoODSTexto(f.name, txt);
-      if (parsed) {
-        nuevoLote[parsed.ods_num] = parsed;
+        const parsed = procesarFilasODS(f.name, rows);
+        if (parsed) {
+          nuevoLote[parsed.ods_num] = parsed;
+        }
+      } catch (err) {
+        console.error('Error leyendo archivo ODS:', f.name, err);
       }
       archivosProcesados++;
     }
@@ -619,17 +631,17 @@
           id="ods-bulk-input" 
           type="file" 
           multiple 
-          accept=".csv,.tsv,.txt" 
+          accept=".xlsx,.xls,.csv,.tsv,.txt,.ods" 
           onchange={onArchivosLoteODS} 
           class="file-hidden-input" />
         <label for="ods-bulk-input" class="ods-dropzone-box">
-          <div class="odz-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+          <div class="odz-icon"><i class="bi bi-file-earmark-excel-fill" style="color:#16a34a;"></i></div>
           <div class="odz-text">
-            <strong>Haz clic aquí o arrastra tus archivos de ODS en bloque</strong>
-            <p>Puedes seleccionar de 1 a 17 archivos a la vez. Detección instantánea de indicadores.</p>
+            <strong>Haz clic aquí o arrastra tus archivos Excel (.xlsx) o CSV en bloque</strong>
+            <p>Puedes soltar de 1 a 17 archivos a la vez. El sistema analiza automáticamente cada archivo y extrae los datos de Ecuador.</p>
           </div>
-          <div class="odz-btn">
-            <i class="bi bi-folder-plus"></i> Seleccionar archivos en lote
+          <div class="odz-btn" style="background:#16a34a;">
+            <i class="bi bi-folder-plus"></i> Seleccionar archivos Excel / CSV
           </div>
         </label>
       </div>
@@ -838,12 +850,15 @@
 /* ── BODY ── */
 .cap-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 24px; }
 
-/* ── PESTAÑAS SUBMÓDULO ── */
+/* ── PESTAÑAS SUBMÓDULO PERFECTAMENTE CENTRADAS ── */
 .cap-nav-tabs {
   display: flex;
-  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
   border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
 }
 .nav-tab-btn {
   display: flex;
