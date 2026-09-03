@@ -3418,7 +3418,7 @@ def api_auditoria_listar(request):
             'ip_origen': b.ip_origen or '127.0.0.1',
             'hash_anterior': b.hash_anterior,
             'hash_actual': b.hash_actual,
-            'creado_en': b.creado_en.strftime('%Y-%m-%d %H:%M:%S') if b.creado_en else '',
+            'creado_en': timezone.localtime(b.creado_en).strftime('%Y-%m-%d %H:%M:%S') if b.creado_en else '',
             'detalles': json.loads(b.detalles_json) if b.detalles_json else {},
         })
     return JsonResponse({
