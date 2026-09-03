@@ -180,6 +180,8 @@
     periodosList.filter(p => (p.codigo || p.nombre || '').toLowerCase().includes(searchPeriod.toLowerCase()))
   );
 
+  let estadosAbierto = $state(false);
+
   const ESTADOS = [
     { val:'EN_EJECUCION', label:'En ejecución', color:'#1b7505' },
     { val:'PROPUESTO',    label:'Propuesto',    color:'#dba112' },
@@ -635,17 +637,22 @@
           </a>
         </div>
 
-        <!-- ESTADOS: solo en mapa, debajo del menú -->
+        <!-- ESTADOS: solo en mapa, debajo del menú (Acordeón colapsable) -->
         {#if isMapa}
         <div class="estados-card">
-          <p class="sc-label">ESTADOS</p>
-          <div class="sc-pills">
-            {#each ESTADOS as e}
-              <span class="sc-pill" style="--c:{e.color}">
-                <span class="sc-dot"></span>{e.label}
-              </span>
-            {/each}
-          </div>
+          <button type="button" class="sc-header-btn" onclick={() => estadosAbierto = !estadosAbierto}>
+            <span class="sc-label"><i class="bi bi-palette-fill" style="color:var(--verde);margin-right:4px;"></i> ESTADOS ({ESTADOS.length})</span>
+            <i class="bi {estadosAbierto ? 'bi-chevron-up' : 'bi-chevron-down'} sc-chev"></i>
+          </button>
+          {#if estadosAbierto}
+            <div class="sc-pills">
+              {#each ESTADOS as e}
+                <span class="sc-pill" style="--c:{e.color}">
+                  <span class="sc-dot"></span>{e.label}
+                </span>
+              {/each}
+            </div>
+          {/if}
         </div>
         {/if}
 
@@ -1379,19 +1386,45 @@
   border-radius: 14px;
   box-shadow: 0 3px 14px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
   border: 1px solid #ebebeb;
-  padding: 12px 14px 10px;
+  padding: 8px 12px;
+}
+
+.sc-header-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 4px 2px;
+  font-family: inherit;
 }
 
 .sc-label {
-  font-size: .58rem;
+  font-size: .62rem;
   font-weight: 800;
-  color: #bbb;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: .1em;
-  margin: 0 0 8px;
+  letter-spacing: .08em;
+  margin: 0;
+  display: flex;
+  align-items: center;
 }
 
-.sc-pills { display: flex; flex-direction: column; gap: 5px; }
+.sc-chev {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.sc-pills { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 5px; 
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
 
 .sc-pill {
   display: inline-flex;

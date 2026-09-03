@@ -679,10 +679,9 @@
 <div class="mapa-layout">
   <div class="mapa-right">
 
-    <!-- FILTROS -->
+    <!-- FILTROS REESTRUCTURADOS -->
     <div class="filtros-bar">
-      <div class="filtros-inner">
-
+      <div class="filtros-grid-top">
         <select class="fsel" bind:value={filtros.facultad} onchange={() => { filtros.carrera=''; filtrar(); }}>
           <option value="">Facultad (Todas)</option>
           {#each facultades as f}
@@ -704,27 +703,29 @@
           {/each}
         </select>
 
-        <select class="fsel" bind:value={filtros.estado} onchange={filtrar}>
+        <select class="fsel fsel-sm" bind:value={filtros.estado} onchange={filtrar}>
           <option value="">Estado (Todos)</option>
           {#each ESTADOS as e}
             <option value={e.val}>{e.label}</option>
           {/each}
         </select>
 
-        <select class="fsel fsel-sm" bind:value={filtros.anio} onchange={filtrar}>
+        <select class="fsel fsel-xs" bind:value={filtros.anio} onchange={filtrar}>
           <option value="">Año</option>
           {#each anios as a}
             <option value={a}>{a}</option>
           {/each}
         </select>
+      </div>
 
+      <div class="filtros-grid-bot">
         <div class="buscar-wrap">
           <i class="bi bi-search buscar-ico"></i>
           <input
             class="fbuscar"
             bind:value={filtros.buscar}
             onkeydown={(e) => { if (e.key === 'Enter') filtrar(); }}
-            placeholder="Buscar proyecto, cantón..."
+            placeholder="Buscar proyecto, cantón, responsable..."
           />
         </div>
 
@@ -732,22 +733,15 @@
           <i class="bi bi-geo-alt-fill"></i> Quevedo
         </button>
 
-        <label class="nbi-switch" title="OFF: solo cantones visibles · ON: toda la capa">
-          <input type="checkbox" checked={nbiCargaTodo} onchange={toggleNbiCargaTodo} />
-          <span class="ns-slider"></span>
-          <span class="ns-label">Toda la capa</span>
-        </label>
-
         {#if nbiAviso}
           <span class="nbi-aviso">{nbiAviso}</span>
         {/if}
 
         <div class="factions">
-          <span class="total-badge"><i class="bi bi-pin-map-fill"></i> {total} proy.</span>
-          <button class="btn-limpiar" onclick={limpiar}>Limpiar</button>
+          <span class="total-badge"><i class="bi bi-pin-map-fill"></i> {total} proyectos</span>
+          <button class="btn-limpiar" onclick={limpiar} title="Restablecer filtros">Limpiar</button>
           <button class="btn-filtrar" onclick={filtrar}><i class="bi bi-funnel-fill"></i> Filtrar</button>
         </div>
-
       </div>
 
       {#if filtros.facultad && facultades.find(f => String(f.id_facultad) === String(filtros.facultad) && (f.codigo === 'FCC' || f.nombre?.includes('Computación')))}
@@ -1277,71 +1271,174 @@
   background: #fff;
   overflow: hidden;
 }
-/* ── FILTROS rediseñados ── */
+/* ── FILTROS rediseñados y balanceados ── */
 .filtros-bar {
-  background: #fff;
-  border-bottom: 1px solid var(--borde);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   padding: 10px 14px;
   border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.filtros-inner {
+
+.filtros-grid-top {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.filtros-grid-top .fsel {
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+
+.filtros-grid-top .fsel-sm {
+  flex: 0 1 150px;
+  min-width: 120px;
+}
+
+.filtros-grid-top .fsel-xs {
+  flex: 0 0 90px;
+  min-width: 80px;
+}
+
+.filtros-grid-bot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .fsel {
-  border: 1.5px solid var(--borde);
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: .8rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
   font-family: inherit;
   font-weight: 600;
-  color: #444;
-  background: #fafafa;
+  color: #334155;
+  background: #f8fafc;
   outline: none;
   cursor: pointer;
-  transition: border-color .2s, background .2s;
+  transition: border-color .15s, background .15s;
   appearance: auto;
-  min-width: 130px;
 }
-.fsel:focus, .fsel:hover { border-color: var(--verde); background: #fff; }
-.fsel-sm { min-width: 90px; }
 
-/* Buscador con ícono */
+.fsel:focus, .fsel:hover { 
+  border-color: var(--verde, #16a34a); 
+  background: #ffffff; 
+}
+
 .buscar-wrap {
-  display: flex; align-items: center; gap: 7px;
-  border: 1.5px solid var(--borde); border-radius: 20px;
-  padding: 6px 14px; background: #fafafa;
-  transition: border-color .2s;
-}
-.buscar-wrap:focus-within { border-color: var(--verde); background: #fff; }
-.buscar-ico { color: #9999bb; font-size: .85rem; flex-shrink: 0; }
-.fbuscar {
-  border: none; background: transparent; outline: none;
-  font-size: .8rem; font-family: inherit; font-weight: 600;
-  color: #444; width: 140px;
+  display: flex; 
+  align-items: center; 
+  gap: 7px;
+  border: 1.5px solid #cbd5e1; 
+  border-radius: 10px;
+  padding: 5px 12px; 
+  background: #f8fafc;
+  flex: 1 1 240px;
+  min-width: 180px;
+  transition: border-color .15s;
 }
 
-.factions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.buscar-wrap:focus-within { 
+  border-color: var(--verde, #16a34a); 
+  background: #ffffff; 
+}
+
+.buscar-ico { color: #94a3b8; font-size: .85rem; flex-shrink: 0; }
+.fbuscar {
+  border: none; 
+  background: transparent; 
+  outline: none;
+  font-size: .78rem; 
+  font-family: inherit; 
+  font-weight: 600;
+  color: #1e293b; 
+  width: 100%;
+}
+
+.btn-quevedo {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #15803d;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-quevedo:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.factions { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  margin-left: auto; 
+}
+
 .total-badge {
-  background: var(--verde-claro); color: var(--verde);
-  font-size: .75rem; font-weight: 800;
-  padding: 4px 12px; border-radius: 20px; border: 1px solid #c3e6b0;
+  background: #f0fdf4; 
+  color: #16a34a;
+  font-size: .75rem; 
+  font-weight: 800;
+  padding: 5px 12px; 
+  border-radius: 8px; 
+  border: 1px solid #bbf7d0;
   white-space: nowrap;
 }
+
 .btn-limpiar {
-  background: #fff; border: 1.5px solid var(--borde); border-radius: 20px;
-  padding: 6px 16px; font-size: .8rem; font-weight: 700; color: #555;
-  cursor: pointer; transition: border-color .2s; font-family: inherit;
+  background: #ffffff; 
+  border: 1.5px solid #cbd5e1; 
+  border-radius: 10px;
+  padding: 5px 14px; 
+  font-size: .78rem; 
+  font-weight: 700; 
+  color: #64748b;
+  cursor: pointer; 
+  transition: all .15s; 
+  font-family: inherit;
 }
-.btn-limpiar:hover { border-color: #aaa; }
+
+.btn-limpiar:hover { 
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a; 
+}
+
 .btn-filtrar {
-  background: var(--verde); border: none; border-radius: 20px;
-  padding: 7px 20px; font-size: .8rem; font-weight: 800;
-  color: #fff; cursor: pointer; transition: background .2s; font-family: inherit;
+  background: var(--verde, #16a34a); 
+  border: none; 
+  border-radius: 10px;
+  padding: 6px 18px; 
+  font-size: .78rem; 
+  font-weight: 800;
+  color: #ffffff; 
+  cursor: pointer; 
+  transition: background .15s; 
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
 }
-.btn-filtrar:hover { background: #155e04; }
+
+.btn-filtrar:hover { 
+  background: #15803d; 
+}
 
 .fcc-mapa-banner {
   background: #f0f9ff;
@@ -1998,14 +2095,14 @@
 .modal-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px 14px; }
 @media (max-width:520px) { .modal-grid { grid-template-columns:1fr; } }
 
-/* ── HUD CARD FLOTANTE DE ODS EN EL MAPA ── */
+/* ── HUD CARD FLOTANTE DE ODS EN EL MAPA (POSICIONADO BAJO EL SELECTOR DE CAPA) ── */
 .map-ods-floating-card {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 68px;
+  right: 18px;
   z-index: 999;
   width: 320px;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 36px);
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
