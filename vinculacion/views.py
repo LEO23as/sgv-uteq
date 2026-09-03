@@ -509,6 +509,18 @@ def _error_amigable(e):
         return 'El alcance del proyecto no es válido.'
     if 'duplicate key' in s and 'codigo' in s:
         return 'Ya existe un proyecto con ese código.'
+    if 'duplicate key' in s and 'ruc' in s:
+        return 'Ya existe una entidad con ese número de RUC.'
+    if 'expected a number but got' in s or 'invalid literal for int()' in s:
+        return 'Uno de los campos de selección requeridos no tiene un valor numérico válido.'
+    if 'matching query does not exist' in s:
+        return 'El registro relacionado seleccionado no existe o no es válido para este período.'
+    if 'violates foreign key constraint' in s:
+        return 'No se puede procesar el registro porque depende de un elemento relacionado que no existe.'
+    if 'invalid input syntax for type numeric' in s or 'Decimal.InvalidOperation' in s:
+        return 'Uno de los valores numéricos ingresados (presupuesto o coordenadas) tiene un formato no válido.'
+    if 'value too long' in s:
+        return 'Uno de los textos ingresados excede la longitud máxima permitida en el sistema.'
     return s
 
 
@@ -1921,17 +1933,27 @@ def api_entidades_post(request):
     except Exception:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     try:
-        tipo = TipoEntidad.objects.get(id_tipo=data['id_tipo'])
+        nombre = data.get('nombre', '').strip()
+        if not nombre:
+            return JsonResponse({'error': 'El nombre o razón social de la entidad es obligatorio'}, status=400)
+        id_tipo = data.get('id_tipo')
+        if not id_tipo:
+            return JsonResponse({'error': 'Debe seleccionar el tipo de entidad cooperante'}, status=400)
+        try:
+            tipo = TipoEntidad.objects.get(id_tipo=id_tipo)
+        except (TipoEntidad.DoesNotExist, ValueError):
+            return JsonResponse({'error': 'El tipo de entidad seleccionado no es válido'}, status=400)
+
         ruc = data.get('ruc', '').strip() or None
         if ruc and not validar_ruc_ecuador(ruc):
             return JsonResponse({'error': 'El RUC ingresado no es válido para Ecuador (debe tener 13 dígitos y terminar en 001)'}, status=400)
         if ruc and EntidadCooperante.objects.filter(ruc=ruc).exists():
             return JsonResponse({'error': f'Ya existe una entidad con el RUC {ruc}'}, status=400)
         rep = (data.get('representante_legal') or '').strip()
-        if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', rep):
-            return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+        if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', rep):
+            return JsonResponse({'error': 'El nombre del representante legal contiene caracteres inválidos'}, status=400)
         entidad = EntidadCooperante.objects.create(
-            nombre=data['nombre'],
+            nombre=nombre,
             nombre_corto=data.get('nombre_corto', '') or None,
             id_tipo=tipo,
             ruc=ruc,
@@ -1982,8 +2004,8 @@ def api_entidad_detail(request, id):
                 return JsonResponse({'error': f'Ya existe otra entidad con el RUC {ruc}'}, status=400)
         if 'representante_legal' in data and data.get('representante_legal'):
             rep = data.get('representante_legal', '').strip()
-            if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', rep):
-                return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+            if rep and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', rep):
+                return JsonResponse({'error': 'El nombre del representante legal contiene caracteres inválidos'}, status=400)
         for field in ['nombre', 'nombre_corto', 'ruc', 'representante_legal', 'cargo_representante',
                       'telefono', 'correo', 'pagina_web', 'provincia', 'canton', 'parroquia',
                       'direccion', 'sector', 'observaciones']:
@@ -2029,16 +2051,37 @@ def api_proyecto_create(request):
         with transaction.atomic():
             codigo = request.POST.get('codigo', '').strip()
             nombre = request.POST.get('nombre', '').strip()
+            id_facultad = request.POST.get('id_facultad', '').strip()
+            id_carrera = request.POST.get('id_carrera', '').strip()
+            id_periodo_inicio = request.POST.get('id_periodo_inicio', '').strip()
+
             if not codigo or not nombre:
-                return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
+                return JsonResponse({'error': 'El código y el nombre del proyecto son obligatorios'}, status=400)
+            if not id_facultad or not id_carrera or not id_periodo_inicio:
+                return JsonResponse({'error': 'Facultad, carrera y período académico de inicio son obligatorios.'}, status=400)
+
             if Proyecto.objects.filter(codigo=codigo).exists():
-                return JsonResponse({'error': f'Ya existe un proyecto con el código {codigo}'}, status=400)
+                return JsonResponse({'error': f'Ya existe un proyecto registrado con el código {codigo}'}, status=400)
+
+            try:
+                facultad_obj = Facultad.objects.get(id_facultad=id_facultad)
+            except (Facultad.DoesNotExist, ValueError):
+                return JsonResponse({'error': 'La facultad seleccionada no es válida o no existe.'}, status=400)
+            try:
+                carrera_obj = Carrera.objects.get(id_carrera=id_carrera)
+            except (Carrera.DoesNotExist, ValueError):
+                return JsonResponse({'error': 'La carrera seleccionada no es válida o no existe.'}, status=400)
+            try:
+                periodo_obj = PeriodoAcademico.objects.get(id_periodo=id_periodo_inicio)
+            except (PeriodoAcademico.DoesNotExist, ValueError):
+                return JsonResponse({'error': 'El período académico de inicio seleccionado no es válido.'}, status=400)
 
             fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
             fecha_fin = request.POST.get('fecha_fin_planificada', '').strip() or None
             presupuesto = request.POST.get('presupuesto_planificado', '').strip()
             presupuesto = presupuesto if presupuesto != '' else None
             director_nombre = request.POST.get('director_nombre', '').strip() or None
+            director_correo = request.POST.get('director_correo', '').strip() or None
 
             # Validar fechas
             if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
@@ -2057,17 +2100,36 @@ def api_proyecto_create(request):
             if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', director_nombre):
                 return JsonResponse({'error': 'El nombre del director contiene caracteres inválidos'}, status=400)
 
+            # Validar correo del director si fue ingresado
+            if director_correo and not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', director_correo):
+                return JsonResponse({'error': 'El correo del director no tiene un formato válido'}, status=400)
+
             lat = request.POST.get('latitud', '').strip() or None
             lng = request.POST.get('longitud', '').strip() or None
+            if lat:
+                try:
+                    lat_num = float(lat)
+                    if not (-90 <= lat_num <= 90):
+                        return JsonResponse({'error': 'La latitud debe estar entre -90 y 90 grados'}, status=400)
+                except ValueError:
+                    return JsonResponse({'error': 'La latitud debe ser un valor decimal válido'}, status=400)
+            if lng:
+                try:
+                    lng_num = float(lng)
+                    if not (-180 <= lng_num <= 180):
+                        return JsonResponse({'error': 'La longitud debe estar entre -180 y 180 grados'}, status=400)
+                except ValueError:
+                    return JsonResponse({'error': 'La longitud debe ser un valor decimal válido'}, status=400)
+
             # nombre_corto se autogenera del título (se quitó como campo redundante)
             nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
             proyecto = Proyecto.objects.create(
                 codigo=codigo,
                 nombre=nombre,
                 nombre_corto=nombre_corto,
-                id_facultad=Facultad.objects.get(id_facultad=request.POST['id_facultad']),
-                id_carrera=Carrera.objects.get(id_carrera=request.POST['id_carrera']),
-                id_periodo_inicio=PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio']),
+                id_facultad=facultad_obj,
+                id_carrera=carrera_obj,
+                id_periodo_inicio=periodo_obj,
                 estado=request.POST.get('estado', 'EN_EJECUCION'),
                 programa=request.POST.get('programa', '').strip() or None,
                 linea_vinculacion=request.POST.get('linea_vinculacion', '').strip() or None,
@@ -2331,16 +2393,37 @@ def api_proyecto_update(request, id):
             with transaction.atomic():
                 codigo = request.POST.get('codigo', '').strip()
                 nombre = request.POST.get('nombre', '').strip()
+                id_facultad = request.POST.get('id_facultad', '').strip()
+                id_carrera = request.POST.get('id_carrera', '').strip()
+                id_periodo_inicio = request.POST.get('id_periodo_inicio', '').strip()
+
                 if not codigo or not nombre:
-                    return JsonResponse({'error': 'Código y nombre son obligatorios'}, status=400)
+                    return JsonResponse({'error': 'El código y el nombre del proyecto son obligatorios'}, status=400)
+                if not id_facultad or not id_carrera or not id_periodo_inicio:
+                    return JsonResponse({'error': 'Facultad, carrera y período académico de inicio son obligatorios.'}, status=400)
+
                 if Proyecto.objects.filter(codigo=codigo).exclude(id_proyecto=id).exists():
-                    return JsonResponse({'error': f'Ya existe otro proyecto con el código {codigo}'}, status=400)
+                    return JsonResponse({'error': f'Ya existe otro proyecto registrado con el código {codigo}'}, status=400)
+
+                try:
+                    facultad_obj = Facultad.objects.get(id_facultad=id_facultad)
+                except (Facultad.DoesNotExist, ValueError):
+                    return JsonResponse({'error': 'La facultad seleccionada no es válida o no existe.'}, status=400)
+                try:
+                    carrera_obj = Carrera.objects.get(id_carrera=id_carrera)
+                except (Carrera.DoesNotExist, ValueError):
+                    return JsonResponse({'error': 'La carrera seleccionada no es válida o no existe.'}, status=400)
+                try:
+                    periodo_obj = PeriodoAcademico.objects.get(id_periodo=id_periodo_inicio)
+                except (PeriodoAcademico.DoesNotExist, ValueError):
+                    return JsonResponse({'error': 'El período académico de inicio seleccionado no es válido.'}, status=400)
 
                 fecha_inicio = request.POST.get('fecha_inicio', '').strip() or None
                 fecha_fin = request.POST.get('fecha_fin_planificada', '').strip() or None
                 presupuesto = request.POST.get('presupuesto_planificado', '').strip()
                 presupuesto = presupuesto if presupuesto != '' else None
                 director_nombre = request.POST.get('director_nombre', '').strip() or None
+                director_correo = request.POST.get('director_correo', '').strip() or None
 
                 # Validar fechas
                 if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
@@ -2359,12 +2442,16 @@ def api_proyecto_update(request, id):
                 if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', director_nombre):
                     return JsonResponse({'error': 'El nombre del director contiene caracteres inválidos'}, status=400)
 
+                # Validar correo del director si fue ingresado
+                if director_correo and not re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', director_correo):
+                    return JsonResponse({'error': 'El correo del director no tiene un formato válido'}, status=400)
+
                 proyecto.codigo = codigo
                 proyecto.nombre = nombre
                 proyecto.nombre_corto = request.POST.get('nombre_corto', '').strip() or (nombre[:120] if nombre else None)
-                proyecto.id_facultad = Facultad.objects.get(id_facultad=request.POST['id_facultad'])
-                proyecto.id_carrera = Carrera.objects.get(id_carrera=request.POST['id_carrera'])
-                proyecto.id_periodo_inicio = PeriodoAcademico.objects.get(id_periodo=request.POST['id_periodo_inicio'])
+                proyecto.id_facultad = facultad_obj
+                proyecto.id_carrera = carrera_obj
+                proyecto.id_periodo_inicio = periodo_obj
                 proyecto.estado = request.POST.get('estado', proyecto.estado)
                 proyecto.director_nombre = director_nombre
                 proyecto.director_correo = request.POST.get('director_correo', '').strip() or None
@@ -2384,10 +2471,24 @@ def api_proyecto_update(request, id):
                 proyecto.observaciones = request.POST.get('observaciones', '').strip() or None
                 proyecto.presupuesto_planificado = presupuesto
                 proyecto.terminos_negociacion = request.POST.get('terminos_negociacion', '').strip() or None
-                lat = request.POST.get('latitud', '').strip()
-                lng = request.POST.get('longitud', '').strip()
-                proyecto.latitud = lat or None
-                proyecto.longitud = lng or None
+                lat = request.POST.get('latitud', '').strip() or None
+                lng = request.POST.get('longitud', '').strip() or None
+                if lat:
+                    try:
+                        lat_num = float(lat)
+                        if not (-90 <= lat_num <= 90):
+                            return JsonResponse({'error': 'La latitud debe estar entre -90 y 90 grados'}, status=400)
+                    except ValueError:
+                        return JsonResponse({'error': 'La latitud debe ser un valor decimal válido'}, status=400)
+                if lng:
+                    try:
+                        lng_num = float(lng)
+                        if not (-180 <= lng_num <= 180):
+                            return JsonResponse({'error': 'La longitud debe estar entre -180 y 180 grados'}, status=400)
+                    except ValueError:
+                        return JsonResponse({'error': 'La longitud debe ser un valor decimal válido'}, status=400)
+                proyecto.latitud = lat
+                proyecto.longitud = lng
                 proyecto.actualizado_en = timezone.now()
                 proyecto.save()
                 # Multi-ubicación: reemplazar el conjunto de puntos y reflejar el principal
@@ -2478,14 +2579,35 @@ def api_convenios_post(request):
     except Exception:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
     try:
+        if not data.get('id_proyecto'):
+            return JsonResponse({'error': 'Debe seleccionar el proyecto al que pertenece el convenio'}, status=400)
+        if not data.get('id_entidad'):
+            return JsonResponse({'error': 'Debe seleccionar la entidad cooperante del convenio'}, status=400)
+
+        try:
+            proy_obj = Proyecto.objects.get(pk=data['id_proyecto'])
+        except (Proyecto.DoesNotExist, ValueError):
+            return JsonResponse({'error': 'El proyecto seleccionado no existe o no es válido'}, status=400)
+        try:
+            entidad_obj = EntidadCooperante.objects.get(pk=data['id_entidad'])
+        except (EntidadCooperante.DoesNotExist, ValueError):
+            return JsonResponse({'error': 'La entidad cooperante seleccionada no existe o no es válida'}, status=400)
+
+        periodo_obj = None
+        if data.get('id_periodo'):
+            try:
+                periodo_obj = PeriodoAcademico.objects.get(pk=data['id_periodo'])
+            except (PeriodoAcademico.DoesNotExist, ValueError):
+                return JsonResponse({'error': 'El período académico seleccionado no es válido'}, status=400)
+
         fecha_inicio = data.get('fecha_inicio') or None
         fecha_fin = data.get('fecha_fin') or None
         if fecha_inicio and fecha_fin and str(fecha_fin) < str(fecha_inicio):
             return JsonResponse({'error': 'La fecha de fin no puede ser anterior a la fecha de inicio'}, status=400)
         convenio = Convenio.objects.create(
-            id_proyecto=Proyecto.objects.get(pk=data['id_proyecto']),
-            id_entidad=EntidadCooperante.objects.get(pk=data['id_entidad']),
-            id_periodo=PeriodoAcademico.objects.get(pk=data['id_periodo']) if data.get('id_periodo') else None,
+            id_proyecto=proy_obj,
+            id_entidad=entidad_obj,
+            id_periodo=periodo_obj,
             numero_memorando=data.get('numero_memorando', '') or None,
             fecha_firma=data.get('fecha_firma') or None,
             fecha_inicio=fecha_inicio,
