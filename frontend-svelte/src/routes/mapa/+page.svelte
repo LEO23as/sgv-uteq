@@ -247,11 +247,19 @@
       }
 
       const data = await fetchAPI('/api/mapa/proyectos/?' + params.toString());
+      proyectosGeoJSON = data;
       total = data.features?.length ?? 0;
 
       markersLayer.clearLayers();
       if (redesLayer) redesLayer.clearLayers();
       proyectoRedExtendidaId = null;
+
+      if (get(capaODSActiva)) {
+        cargarCantonesODS();
+      } else if (odsPolygonsLayer && map) {
+        map.removeLayer(odsPolygonsLayer);
+        odsPolygonsLayer = null;
+      }
 
       (data.features || []).forEach(f => {
       const [lng, lat] = f.geometry.coordinates;
@@ -336,6 +344,100 @@
     } finally {
       cargandoProyectos = false;
     }
+  }
+
+  // ── Capas Territoriales ODS ──────────────────────────────────
+  let proyectosGeoJSON = $state(null);
+  let odsPolygonsLayer = null;
+
+  function normalizarNombreCanton(s) {
+    if (!s) return '';
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+
+  async function cargarCantonesODS() {
+    const L = window._L;
+    if (!map) return;
+    try {
+      if (!cantonesGeo) {
+        const res = await fetch('/geo/cantones_ec.geojson');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        cantonesGeo = await res.json();
+      }
+      renderODSPolygonsLayer();
+    } catch (e) {
+      console.error('[ODS Layer]', e);
+    }
+  }
+
+  function renderODSPolygonsLayer() {
+    const L = window._L;
+    if (!map || !cantonesGeo) return;
+    if (odsPolygonsLayer) { map.removeLayer(odsPolygonsLayer); odsPolygonsLayer = null; }
+    if (!$capaODSActiva) return;
+
+    const odsActivo = infoOdsActivo;
+    const colorODS = odsActivo?.color || '#1b7505';
+
+    // Contar proyectos por cantón
+    const cantonesCount = {};
+    (proyectosGeoJSON?.features || []).forEach(f => {
+      const p = f.properties || {};
+      const ubiList = p.ubicaciones || [{ canton: p.canton, provincia: p.provincia }];
+      ubiList.forEach(u => {
+        const cNorm = normalizarNombreCanton(u.canton || p.canton);
+        if (cNorm) {
+          cantonesCount[cNorm] = (cantonesCount[cNorm] || 0) + 1;
+        }
+      });
+    });
+
+    const feats = filtrarFeaturesPorVista(L);
+    odsPolygonsLayer = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+      style: (feature) => {
+        const p = feature.properties || {};
+        const cNorm = normalizarNombreCanton(p.canton || p.name);
+        const count = cantonesCount[cNorm] || 0;
+        const tieneProy = count > 0;
+        return {
+          weight: tieneProy ? 1.5 : 0.5,
+          opacity: tieneProy ? 0.9 : 0.35,
+          color: tieneProy ? colorODS : '#94a3b8',
+          fillOpacity: tieneProy ? Math.min(0.28 + (count * 0.12), 0.75) : 0.04,
+          fillColor: tieneProy ? colorODS : '#cbd5e1',
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const p = feature.properties || {};
+        const nombre = p.canton || p.name || 'Cantón';
+        const prov = p.province || p.provincia || '';
+        const cNorm = normalizarNombreCanton(nombre);
+        const count = cantonesCount[cNorm] || 0;
+
+        let metaInfo = '';
+        if (odsActivo) {
+          metaInfo = `<div style="margin-top:4px;border-top:1px solid rgba(0,0,0,0.1);padding-top:4px;">
+            <b style="color:${colorODS}">ODS ${odsActivo.num}: ${odsActivo.nombre}</b><br>
+            <span style="font-size:0.75rem;color:#475569"><b>Indicador nacional:</b> ${odsActivo.valor_reciente ?? '—'} ${odsActivo.unidad || ''} (${odsActivo.anio_reciente || 'Reciente'})</span>
+          </div>`;
+        }
+
+        layer.bindTooltip(
+          `<b>Cantón:</b> ${nombre}${prov ? ` (${prov})` : ''}<br>` +
+          `<span style="color:#0f172a;font-weight:700;">📍 Proyectos UTEQ:</span> ${count > 0 ? `<strong>${count}</strong> proyectos activos` : '<i>Sin proyectos en esta meta</i>'}` +
+          metaInfo,
+          { sticky: true, direction: 'top' }
+        );
+
+        layer.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          map.flyToBounds(layer.getBounds(), { padding: [40, 40], maxZoom: 13, duration: 1.0 });
+        });
+      }
+    }).addTo(map);
+
+    if (markersLayer) markersLayer.bringToFront();
+    if (redesLayer) redesLayer.bringToFront();
   }
 
   // ── Capa NBI/INEC ───────────────────────────────────────────
@@ -519,12 +621,14 @@
       proyectoRedExtendidaId = null;
     });
 
-    // Re-renderizar capa NBI en modo "solo vista" al mover/zoom
+    // Re-renderizar capas en modo "solo vista" al mover/zoom
     let mvTimer;
     map.on('moveend zoomend', () => {
-      if (!nbiLayer || nbiCargaTodo) return;
       clearTimeout(mvTimer);
-      mvTimer = setTimeout(renderNBILayer, 120);
+      mvTimer = setTimeout(() => {
+        if (nbiLayer && !nbiCargaTodo) renderNBILayer();
+        if (odsPolygonsLayer) renderODSPolygonsLayer();
+      }, 120);
     });
 
     await cargarCapasOdsDB();
