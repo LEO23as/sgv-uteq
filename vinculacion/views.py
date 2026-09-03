@@ -3511,5 +3511,35 @@ def api_vincular_dispositivo(request):
     })
 
 
+def servir_documento_inline(request, path):
+    """
+    Sirve documentos PDF e imágenes con cabecera Content-Disposition: inline
+    para permitir su visualización interactiva embebida en el visor modal.
+    """
+    import mimetypes
+    from django.http import FileResponse, Http404
+    
+    # Prevenir Directory Traversal
+    norm_path = os.path.normpath(path).lstrip('/\\')
+    full_path = os.path.join(settings.MEDIA_ROOT, norm_path)
+    
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        raise Http404("Documento no encontrado en el servidor.")
+    
+    content_type, _ = mimetypes.guess_type(full_path)
+    if norm_path.lower().endswith('.pdf'):
+        content_type = 'application/pdf'
+    elif not content_type:
+        content_type = 'application/octet-stream'
+        
+    filename = os.path.basename(full_path)
+    response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    response['Accept-Ranges'] = 'bytes'
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+
 
 
