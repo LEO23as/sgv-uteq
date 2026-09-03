@@ -177,7 +177,6 @@
       {#each filtered as m}
         {#if m.disabled}
           <div class="mod-card disabled">
-            <span class="mod-star"><i class="bi bi-star-fill"></i></span>
             <div class="mod-icon-container" style="background-color: {m.bg}; color: {m.color};">
               <i class="bi {m.bi}"></i>
             </div>
@@ -186,7 +185,6 @@
           </div>
         {:else}
           <a href={m.href} class="mod-card">
-            <span class="mod-star"><i class="bi bi-star-fill"></i></span>
             <div class="mod-icon-container" style="background-color: {m.bg}; color: {m.color};">
               <i class="bi {m.bi}"></i>
             </div>
@@ -487,15 +485,6 @@
 .mod-card.disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.mod-star {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  font-size: 0.82rem;
-  color: #f59e0b;
-  opacity: 0.9;
 }
 
 .mod-icon-container {

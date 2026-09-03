@@ -42,65 +42,76 @@
     EN_CIERRE:'En cierre',DETENIDO:'Detenido',FINALIZADO:'Finalizado',RECHAZADO:'Rechazado',
   };
 
-  onMount(async () => {
-    periodos = await fetchAPI('/api/periodos/');
-    const urlParams = new URLSearchParams(window.location.search);
-    const pFac = urlParams.get('facultad');
-    const pCar = urlParams.get('carrera');
-    const pPer = urlParams.get('periodo') || (periodos.find(p => p.activo)?.id_periodo || periodos[0]?.id_periodo);
-
-    if (pPer) {
-      form.id_periodo_inicio = String(pPer);
+  async function cargarFacultades(periodoId) {
+    facultades = [];
+    if (periodoId) {
       try {
-        facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+        facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${periodoId}`);
       } catch {
         facultades = [];
       }
-      if (!facultades || !facultades.length) {
-        try { facultades = await fetchAPI('/api/facultades/'); } catch { facultades = []; }
-      }
-      if (pFac) {
-        form.id_facultad = String(pFac);
-        try {
-          carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
-        } catch {
-          carrerasFil = [];
-        }
-        if (!carrerasFil || !carrerasFil.length) {
-          try { carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${form.id_facultad}`); } catch { carrerasFil = []; }
-        }
-        if (pCar) form.id_carrera = String(pCar);
-      }
-    }
-  });
-
-  async function onPeriodoChange() {
-    form.id_facultad = ''; form.id_carrera = '';
-    facultades = []; carrerasFil = [];
-    if (!form.id_periodo_inicio) return;
-    try {
-      facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
-    } catch {
-      facultades = [];
     }
     if (!facultades || !facultades.length) {
       try { facultades = await fetchAPI('/api/facultades/'); } catch { facultades = []; }
     }
   }
 
-  async function onFacultadChange() {
-    form.id_carrera = ''; carrerasFil = [];
-    if (!form.id_facultad) return;
-    if (form.id_periodo_inicio) {
+  async function cargarCarreras(periodoId, facultadId) {
+    carrerasFil = [];
+    if (!facultadId) return;
+    if (periodoId) {
       try {
-        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${periodoId}&facultad=${facultadId}`);
       } catch {
         carrerasFil = [];
       }
     }
     if (!carrerasFil || !carrerasFil.length) {
-      try { carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${form.id_facultad}`); } catch { carrerasFil = []; }
+      try { carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${facultadId}`); } catch { carrerasFil = []; }
     }
+  }
+
+  onMount(async () => {
+    try {
+      periodos = await fetchAPI('/api/periodos/');
+    } catch {
+      periodos = [];
+    }
+    const urlParams = new URLSearchParams(window.location.search);
+    const pFac = urlParams.get('facultad');
+    const pCar = urlParams.get('carrera');
+    const pPer = urlParams.get('periodo');
+
+    // Identificar período activo institucionalmente
+    const activo = periodos.find(p => p.activo === true) || periodos[0];
+    const periodoTarget = pPer || (activo ? String(activo.id_periodo) : '');
+
+    if (periodoTarget) {
+      form.id_periodo_inicio = String(periodoTarget);
+      await cargarFacultades(form.id_periodo_inicio);
+    } else {
+      await cargarFacultades('');
+    }
+
+    if (pFac) {
+      form.id_facultad = String(pFac);
+      await cargarCarreras(form.id_periodo_inicio, form.id_facultad);
+      if (pCar) {
+        form.id_carrera = String(pCar);
+      }
+    }
+  });
+
+  async function onPeriodoChange() {
+    form.id_facultad = '';
+    form.id_carrera = '';
+    carrerasFil = [];
+    await cargarFacultades(form.id_periodo_inicio);
+  }
+
+  async function onFacultadChange() {
+    form.id_carrera = '';
+    await cargarCarreras(form.id_periodo_inicio, form.id_facultad);
   }
 
   function onFotosChange(e) {
@@ -296,46 +307,64 @@
 
       <div class="sec">
         <h4 class="sec-hdr"><i class="bi bi-mortarboard"></i> Datos académicos y responsables</h4>
-        <div class="grid-3 mb-12">
+        
+        <!-- Fila 1: Período y Estado -->
+        <div class="grid-2">
           <div class="field">
-            <label>Período *</label>
+            <label>Período Académico *</label>
             <select bind:value={form.id_periodo_inicio} onchange={onPeriodoChange}>
               <option value="">— Seleccionar —</option>
-              {#each periodos as p}<option value={p.id_periodo}>{p.codigo || p.nombre}</option>{/each}
+              {#each periodos as p}
+                <option value={String(p.id_periodo)}>{p.codigo || p.nombre} {p.activo ? '(Activo)' : ''}</option>
+              {/each}
             </select>
-            <small>Define la estructura histórica</small>
+            <small>Estructura académica del período</small>
           </div>
+          <div class="field">
+            <label>Estado del Proyecto *</label>
+            <select bind:value={form.estado}>
+              {#each ESTADOS as e}<option value={e}>{ESTADOS_LABEL[e]}</option>{/each}
+            </select>
+            <small>Fase actual de ejecución</small>
+          </div>
+        </div>
+
+        <!-- Fila 2: Facultad (izq) y Carrera (der) -->
+        <div class="grid-2">
           <div class="field">
             <label>Facultad *</label>
             <select bind:value={form.id_facultad} onchange={onFacultadChange} disabled={!form.id_periodo_inicio}>
-              <option value="">{form.id_periodo_inicio ? '— Seleccionar —' : '— Elija período primero —'}</option>
+              <option value="">{form.id_periodo_inicio ? '— Seleccionar Facultad —' : '— Elija período primero —'}</option>
               {#each facultades as f}
-                <option value={f.id_facultad}>{f.nombre} ({f.codigo})</option>
+                <option value={String(f.id_facultad)}>{f.nombre} ({f.codigo})</option>
               {/each}
             </select>
           </div>
           <div class="field">
             <label>Carrera *</label>
             <select bind:value={form.id_carrera} disabled={!carrerasFil.length}>
-              <option value="">— Seleccionar facultad primero —</option>
-              {#each carrerasFil as c}<option value={c.id_carrera}>{c.nombre}</option>{/each}
+              <option value="">{carrerasFil.length ? '— Seleccionar Carrera —' : '— Elija facultad primero —'}</option>
+              {#each carrerasFil as c}
+                <option value={String(c.id_carrera)}>{c.nombre}</option>
+              {/each}
             </select>
           </div>
         </div>
-        <div class="grid-3">
+
+        <!-- Fila 3: Director y Correo -->
+        <div class="grid-2">
           <div class="field">
-            <label>Director del proyecto</label>
+            <label>Director del Proyecto *</label>
             <input
               type="text"
               bind:value={form.director_nombre}
               oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]/g, '')}
-              placeholder="Ing. Moisés Menace, MSc."
+              placeholder="Ing. Juan Pérez, MSc."
             />
           </div>
-          <div class="field"><label>Correo del director</label><input type="email" bind:value={form.director_correo} placeholder="mmenace@uteq.edu.ec" /></div>
           <div class="field">
-            <label>Estado *</label>
-            <select bind:value={form.estado}>{#each ESTADOS as e}<option value={e}>{ESTADOS_LABEL[e]}</option>{/each}</select>
+            <label>Correo del Director</label>
+            <input type="email" bind:value={form.director_correo} placeholder="director@uteq.edu.ec" />
           </div>
         </div>
       </div>

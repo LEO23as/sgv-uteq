@@ -341,32 +341,54 @@
 
       <div class="sec">
         <h4 class="sec-hdr"><i class="bi bi-mortarboard"></i> Datos académicos y responsables</h4>
-        <div class="grid-3 mb-12">
+        
+        <!-- Fila 1: Período y Estado -->
+        <div class="grid-2">
           <div class="field">
-            <label>Período *</label>
+            <label>Período Académico *</label>
             <select bind:value={form.id_periodo_inicio} onchange={onPeriodoChange}>
               <option value="">— Seleccionar —</option>
-              {#each periodos as p}<option value={String(p.id_periodo)}>{p.codigo || p.nombre}</option>{/each}
+              {#each periodos as p}
+                <option value={String(p.id_periodo)}>{p.codigo || p.nombre} {p.activo ? '(Activo)' : ''}</option>
+              {/each}
             </select>
+            <small>Estructura académica del período</small>
           </div>
+          <div class="field">
+            <label>Estado del Proyecto *</label>
+            <select bind:value={form.estado}>
+              {#each ESTADOS as e}<option value={e}>{ESTADOS_LABEL[e]}</option>{/each}
+            </select>
+            <small>Fase actual de ejecución</small>
+          </div>
+        </div>
+
+        <!-- Fila 2: Facultad (izq) y Carrera (der) -->
+        <div class="grid-2">
           <div class="field">
             <label>Facultad *</label>
             <select bind:value={form.id_facultad} onchange={onFacultadChange} disabled={!form.id_periodo_inicio}>
-              <option value="">— Seleccionar —</option>
-              {#each facultades as f}<option value={String(f.id_facultad)}>{f.nombre} ({f.codigo})</option>{/each}
+              <option value="">{form.id_periodo_inicio ? '— Seleccionar Facultad —' : '— Elija período primero —'}</option>
+              {#each facultades as f}
+                <option value={String(f.id_facultad)}>{f.nombre} ({f.codigo})</option>
+              {/each}
             </select>
           </div>
           <div class="field">
             <label>Carrera *</label>
             <select bind:value={form.id_carrera} disabled={!carrerasFil.length}>
-              <option value="">— Seleccionar —</option>
-              {#each carrerasFil as c}<option value={String(c.id_carrera)}>{c.nombre}</option>{/each}
+              <option value="">{carrerasFil.length ? '— Seleccionar Carrera —' : '— Elija facultad primero —'}</option>
+              {#each carrerasFil as c}
+                <option value={String(c.id_carrera)}>{c.nombre}</option>
+              {/each}
             </select>
           </div>
         </div>
-        <div class="grid-3">
+
+        <!-- Fila 3: Director y Correo -->
+        <div class="grid-2">
           <div class="field">
-            <label>Director del proyecto</label>
+            <label>Director del Proyecto *</label>
             <input
               type="text"
               bind:value={form.director_nombre}
@@ -374,10 +396,9 @@
               placeholder="Nombre completo del director (ej: Ing. Juan Pérez, MSc.)..."
             />
           </div>
-          <div class="field"><label>Correo del director</label><input type="email" bind:value={form.director_correo} placeholder="director@uteq.edu.ec" /></div>
           <div class="field">
-            <label>Estado del proyecto *</label>
-            <select bind:value={form.estado}>{#each ESTADOS as e}<option value={e}>{ESTADOS_LABEL[e]}</option>{/each}</select>
+            <label>Correo del Director</label>
+            <input type="email" bind:value={form.director_correo} placeholder="director@uteq.edu.ec" />
           </div>
         </div>
       </div>
