@@ -2,6 +2,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
+  import PdfViewerModal from '$lib/PdfViewerModal.svelte';
 
   let { idProyecto = null, isOpen = false, onClose } = $props();
 
@@ -14,6 +15,20 @@
   let codigoTipoSubir = $state('');
   let archivoSubir = $state(null);
   let subiendoDoc = $state(false);
+
+  // Estado del Visor Interactivo de PDF
+  let pdfViewerOpen = $state(false);
+  let pdfUrl = $state('');
+  let pdfTitle = $state('');
+  let pdfCategory = $state('');
+
+  function verDocumentoPdf(doc) {
+    if (!doc || !doc.url) return;
+    pdfUrl = API_BASE + doc.url;
+    pdfTitle = doc.nombre || doc.tipo || 'Documento Oficial';
+    pdfCategory = `${doc.codigo_tipo || 'CACES'} — ${doc.tipo || 'Portafolio'}`;
+    pdfViewerOpen = true;
+  }
 
   const ESTADOS = {
     EN_EJECUCION: { label:'En ejecución', cls:'ejecucion' },
@@ -626,14 +641,24 @@
                 <div class="docs-stack">
                   {#each documentos as d}
                     <div class="doc-item">
-                      <i class="bi bi-file-earmark-pdf-fill doc-ic"></i>
-                      <div class="doc-txt">
-                        <a href={API_BASE + d.url} target="_blank" class="doc-link">{d.tipo}</a>
-                        <span class="doc-sub">{d.codigo_tipo} — {d.nombre} · {d.tamanio_kb} KB</span>
-                      </div>
-                      <button class="btn-doc-del" onclick={() => eliminarDocumento(d)} title="Eliminar documento">
-                        <i class="bi bi-trash"></i>
+                      <button type="button" class="doc-preview-click" onclick={() => verDocumentoPdf(d)} title="Ver vista previa del documento">
+                        <i class="bi bi-file-earmark-pdf-fill doc-ic"></i>
+                        <div class="doc-txt">
+                          <span class="doc-link">{d.tipo}</span>
+                          <span class="doc-sub">{d.codigo_tipo} — {d.nombre} · {d.tamanio_kb} KB</span>
+                        </div>
                       </button>
+                      <div class="doc-btn-group">
+                        <button type="button" class="btn-doc-ver" onclick={() => verDocumentoPdf(d)} title="Ver en visor integrado">
+                          <i class="bi bi-eye-fill"></i> <span class="doc-btn-txt">Ver</span>
+                        </button>
+                        <a href={API_BASE + d.url} download class="btn-doc-dl" title="Descargar documento">
+                          <i class="bi bi-download"></i>
+                        </a>
+                        <button type="button" class="btn-doc-del" onclick={() => eliminarDocumento(d)} title="Eliminar documento">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
                     </div>
                   {/each}
                 </div>
@@ -686,6 +711,15 @@
     {#if fotoActiva.titulo}<p class="lb-caption">{fotoActiva.titulo}</p>{/if}
   </div>
 {/if}
+
+<!-- VISOR INTERACTIVO DE DOCUMENTOS PDF (CACES) -->
+<PdfViewerModal
+  bind:show={pdfViewerOpen}
+  docUrl={pdfUrl}
+  docTitle={pdfTitle}
+  docCategory={pdfCategory}
+  onClose={() => { pdfViewerOpen = false; }}
+/>
 
 <style>
   .modal-backdrop {
@@ -789,12 +823,21 @@
   .btn-subir-doc:hover { background: #145c04; }
 
   .docs-stack { display: flex; flex-direction: column; gap: 6px; }
-  .doc-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-  .doc-ic { font-size: 1.15rem; color: #dc2626; }
+  .doc-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; transition: background .15s; }
+  .doc-item:hover { background: #f1f5f9; }
+  .doc-preview-click { background: none; border: none; padding: 0; display: flex; align-items: center; gap: 10px; flex: 1; text-align: left; cursor: pointer; min-width: 0; }
+  .doc-ic { font-size: 1.25rem; color: #dc2626; flex-shrink: 0; }
   .doc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .doc-link { font-size: .82rem; font-weight: 700; color: #0284c7; text-decoration: none; }
+  .doc-link { font-size: .84rem; font-weight: 700; color: #0f172a; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .doc-preview-click:hover .doc-link { color: #1b7505; }
   .doc-sub { font-size: .72rem; color: #64748b; }
-  .btn-doc-del { width: 28px; height: 28px; border-radius: 6px; border: none; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .doc-btn-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .btn-doc-ver { background: #e8f5e0; color: #1b7505; border: 1px solid #cbebc0; padding: 4px 10px; border-radius: 6px; font-size: .76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all .15s; }
+  .btn-doc-ver:hover { background: #1b7505; color: #ffffff; }
+  .btn-doc-dl { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: .8rem; transition: all .15s; }
+  .btn-doc-dl:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+  .btn-doc-del { width: 28px; height: 28px; border-radius: 6px; border: none; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .8rem; }
+  .btn-doc-del:hover { background: #fecaca; }
   .empty-docs { font-size: .82rem; color: #94a3b8; font-style: italic; margin: 4px 0 0; }
 
   .modal-footer {
