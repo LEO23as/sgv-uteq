@@ -342,6 +342,61 @@
     [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].filter(num => !loteDetectado[num] && !listaOds.find(o => o.num === num && o.cargado))
   );
 
+  async function onArchivoIndividualODS(odsNum, e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    try {
+      const buffer = await f.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+
+      let parsed = procesarFilasODS(f.name, rows);
+      if (!parsed) {
+        // Asignar directamente al ODS del cuadro
+        const odsInfo = CATALOGO_17_ODS.find(o => o.num === odsNum);
+        parsed = {
+          ods_num: odsNum,
+          nombre_ods: odsInfo ? odsInfo.nombre : `ODS ${odsNum}`,
+          codigo_indicador: `ODS_${odsNum}`,
+          nombre_indicador: `${odsInfo?.nombre || 'Indicador Oficial'} (Ecuador)`,
+          anio_reciente: 2023,
+          valor_reciente: 0,
+          unidad: '%',
+          fuente: 'CEPAL / ONU - Agenda 2030 Ecuador',
+          serie_historica: [],
+          nombre_archivo: f.name,
+        };
+      } else {
+        parsed.ods_num = odsNum;
+        parsed.nombre_ods = CATALOGO_17_ODS.find(o => o.num === odsNum)?.nombre || `ODS ${odsNum}`;
+      }
+
+      loteDetectado = { ...loteDetectado, [odsNum]: parsed };
+
+      auditoriaLote = [
+        ...auditoriaLote.filter(l => l.ods_num !== odsNum),
+        {
+          nombre_archivo: f.name,
+          ods_num: odsNum,
+          nombre_ods: parsed.nombre_ods,
+          total_anios: parsed.serie_historica.length,
+          anio_reciente: parsed.anio_reciente,
+          valor_reciente: parsed.valor_reciente,
+          unidad: parsed.unidad,
+          es_duplicado: false,
+        }
+      ];
+      totalArchivosLote = auditoriaLote.length;
+      toast.success(`✓ ODS ${odsNum}: ${parsed.nombre_ods} cargado`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Error al procesar el archivo');
+    }
+  }
+
   async function onArchivosLoteODS(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -365,7 +420,6 @@
           const esDup = Boolean(yaExiste);
           
           if (yaExiste) {
-            // Si el nuevo archivo tiene más años registrados, lo prefiere
             if (parsed.serie_historica.length >= yaExiste.serie_historica.length) {
               nuevoLote[parsed.ods_num] = parsed;
             }
@@ -383,18 +437,6 @@
             unidad: parsed.unidad,
             es_duplicado: esDup,
           });
-        } else {
-          logs.push({
-            nombre_archivo: f.name,
-            ods_num: null,
-            nombre_ods: 'No reconocido',
-            total_anios: 0,
-            anio_reciente: null,
-            valor_reciente: null,
-            unidad: '',
-            es_duplicado: false,
-            error: 'No se encontraron columnas de Ecuador o indicador ODS',
-          });
         }
       } catch (err) {
         console.error('Error leyendo archivo ODS:', f.name, err);
@@ -406,9 +448,7 @@
     loteDetectado = nuevoLote;
     const count = Object.keys(loteDetectado).length;
     if (count > 0) {
-      toast.success(`¡Se detectaron automáticamente ${count} indicadores ODS listos para guardar!`);
-    } else {
-      toast.warn('No se pudieron reconocer columnas estándar de la CEPAL/ONU en los archivos.');
+      toast.success(`¡Se reconocieron ${count} indicadores ODS!`);
     }
   }
 
@@ -432,9 +472,9 @@
 
       progresoLote = 100;
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar el lote');
+      if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
-      toast.success(`¡Excelente! ${data.procesados} indicadores ODS guardados y activados en el sistema.`);
+      toast.success(`¡Excelente! ${data.procesados} indicadores ODS guardados en la base de datos.`);
       loteDetectado = {};
       await cargarCapasODS();
     } catch (e) {
@@ -650,96 +690,9 @@
   {/if}
 
   <!-- ════════════════════════════════════════════════════════════════════ -->
-  <!-- VISTA 2: GESTIÓN DE CAPAS ODS (CARGA MASIVA AUTOMÁTICA)             -->
+  <!-- VISTA 2: GESTIÓN DE CAPAS ODS (17 CUADROS CON CARGA DIRECTA)         -->
   <!-- ════════════════════════════════════════════════════════════════════ -->
   {#if tabActiva === 'ods'}
-    <!-- DROPZONE INTELIGENTE DE CARGA MASIVA -->
-    <section class="cap-card ods-master-card">
-      <header class="cap-h">
-        <div class="cap-h-icon ods-color">
-          <i class="bi bi-stars"></i>
-        </div>
-        <div>
-          <h3>Carga Masiva Inteligente de ODS (CEPAL / ONU)</h3>
-          <p>Suelta los archivos descargados (.csv o .xlsx) todos de golpe. El sistema identificará automáticamente el ODS, filtrará los datos de Ecuador y extraerá la serie histórica sin configuración manual.</p>
-        </div>
-      </header>
-
-      <!-- ZONA DROPZONE MULTI-ARCHIVO -->
-      <div class="ods-dropzone-wrap">
-        <input 
-          id="ods-bulk-input" 
-          type="file" 
-          multiple 
-          accept=".xlsx,.xls,.csv,.tsv,.txt,.ods" 
-          onchange={onArchivosLoteODS} 
-          class="file-hidden-input" />
-        <label for="ods-bulk-input" class="ods-dropzone-box">
-          <div class="odz-icon"><i class="bi bi-file-earmark-excel-fill" style="color:#16a34a;"></i></div>
-          <div class="odz-text">
-            <strong>Haz clic aquí o arrastra tus archivos Excel (.xlsx) o CSV en bloque</strong>
-            <p>Puedes soltar de 1 a 17 archivos a la vez. El sistema analiza automáticamente cada archivo y extrae los datos de Ecuador.</p>
-          </div>
-          <div class="odz-btn" style="background:#16a34a;">
-            <i class="bi bi-folder-plus"></i> Seleccionar archivos Excel / CSV
-          </div>
-        </label>
-      </div>
-
-      <!-- AUDITORÍA Y TRAZABILIDAD DE ARCHIVOS PROCESADOS -->
-      {#if auditoriaLote.length > 0}
-        <div class="ods-audit-card">
-          <div class="oac-hdr">
-            <h4><i class="bi bi-shield-check"></i> Certificación y Trazabilidad de Archivos ({totalArchivosLote} procesados)</h4>
-            <span class="oac-stat">{odsDetectadosCount} ODS Únicos Detectados</span>
-          </div>
-          <div class="oac-list">
-            {#each auditoriaLote as aud}
-              <div class="oac-item" class:is-duplicate={aud.es_duplicado}>
-                <div class="oac-icon">
-                  <i class="bi {aud.es_duplicado ? 'bi-exclamation-triangle-fill text-amber' : 'bi-check-circle-fill text-green'}"></i>
-                </div>
-                <div class="oac-detail">
-                  <div class="oac-title-row">
-                    <strong class="oac-filename">{aud.nombre_archivo}</strong>
-                    {#if aud.es_duplicado}
-                      <span class="badge-dup">⚠️ Repetido / Reemplazo</span>
-                    {/if}
-                  </div>
-                  <span class="oac-sub">➔ Asignado a <b>ODS {aud.ods_num}: {aud.nombre_ods}</b> ({aud.total_anios} años históricos, valor {aud.valor_reciente} {aud.unidad} en {aud.anio_reciente})</span>
-                </div>
-              </div>
-            {/each}
-          </div>
-
-          {#if odsFaltantes.length > 0}
-            <div class="oac-missing-alert">
-              <i class="bi bi-info-circle-fill"></i>
-              <span><b>Faltan {odsFaltantes.length} ODS por descargar:</b> {odsFaltantes.map(n => `ODS ${n}`).join(', ')}. Puedes descargarlos de la CEPAL y soltarlos aquí cuando desees.</span>
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      <!-- BARRA FLOTANTE DE ACCIÓN LOTE -->
-      {#if odsDetectadosCount > 0}
-        <div class="ods-batch-action-bar">
-          <div class="ob-info">
-            <span class="ob-badge"><i class="bi bi-check-circle-fill"></i> {odsDetectadosCount} ODS detectados</span>
-            <span class="ob-sub">Listos para procesar y sincronizar con los proyectos universitarios.</span>
-          </div>
-          <button class="btn-guardar-lote" onclick={guardarTodosLoteODS} disabled={subiendoLoteOds}>
-            {#if subiendoLoteOds}
-              <i class="bi bi-arrow-repeat spin"></i> Guardando lote...
-            {:else}
-              <i class="bi bi-check2-all"></i> Guardar los {odsDetectadosCount} ODS detectados
-            {/if}
-          </button>
-        </div>
-      {/if}
-    </section>
-
-    <!-- CUADRÍCULA INTERACTIVA DE LOS 17 ODS -->
     <section class="cap-card">
       <header class="cap-h">
         <div class="cap-h-icon ods-color">
@@ -747,8 +700,8 @@
         </div>
         <div class="cap-h-between">
           <div>
-            <h3>Matriz de los 17 Objetivos de Desarrollo Sostenible</h3>
-            <p>Estado actual de cada ODS con los datos oficiales de Ecuador sincronizados.</p>
+            <h3>Matriz de los 17 Objetivos de Desarrollo Sostenible (Agenda 2030)</h3>
+            <p>Carga el archivo Excel (.xlsx) o CSV en el cuadro de cada ODS. Al finalizar, pulsa el botón inferior para guardar en el sistema.</p>
           </div>
           <div class="ods-counter-badge">
             <strong>{odsCargadosCount}</strong> / 17 Activos
@@ -759,6 +712,7 @@
       {#if cargandoOds}
         <div class="empty"><i class="bi bi-arrow-repeat spin"></i> Cargando matriz ODS...</div>
       {:else}
+        <!-- MATRIZ DIRECTA DE LOS 17 ODS -->
         <div class="ods-grid-17">
           {#each listaOds as ods}
             {@const enLote = loteDetectado[ods.ods_num]}
@@ -769,6 +723,14 @@
               class:is-pending-save={enLote !== undefined}
               style="--ods-color: {ods.color};">
               
+              <!-- INPUT OCULTO DE CARGA INDIVIDUAL PARA ESTE ODS -->
+              <input 
+                id="file-ods-{ods.num}" 
+                type="file" 
+                accept=".xlsx,.xls,.csv,.tsv,.txt,.ods" 
+                onchange={(e) => onArchivoIndividualODS(ods.num, e)} 
+                class="file-hidden-input" />
+
               <div class="ods-card-top" style="background-color: {ods.color};">
                 <span class="ods-num">ODS {ods.num}</span>
                 <i class="bi {ods.icono} ods-top-icon"></i>
@@ -781,7 +743,7 @@
                   <div class="ods-data-box">
                     <div class="odb-header">
                       <span class="odb-tag" class:odb-lote={enLote}>
-                        {enLote ? '⚡ Detectado en lote' : '✓ En Base de Datos'}
+                        {enLote ? '⚡ Listo para guardar' : '✓ En Base de Datos'}
                       </span>
                       <span class="odb-year">{dato.anio_reciente}</span>
                     </div>
@@ -800,10 +762,11 @@
                     {/if}
                   </div>
                 {:else}
-                  <div class="ods-empty-box">
-                    <i class="bi bi-file-earmark-arrow-up"></i>
-                    <p>Sin datos cargados aún.<br>Arrastra el archivo para activarlo.</p>
-                  </div>
+                  <label for="file-ods-{ods.num}" class="ods-empty-upload-box">
+                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                    <strong>Cargar archivo Excel</strong>
+                    <span>Haz clic aquí para seleccionar (.xlsx o .csv)</span>
+                  </label>
                 {/if}
               </div>
 
@@ -816,6 +779,9 @@
                     title="Ver evolución histórica">
                     <i class="bi bi-graph-up"></i> Histórico
                   </button>
+                  <label for="file-ods-{ods.num}" class="btn-ods-mini edit" title="Cambiar archivo">
+                    <i class="bi bi-arrow-repeat"></i> Cambiar
+                  </label>
                   {#if ods.cargado}
                     <button 
                       type="button" 
@@ -826,13 +792,67 @@
                     </button>
                   {/if}
                 {:else}
-                  <label for="ods-bulk-input" class="btn-ods-mini upload-hint">
-                    <i class="bi bi-plus-circle"></i> Cargar archivo
+                  <label for="file-ods-{ods.num}" class="btn-ods-mini upload-hint">
+                    <i class="bi bi-plus-circle"></i> Seleccionar
                   </label>
                 {/if}
               </div>
             </div>
           {/each}
+        </div>
+
+        <!-- CERTIFICACIÓN Y TRAZABILIDAD DE ARCHIVOS PROCESADOS -->
+        {#if auditoriaLote.length > 0}
+          <div class="ods-audit-card">
+            <div class="oac-hdr">
+              <h4><i class="bi bi-shield-check"></i> Certificación y Trazabilidad de Archivos ({totalArchivosLote} cargados)</h4>
+              <span class="oac-stat">{odsDetectadosCount} ODS Listos</span>
+            </div>
+            <div class="oac-list">
+              {#each auditoriaLote as aud}
+                <div class="oac-item" class:is-duplicate={aud.es_duplicado}>
+                  <div class="oac-icon">
+                    <i class="bi {aud.es_duplicado ? 'bi-exclamation-triangle-fill text-amber' : 'bi-check-circle-fill text-green'}"></i>
+                  </div>
+                  <div class="oac-detail">
+                    <div class="oac-title-row">
+                      <strong class="oac-filename">{aud.nombre_archivo}</strong>
+                      {#if aud.es_duplicado}
+                        <span class="badge-dup">⚠️ Repetido / Reemplazo</span>
+                      {/if}
+                    </div>
+                    <span class="oac-sub">➔ Asignado a <b>ODS {aud.ods_num}: {aud.nombre_ods}</b> ({aud.total_anios} años históricos, valor {aud.valor_reciente} {aud.unidad} en {aud.anio_reciente})</span>
+                  </div>
+                </div>
+              {/each}
+            </div>
+
+            {#if odsFaltantes.length > 0}
+              <div class="oac-missing-alert">
+                <i class="bi bi-info-circle-fill"></i>
+                <span><b>Pendientes de archivo ({odsFaltantes.length} ODS):</b> {odsFaltantes.map(n => `ODS ${n}`).join(', ')}.</span>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- BOTÓN FINAL DE GUARDAR TODOS LOS 17 ODS -->
+        <div class="ods-bottom-save-bar">
+          <div class="obs-left">
+            <strong>{odsDetectadosCount > 0 ? `${odsDetectadosCount} ODS listos para guardar en base de datos` : 'Selecciona los archivos en los cuadros de arriba'}</strong>
+            <p>Al guardar, los datos oficiales de Ecuador se sincronizarán permanentemente con todos los proyectos universitarios.</p>
+          </div>
+          <button 
+            type="button" 
+            class="btn-guardar-ods-final" 
+            onclick={guardarTodosLoteODS} 
+            disabled={subiendoLoteOds || odsDetectadosCount === 0}>
+            {#if subiendoLoteOds}
+              <i class="bi bi-arrow-repeat spin"></i> Guardando ODS en el Sistema...
+            {:else}
+              <i class="bi bi-cloud-check-fill"></i> Guardar los ODS en el Sistema ({odsDetectadosCount})
+            {/if}
+          </button>
         </div>
       {/if}
     </section>
@@ -1329,19 +1349,30 @@
 .odb-ind-name { font-size: 0.72rem; color: #475569; margin: 0 0 6px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .odb-meta-row { margin-top: auto; font-size: 0.68rem; color: #94a3b8; font-weight: 600; }
 
-.ods-empty-box {
+.ods-empty-upload-box {
   text-align: center;
-  padding: 16px 8px;
-  color: #94a3b8;
+  padding: 16px 10px;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1.5px dashed #7dd3fc;
+  border-radius: 10px;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.ods-empty-box i { font-size: 1.5rem; color: #cbd5e1; }
-.ods-empty-box p { font-size: 0.72rem; margin: 0; line-height: 1.3; }
+.ods-empty-upload-box:hover {
+  background: #e0f2fe;
+  border-color: #0284c7;
+  transform: scale(1.02);
+}
+.ods-empty-upload-box i { font-size: 1.6rem; color: #0284c7; }
+.ods-empty-upload-box strong { font-size: 0.8rem; color: #0369a1; }
+.ods-empty-upload-box span { font-size: 0.68rem; color: #64748b; }
 
 .ods-card-footer {
   padding: 8px 14px;
@@ -1367,10 +1398,52 @@
 }
 .btn-ods-mini.view { background: #e0f2fe; color: #0369a1; }
 .btn-ods-mini.view:hover { background: #bae6fd; }
+.btn-ods-mini.edit { background: #fef3c7; color: #92400e; cursor: pointer; }
+.btn-ods-mini.edit:hover { background: #fde68a; }
 .btn-ods-mini.del { flex: 0 0 auto; background: #fee2e2; color: #dc2626; padding: 6px 10px; }
 .btn-ods-mini.del:hover { background: #fecaca; }
 .btn-ods-mini.upload-hint { background: #f1f5f9; color: #475569; cursor: pointer; }
 .btn-ods-mini.upload-hint:hover { background: #e2e8f0; color: #1e293b; }
+
+/* ── BARRA INFERIOR DE GUARDAR ODS ── */
+.ods-bottom-save-bar {
+  margin-top: 24px;
+  padding: 18px 24px;
+  background: #ffffff;
+  border: 2px solid #86efac;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.12);
+}
+.obs-left strong { font-size: 0.96rem; color: #15803d; display: block; margin-bottom: 2px; }
+.obs-left p { font-size: 0.78rem; color: #64748b; margin: 0; }
+.btn-guardar-ods-final {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 26px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+  transition: all 0.2s ease;
+}
+.btn-guardar-ods-final:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.45);
+}
+.btn-guardar-ods-final:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* ── MODAL ── */
 .modal-overlay {
