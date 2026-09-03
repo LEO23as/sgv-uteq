@@ -77,6 +77,7 @@
       color: '#475569', 
       bg: '#f1f5f9',
       disabled: false 
+    },
     { 
       href: '/usuarios', 
       bi: 'bi-people', 
