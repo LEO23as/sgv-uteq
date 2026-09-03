@@ -3,12 +3,17 @@ Script institucional SGV-UTEQ:
 Clasificación y vinculación masiva de ODS para todos los proyectos de vinculación.
 Analiza nombre, carrera, facultad, línea de vinculación, programa y descripción.
 """
+import sys
 import os
 import re
 import unicodedata
-import django
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+import django
 django.setup()
 
 from vinculacion.models import Proyecto
