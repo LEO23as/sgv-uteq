@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { page, navigating } from '$app/stores';
   import { get } from 'svelte/store';
-  import { user, checkAuth, logout, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa, fetchAPI, loading } from '$lib/stores';
+  import { user, checkAuth, logout, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa, fetchAPI, loading, periodoSeleccionadoGlobal } from '$lib/stores';
   import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida, solicitarPermisoNotificaciones } from '$lib/notifications';
   import { toast } from '$lib/toast';
   import Toasts from '$lib/Toasts.svelte';
@@ -145,6 +145,7 @@
   function selectPeriod(p) {
     selectedPeriodCode = p.codigo;
     periodosList = periodosList.map(item => ({ ...item, activo: item.id === p.id }));
+    periodoSeleccionadoGlobal.set(p);
     showPeriodModal = false;
   }
 

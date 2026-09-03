@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { fetchAPI, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa } from '$lib/stores';
+  import { fetchAPI, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa, periodoSeleccionadoGlobal } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { get } from 'svelte/store';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
@@ -534,11 +534,18 @@
     const unsubNBI = capaNBIActiva.subscribe(activo => toggleNBI(activo));
     const unsubODS = capaODSActiva.subscribe(() => { if (map) cargarProyectos(); });
     const unsubODSNum = odsSeleccionadoMapa.subscribe(() => { if (map) cargarProyectos(); });
+    const unsubPeriodo = periodoSeleccionadoGlobal.subscribe(p => {
+      if (p && p.id && map) {
+        filtros.periodo = String(p.id);
+        filtrar();
+      }
+    });
 
     return () => {
       unsubNBI();
       unsubODS();
       unsubODSNum();
+      unsubPeriodo();
     };
   });
 
