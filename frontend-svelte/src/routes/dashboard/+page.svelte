@@ -78,16 +78,6 @@
       bg: '#f1f5f9',
       disabled: false 
     },
-    { 
-      href: '/usuarios', 
-      bi: 'bi-people', 
-      label: 'Usuarios', 
-      desc: 'Gestión de cuentas y roles', 
-      key: 'usuarios', 
-      color: '#9333ea', 
-      bg: '#faf5ff',
-      disabled: false 
-    },
   ];
 
   let filtered = $derived(
