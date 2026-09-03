@@ -342,33 +342,140 @@
     [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].filter(num => !loteDetectado[num] && !listaOds.find(o => o.num === num && o.cargado))
   );
 
-  async function extraerFilasDeArchivo(f) {
+  function procesarJsonCEPALSTAT(obj, nombreArchivo) {
+    if (!obj || !obj.body) return null;
+    const meta = obj.body.metadata || {};
+    const indicatorName = meta.indicator_name || meta.area || '';
+    const unit = meta.unit || '%';
+    const data = obj.body.data || [];
+    const dimensions = obj.body.dimensions || [];
+
+    // 1. Mapear dimensiones (País y Años)
+    let idDimPais = null;
+    let idMiembroEcuador = 229; // ID oficial de Ecuador en CEPALSTAT
+    let idDimAnios = null;
+    const mapaAnios = {}; // member_id -> year
+
+    for (const dim of dimensions) {
+      const dimName = (dim.name || '').toLowerCase();
+      if (dimName.includes('país') || dimName.includes('pais') || dimName.includes('country') || dimName.includes('location')) {
+        idDimPais = dim.id;
+        for (const m of (dim.members || [])) {
+          if ((m.name || '').toLowerCase().includes('ecuador')) {
+            idMiembroEcuador = m.id;
+          }
+        }
+      } else if (dimName.includes('año') || dimName.includes('ano') || dimName.includes('year') || dimName.includes('tiempo') || dimName.includes('periodo')) {
+        idDimAnios = dim.id;
+        for (const m of (dim.members || [])) {
+          const yr = parseInt(m.name || m.order);
+          if (!isNaN(yr)) {
+            mapaAnios[m.id] = yr;
+          }
+        }
+      }
+    }
+
+    // 2. Extraer datos correspondientes a Ecuador
+    const serieHistorica = [];
+    const dimPaisKey = idDimPais ? `dim_${idDimPais}` : null;
+    const dimAnioKey = idDimAnios ? `dim_${idDimAnios}` : null;
+
+    for (const row of data) {
+      const isEcu = (row.iso3 === 'ECU') || 
+                    (dimPaisKey && row[dimPaisKey] === idMiembroEcuador) ||
+                    (!dimPaisKey && !row.iso3);
+
+      if (!isEcu && (row.iso3 || dimPaisKey)) continue;
+
+      let anio = null;
+      if (dimAnioKey && mapaAnios[row[dimAnioKey]]) {
+        anio = mapaAnios[row[dimAnioKey]];
+      } else {
+        for (const [k, v] of Object.entries(row)) {
+          if (mapaAnios[v]) {
+            anio = mapaAnios[v];
+            break;
+          }
+        }
+      }
+
+      const valRaw = String(row.value || row.valor || '').replace(',', '.');
+      const val = parseFloat(valRaw);
+
+      if (anio && !isNaN(val)) {
+        serieHistorica.push({ anio, valor: val });
+      }
+    }
+
+    if (!serieHistorica.length) return null;
+
+    const mapaFinal = new Map();
+    for (const s of serieHistorica) {
+      mapaFinal.set(s.anio, s.valor);
+    }
+    const serieLimpia = Array.from(mapaFinal.entries())
+      .map(([anio, valor]) => ({ anio, valor }))
+      .sort((a, b) => a.anio - b.anio);
+
+    const masReciente = serieLimpia[serieLimpia.length - 1];
+    const odsNum = detectarNumeroODS(nombreArchivo, indicatorName);
+
+    return {
+      ods_num: odsNum || 1,
+      nombre_ods: CATALOGO_17_ODS.find(o => o.num === odsNum)?.nombre || `ODS ${odsNum}`,
+      codigo_indicador: (indicatorName.match(/([A-Z0-9_]{4,})/) || [])[1] || `ODS_${odsNum || 1}`,
+      nombre_indicador: indicatorName || 'Indicador Oficial CEPALSTAT (Ecuador)',
+      anio_reciente: masReciente.anio,
+      valor_reciente: masReciente.valor,
+      unidad: unit,
+      fuente: 'CEPALSTAT / ONU - Agenda 2030 Ecuador',
+      serie_historica: serieLimpia,
+      nombre_archivo: nombreArchivo,
+    };
+  }
+
+  async function procesarArchivoCompleto(f) {
     if (f.name.endsWith('.json')) {
       const txt = await f.text();
-      const parsed = JSON.parse(txt);
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed && typeof parsed === 'object') {
-        if (Array.isArray(parsed.data)) return parsed.data;
-        if (Array.isArray(parsed.items)) return parsed.items;
-        if (Array.isArray(parsed.serie_historica)) {
-          return parsed.serie_historica.map(s => ({
-            ...s,
-            indicator: parsed.nombre_indicador || parsed.codigo_indicador,
-            País__ESTANDAR: 'Ecuador',
-            Años__ESTANDAR: s.anio,
-            value: s.valor,
-            unit: parsed.unidad || '%'
-          }));
-        }
-        return [parsed];
+      const obj = JSON.parse(txt);
+      
+      // Formato 1: CEPALSTAT API oficial
+      if (obj && obj.body && (obj.body.data || obj.body.metadata)) {
+        return procesarJsonCEPALSTAT(obj, f.name);
       }
-      return [];
+      
+      // Formato 2: Array o Dump estructurado
+      let rows = [];
+      if (Array.isArray(obj)) rows = obj;
+      else if (Array.isArray(obj.data)) rows = obj.data;
+      else if (Array.isArray(obj.items)) rows = obj.items;
+      else if (Array.isArray(obj.serie_historica)) {
+        const num = obj.ods_num || detectarNumeroODS(f.name, obj.nombre_indicador || '');
+        return {
+          ods_num: num,
+          nombre_ods: obj.nombre_ods || CATALOGO_17_ODS.find(o => o.num === num)?.nombre || 'ODS',
+          codigo_indicador: obj.codigo_indicador || '',
+          nombre_indicador: obj.nombre_indicador || '',
+          anio_reciente: obj.anio_reciente,
+          valor_reciente: obj.valor_reciente,
+          unidad: obj.unidad || '%',
+          fuente: obj.fuente || 'CEPAL / ONU',
+          serie_historica: obj.serie_historica,
+          nombre_archivo: f.name
+        };
+      } else {
+        rows = [obj];
+      }
+      return procesarFilasODS(f.name, rows);
     } else {
+      // Excel (.xlsx, .xls, .ods) o CSV/TSV/TXT
       const buffer = await f.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      return XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false });
+      return procesarFilasODS(f.name, rows);
     }
   }
 
@@ -377,26 +484,18 @@
     if (!f) return;
 
     try {
-      const rows = await extraerFilasDeArchivo(f);
-      let parsed = procesarFilasODS(f.name, rows);
+      let parsed = await procesarArchivoCompleto(f);
+      const odsInfo = CATALOGO_17_ODS.find(o => o.num === odsNum);
+
       if (!parsed) {
-        // Asignar directamente al ODS del cuadro
-        const odsInfo = CATALOGO_17_ODS.find(o => o.num === odsNum);
-        parsed = {
-          ods_num: odsNum,
-          nombre_ods: odsInfo ? odsInfo.nombre : `ODS ${odsNum}`,
-          codigo_indicador: `ODS_${odsNum}`,
-          nombre_indicador: `${odsInfo?.nombre || 'Indicador Oficial'} (Ecuador)`,
-          anio_reciente: 2023,
-          valor_reciente: 0,
-          unidad: '%',
-          fuente: 'CEPAL / ONU - Agenda 2030 Ecuador',
-          serie_historica: [],
-          nombre_archivo: f.name,
-        };
-      } else {
-        parsed.ods_num = odsNum;
-        parsed.nombre_ods = CATALOGO_17_ODS.find(o => o.num === odsNum)?.nombre || `ODS ${odsNum}`;
+        toast.error(`No se pudieron encontrar registros de Ecuador en "${f.name}"`);
+        return;
+      }
+
+      parsed.ods_num = odsNum;
+      parsed.nombre_ods = odsInfo?.nombre || `ODS ${odsNum}`;
+      if (!parsed.nombre_indicador) {
+        parsed.nombre_indicador = `${odsInfo?.nombre || 'Indicador Oficial'} (Ecuador)`;
       }
 
       loteDetectado = { ...loteDetectado, [odsNum]: parsed };
@@ -415,10 +514,10 @@
         }
       ];
       totalArchivosLote = auditoriaLote.length;
-      toast.success(`✓ ODS ${odsNum}: ${parsed.nombre_ods} cargado`);
+      toast.success(`✓ ODS ${odsNum}: ${parsed.nombre_ods} cargado con ${parsed.serie_historica.length} años (${parsed.valor_reciente}${parsed.unidad} en ${parsed.anio_reciente})`);
     } catch (err) {
       console.error(err);
-      toast.error('Error al procesar el archivo');
+      toast.error('Error al procesar el archivo: ' + err.message);
     }
   }
 
@@ -433,8 +532,7 @@
 
     for (const f of files) {
       try {
-        const rows = await extraerFilasDeArchivo(f);
-        const parsed = procesarFilasODS(f.name, rows);
+        const parsed = await procesarArchivoCompleto(f);
         if (parsed) {
           const yaExiste = nuevoLote[parsed.ods_num];
           const esDup = Boolean(yaExiste);
