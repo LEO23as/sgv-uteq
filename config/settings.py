@@ -130,3 +130,12 @@ CSRF_COOKIE_HTTPONLY = False            # Permite leer el token CSRF para petici
 SESSION_COOKIE_SAMESITE = 'Lax'         # Protege contra ataques CSRF externos
 SESSION_COOKIE_AGE = 60 * 60 * 24       # Expiración: 24 horas (86400 segundos)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False # Mantiene la sesión activa hasta que expire
+
+# ── SEGURIDAD HTTPS Y PROXY REVERSO NGINX ──
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+CSRF_TRUSTED_ORIGINS = [
+    'https://sgv-uteq.duckdns.org',
+    'http://sgv-uteq.duckdns.org',
+]
