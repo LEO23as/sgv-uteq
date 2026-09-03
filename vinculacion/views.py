@@ -3540,6 +3540,129 @@ def servir_documento_inline(request, path):
     return response
 
 
+@api_view(['GET'])
+def api_busqueda_global(request):
+    """
+    Buscador unificado de alta velocidad para Command Palette (Ctrl + K).
+    Permite encontrar proyectos, docentes, convenios y cantones en un solo paso.
+    """
+    q = request.GET.get('q', '').strip()
+    if not q or len(q) < 2:
+        ultimos_proyectos = list(
+            Proyecto.objects.all()
+            .order_by('-creado_en')[:6]
+            .values('id_proyecto', 'codigo', 'nombre', 'nombre_corto', 'estado', 'id_facultad__nombre_corto', 'id_facultad__nombre')
+        )
+        return JsonResponse({
+            'query': q,
+            'total_resultados': len(ultimos_proyectos),
+            'categorias': {
+                'proyectos': ultimos_proyectos,
+                'docentes': [],
+                'convenios': [],
+                'territorios': []
+            },
+            'es_sugerencia': True
+        })
+
+    # 1. Búsqueda en Proyectos
+    proyectos_qs = Proyecto.objects.filter(
+        Q(codigo__icontains=q) |
+        Q(nombre__icontains=q) |
+        Q(nombre_corto__icontains=q) |
+        Q(descripcion__icontains=q) |
+        Q(linea_vinculacion__icontains=q)
+    ).distinct()[:8]
+
+    lista_proyectos = [
+        {
+            'id': p.id_proyecto,
+            'codigo': p.codigo,
+            'nombre': p.nombre,
+            'nombre_corto': p.nombre_corto or p.nombre,
+            'facultad': p.id_facultad.nombre_corto or p.id_facultad.nombre if p.id_facultad else 'UTEQ',
+            'carrera': p.id_carrera.nombre if p.id_carrera else '',
+            'estado': p.estado,
+            'director': p.director_nombre or 'Docente UTEQ',
+            'canton': p.canton or 'Quevedo',
+            'tipo': 'proyecto'
+        }
+        for p in proyectos_qs
+    ]
+
+    # 2. Búsqueda en Docentes Directores
+    docentes_qs = Proyecto.objects.filter(
+        Q(director_nombre__icontains=q) |
+        Q(director_correo__icontains=q)
+    ).exclude(director_nombre__isnull=True).exclude(director_nombre='').distinct()[:6]
+
+    lista_docentes = []
+    vistos_docentes = set()
+    for p in docentes_qs:
+        key = p.director_nombre.strip().lower()
+        if key not in vistos_docentes:
+            vistos_docentes.add(key)
+            lista_docentes.append({
+                'nombre': p.director_nombre,
+                'correo': p.director_correo or '',
+                'proyecto_id': p.id_proyecto,
+                'proyecto_codigo': p.codigo,
+                'proyecto_nombre': p.nombre_corto or p.nombre,
+                'tipo': 'docente'
+            })
+
+    # 3. Búsqueda en Convenios y Entidades
+    convenios_qs = Convenio.objects.filter(
+        Q(id_entidad__nombre__icontains=q) |
+        Q(numero_memorando__icontains=q) |
+        Q(resolucion_aprobacion__icontains=q)
+    ).select_related('id_entidad')[:6]
+
+    lista_convenios = [
+        {
+            'id': c.id_convenio,
+            'entidad': c.id_entidad.nombre if c.id_entidad else 'Entidad Cooperante',
+            'memorando': c.numero_memorando or 'Convenio Oficial',
+            'estado': c.estado,
+            'fecha_fin': str(c.fecha_fin) if c.fecha_fin else '',
+            'tipo': 'convenio'
+        }
+        for c in convenios_qs
+    ]
+
+    # 4. Búsqueda en Territorios / Cantones
+    cantones_qs = Proyecto.objects.filter(
+        Q(canton__icontains=q) |
+        Q(parroquia__icontains=q) |
+        Q(provincia__icontains=q)
+    ).values('canton', 'provincia').annotate(total=Count('id_proyecto')).order_by('-total')[:4]
+
+    lista_territorios = [
+        {
+            'canton': c['canton'] or 'Quevedo',
+            'provincia': c['provincia'] or 'Los Ríos',
+            'total_proyectos': c['total'],
+            'tipo': 'territorio'
+        }
+        for c in cantones_qs if c['canton']
+    ]
+
+    total_encontrados = len(lista_proyectos) + len(lista_docentes) + len(lista_convenios) + len(lista_territorios)
+
+    return JsonResponse({
+        'query': q,
+        'total_resultados': total_encontrados,
+        'categorias': {
+            'proyectos': lista_proyectos,
+            'docentes': lista_docentes,
+            'convenios': lista_convenios,
+            'territorios': lista_territorios
+        },
+        'es_sugerencia': False
+    })
+
+
+
 
 
 

@@ -82,6 +82,8 @@ urlpatterns = [
     # Auditoría Criptográfica Inmutable (Estándar UTEQ Módulo G)
     path('api/auditoria/listar/',                     views.api_auditoria_listar,          name='api_auditoria_listar'),
     path('api/auditoria/verificar/',                  views.api_auditoria_verificar,       name='api_auditoria_verificar'),
+    # Buscador Global Unificado (Command Palette Ctrl + K)
+    path('api/busqueda-global/',                      views.api_busqueda_global,           name='api_busqueda_global'),
 
     # Cualquier otra ruta → mensaje amigable
     path('',        svelte_redirect),
