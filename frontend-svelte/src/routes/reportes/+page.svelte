@@ -334,6 +334,24 @@
             <span class="kpi-sub">Modelo predictivo</span>
           </div>
         </div>
+
+        <div class="kpi-card azul">
+          <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{stats.kpis.total_estudiantes || 0}</span>
+            <span class="kpi-label">Estudiantes Vinculados</span>
+            <span class="kpi-sub">{(stats.kpis.total_horas_estudiantes || 0).toLocaleString()} hrs acreditadas</span>
+          </div>
+        </div>
+
+        <div class="kpi-card esmeralda">
+          <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+          <div class="kpi-body">
+            <span class="kpi-num">{(stats.kpis.total_beneficiarios || 0).toLocaleString()}</span>
+            <span class="kpi-label">Beneficiarios Directos</span>
+            <span class="kpi-sub">Comunidad impactada</span>
+          </div>
+        </div>
       </div>
 
       <!-- BLOQUE: MODELO DE MONITOREO DE RIESGO TEMPORAL -->

@@ -343,8 +343,12 @@
     <tr>
       <th>Presupuesto Asignado:</th>
       <td><strong style="color:#15803d;">$ ${proy.presupuesto_planificado || '0.00'} USD</strong></td>
+      <th>Estudiantes / Beneficiarios:</th>
+      <td><strong>${proy.estudiantes_count || 0} est.</strong> / <strong>${proy.beneficiarios_count || 0} benef.</strong></td>
+    </tr>
+    <tr>
       <th>Resolución de Aprobación:</th>
-      <td>${proy.resolucion_aprobacion || 'Resolución Consejo Directivo'} (${proy.fecha_aprobacion ? formatFechaLocal(proy.fecha_aprobacion) : '—'})</td>
+      <td colspan="3">${proy.resolucion_aprobacion || 'Resolución Consejo Directivo'} (${proy.fecha_aprobacion ? formatFechaLocal(proy.fecha_aprobacion) : '—'})</td>
     </tr>
   </table>
 
@@ -541,6 +545,12 @@
                 {/if}
                 {#if proy.presupuesto_planificado}
                   <div class="info-item"><span class="il">Presupuesto</span><span class="iv text-green font-bold">$ {proy.presupuesto_planificado}</span></div>
+                {/if}
+                {#if proy.estudiantes_count}
+                  <div class="info-item"><span class="il">Estudiantes</span><span class="iv font-semibold text-green"><i class="bi bi-mortarboard-fill"></i> {proy.estudiantes_count} vinculados</span></div>
+                {/if}
+                {#if proy.beneficiarios_count}
+                  <div class="info-item"><span class="il">Beneficiarios</span><span class="iv font-semibold text-green"><i class="bi bi-people-fill"></i> {proy.beneficiarios_count} directos</span></div>
                 {/if}
                 {#if proy.provincia}
                   <div class="info-item full"><span class="il">Ubicación</span><span class="iv"><i class="bi bi-geo-alt-fill text-green"></i> {proy.canton}, {proy.parroquia ? proy.parroquia + ', ' : ''}{proy.provincia}</span></div>

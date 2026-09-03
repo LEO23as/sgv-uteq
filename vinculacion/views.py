@@ -1270,6 +1270,8 @@ def api_proyecto_detalle(request, id):
         for c in convenios_qs
     ]
     convenios_count = len(convenios_list)
+    estudiantes_count = ProyectoEstudiante.objects.filter(id_proyecto=proyecto).count()
+    beneficiarios_count = ProyectoBeneficiario.objects.filter(id_proyecto=proyecto).count()
 
     COLORES = {
         'EN_EJECUCION': '#1b7505', 'PROPUESTO': '#dba112', 'APROBADO': '#0d6efd',
@@ -1316,6 +1318,8 @@ def api_proyecto_detalle(request, id):
         'fotos': fotos_urls,
         'convenios_count': convenios_count,
         'convenios': convenios_list,
+        'estudiantes_count': estudiantes_count,
+        'beneficiarios_count': beneficiarios_count,
         'url_detalle': f'/proyectos/{proyecto.id_proyecto}/detalle/',
         'url_editar': f'/proyectos/{proyecto.id_proyecto}/editar/',
     })
@@ -2680,6 +2684,9 @@ def api_reportes_stats(request):
     total_entidades = EntidadCooperante.objects.filter(activo=True).count()
     total_convenios = Convenio.objects.count()
     con_geo = qs_proyectos.filter(latitud__isnull=False, longitud__isnull=False).count()
+    total_estudiantes = ProyectoEstudiante.objects.filter(id_proyecto__in=qs_proyectos).count()
+    total_beneficiarios = ProyectoBeneficiario.objects.filter(id_proyecto__in=qs_proyectos).count()
+    total_horas_estudiantes = int(ProyectoEstudiante.objects.filter(id_proyecto__in=qs_proyectos).aggregate(h=Sum('horas_cumplidas'))['h'] or 0)
 
     # Presupuesto acumulado
     presupuesto_total = float(qs_proyectos.aggregate(total=Sum('presupuesto_planificado'))['total'] or 0)
@@ -2883,6 +2890,9 @@ def api_reportes_stats(request):
             'duracion_promedio_meses': dur_promedio,
             'duracion_mediana_meses': dur_mediana,
             'prob_a_tiempo_pct': prob_a_tiempo,
+            'total_estudiantes': total_estudiantes,
+            'total_beneficiarios': total_beneficiarios,
+            'total_horas_estudiantes': total_horas_estudiantes,
         },
         'analisis_riesgo': {
             'bajo': len(lista_bajo),
