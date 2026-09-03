@@ -3615,7 +3615,7 @@ def api_busqueda_global(request):
     convenios_qs = Convenio.objects.filter(
         Q(id_entidad__nombre__icontains=q) |
         Q(numero_memorando__icontains=q) |
-        Q(resolucion_aprobacion__icontains=q)
+        Q(observaciones__icontains=q)
     ).select_related('id_entidad')[:6]
 
     lista_convenios = [
