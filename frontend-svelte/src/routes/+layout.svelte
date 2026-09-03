@@ -414,6 +414,27 @@
               <div class="period-list-container">
                 <div class="period-subtitle">• PERÍODOS DISPONIBLES</div>
                 <div class="period-items-list">
+                  <button 
+                    class="period-item-row" 
+                    class:selected-period={!selectedPeriodCode || selectedPeriodCode === 'Todos los períodos'}
+                    onclick={() => {
+                      selectedPeriodCode = 'Todos los períodos';
+                      periodosList = periodosList.map(item => ({ ...item, activo: false }));
+                      periodoSeleccionadoGlobal.set(null);
+                      showPeriodModal = false;
+                    }}
+                  >
+                    <span class="radio-indicator">
+                      {#if !selectedPeriodCode || selectedPeriodCode === 'Todos los períodos'}
+                        <i class="bi bi-check-lg check-active"></i>
+                      {:else}
+                        <span class="radio-circle"></span>
+                      {/if}
+                    </span>
+                    <span class="period-item-label" style="font-weight: 700; color: #1b7505;">
+                      Todos los períodos (Histórico completo)
+                    </span>
+                  </button>
                   {#if filteredPeriods.length === 0}
                     <div class="period-empty-msg">No hay períodos registrados en la base de datos</div>
                   {:else}
