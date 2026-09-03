@@ -360,11 +360,11 @@
               <th style="width: 70px;"># Reg.</th>
               <th style="width: 155px;">Fecha y Hora</th>
               <th style="width: 140px;">Módulo</th>
-              <th style="width: 165px;">Acción Realizada</th>
-              <th style="width: 130px;">Usuario</th>
-              <th style="width: 130px;">Dirección IP</th>
-              <th style="width: 140px; text-align: center;">Estado</th>
-              <th style="width: 90px; text-align: center;">Detalles</th>
+              <th style="width: 160px;">Acción Realizada</th>
+              <th style="width: 200px;">Usuario Responsable</th>
+              <th style="width: 120px;">Dirección IP</th>
+              <th style="width: 130px; text-align: center;">Estado</th>
+              <th style="width: 85px; text-align: center;">Detalles</th>
             </tr>
           </thead>
           <tbody>
@@ -383,8 +383,10 @@
                   </span>
                 </td>
                 <td class="col-user">
-                  <i class="bi bi-person-fill user-ico"></i>
-                  <span>{ev.username}</span>
+                  <div class="user-cell" title="{ev.nombre_persona || ev.username} (@{ev.username})">
+                    <span class="user-fullname">{ev.nombre_persona || ev.username}</span>
+                    <span class="user-handle"><i class="bi bi-person-fill"></i> @{ev.username}</span>
+                  </div>
                 </td>
                 <td class="col-ip">
                   <code>{ev.ip_origen === '127.0.0.1' ? '18.227.201.40' : ev.ip_origen}</code>
@@ -463,7 +465,10 @@
           </div>
           <div class="meta-box">
             <span class="m-lbl">Usuario Responsable</span>
-            <span class="m-val">{eventoSeleccionado.username}</span>
+            <span class="m-val user-modal-val">
+              <span class="u-name-main">{eventoSeleccionado.nombre_persona || eventoSeleccionado.username}</span>
+              <span class="user-subtag">@{eventoSeleccionado.username}</span>
+            </span>
           </div>
           <div class="meta-box">
             <span class="m-lbl">Dirección IP</span>
@@ -871,8 +876,46 @@
 
   .col-id { font-weight: 800; color: #64748b; }
   .col-time { font-size: 0.78rem; color: #64748b; }
-  .col-user { display: flex; align-items: center; gap: 5px; font-weight: 600; }
-  .user-ico { color: #94a3b8; }
+  .col-user { vertical-align: middle; }
+  .user-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.2;
+  }
+  .user-fullname {
+    font-size: 0.81rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 190px;
+    display: block;
+  }
+  .user-handle {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .user-modal-val {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .u-name-main {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .user-subtag {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #64748b;
+  }
   .col-ip code {
     background: #f1f5f9;
     padding: 2px 5px;

@@ -3382,8 +3382,23 @@ def api_auditoria_listar(request):
     if accion:
         qs = qs.filter(accion__icontains=accion)
     if q:
+        matching_user_ids = list(Usuario.objects.filter(
+            Q(username__icontains=q) |
+            Q(nombres__icontains=q) |
+            Q(id_docente__nombres__icontains=q) |
+            Q(id_docente__apellidos__icontains=q)
+        ).values_list('id_usuario', flat=True))
+        matching_usernames = list(Usuario.objects.filter(
+            Q(username__icontains=q) |
+            Q(nombres__icontains=q) |
+            Q(id_docente__nombres__icontains=q) |
+            Q(id_docente__apellidos__icontains=q)
+        ).values_list('username', flat=True))
+
         qs = qs.filter(
             Q(username__icontains=q) |
+            Q(username__in=matching_usernames) |
+            Q(usuario_id__in=matching_user_ids) |
             Q(ip_origen__icontains=q) |
             Q(detalles_json__icontains=q)
         )
@@ -3401,13 +3416,34 @@ def api_auditoria_listar(request):
     start = (page - 1) * page_size
     end = start + page_size
     items = []
-    usuarios_map = {u.id_usuario: u.username for u in Usuario.objects.all()}
+    usuarios_info = {}
+    for u in Usuario.objects.select_related('id_docente').all():
+        nombre_completo = ''
+        if u.id_docente:
+            nom = f"{u.id_docente.nombres or ''} {u.id_docente.apellidos or ''}".strip()
+            if nom:
+                nombre_completo = nom
+        if not nombre_completo and u.nombres:
+            nombre_completo = u.nombres.strip()
+        if not nombre_completo:
+            nombre_completo = u.username
+
+        info = {
+            'username': u.username,
+            'nombre_persona': nombre_completo.title() if nombre_completo else u.username,
+        }
+        usuarios_info[u.id_usuario] = info
+        usuarios_info[u.username.lower()] = info
+
     for b in qs[start:end]:
-        uname = b.username
-        if (not uname or uname in ('ANONIMO', 'SISTEMA')) and b.usuario_id in usuarios_map:
-            uname = usuarios_map[b.usuario_id]
-        if not uname:
-            uname = 'SISTEMA'
+        u_info = usuarios_info.get(b.usuario_id) or usuarios_info.get((b.username or '').lower())
+        if u_info:
+            uname = u_info['username']
+            nombre_persona = u_info['nombre_persona']
+        else:
+            uname = b.username or 'SISTEMA'
+            nombre_persona = 'Sistema Automatizado' if uname.upper() in ('SISTEMA', 'ANONIMO') else uname
+
         creado_en_str = ''
         if b.creado_en:
             dt = b.creado_en
@@ -3422,6 +3458,7 @@ def api_auditoria_listar(request):
             'accion': b.accion,
             'usuario_id': b.usuario_id,
             'username': uname,
+            'nombre_persona': nombre_persona,
             'ip_origen': b.ip_origen or '127.0.0.1',
             'hash_anterior': b.hash_anterior,
             'hash_actual': b.hash_actual,
