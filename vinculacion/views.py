@@ -914,6 +914,18 @@ def api_mapa_proyectos(request):
             Q(canton__icontains=buscar) |
             Q(parroquia__icontains=buscar)
         )
+    ods_filtro = request.GET.get('ods')
+    if ods_filtro:
+        qs = qs.filter(
+            Q(ods__icontains=f"ODS {ods_filtro}") |
+            Q(ods__icontains=f"ODS_{ods_filtro}") |
+            Q(ods__icontains=f"{ods_filtro},") |
+            Q(ods__icontains=f", {ods_filtro}") |
+            Q(ods__icontains=f",{ods_filtro}") |
+            Q(ods=str(ods_filtro)) |
+            Q(ods__endswith=f" {ods_filtro}") |
+            Q(ods__startswith=f"{ods_filtro} ")
+        )
 
     COLORES = {
         'EN_EJECUCION': '#1b7505',

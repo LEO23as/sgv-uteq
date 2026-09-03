@@ -3,6 +3,8 @@ import { writable } from 'svelte/store';
 export const user = writable(null);
 export const loading = writable(false);
 export const capaNBIActiva = writable(false);
+export const capaODSActiva = writable(false);
+export const odsSeleccionadoMapa = writable(null);
 
 /**
  * Petición directa a la API (SIEMPRE DATOS FRESCOS DEL SERVIDOR).

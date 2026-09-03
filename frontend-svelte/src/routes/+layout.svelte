@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { page, navigating } from '$app/stores';
   import { get } from 'svelte/store';
-  import { user, checkAuth, logout, capaNBIActiva, fetchAPI, loading } from '$lib/stores';
+  import { user, checkAuth, logout, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa, fetchAPI, loading } from '$lib/stores';
   import { notificaciones, totalNoLeidas, cargarNotificaciones, marcarTodasLeidas, marcarLeida, solicitarPermisoNotificaciones } from '$lib/notifications';
   import { toast } from '$lib/toast';
   import Toasts from '$lib/Toasts.svelte';
@@ -543,6 +543,64 @@
                   />
                   <span>NBI por Sector (INEC 2022)</span>
                 </label>
+
+                <!-- CAPAS ODS (AGENDA 2030) -->
+                <label class="fc-check">
+                  <input
+                    type="checkbox"
+                    checked={$capaODSActiva}
+                    onchange={(e) => {
+                      capaODSActiva.set(e.target.checked);
+                      if (!e.target.checked) odsSeleccionadoMapa.set(null);
+                    }}
+                  />
+                  <span>Capas ODS (Agenda 2030)</span>
+                </label>
+
+                {#if $capaODSActiva}
+                  <div class="fc-ods-selector-box">
+                    <div class="fc-ods-header">
+                      <span>Filtrar por ODS:</span>
+                      {#if $odsSeleccionadoMapa}
+                        <button type="button" class="fc-ods-reset-btn" onclick={() => odsSeleccionadoMapa.set(null)}>
+                          Todos
+                        </button>
+                      {/if}
+                    </div>
+                    <div class="fc-ods-grid">
+                      {#each [
+                        {num: 1, c: '#E5243B', n: '1. Fin Pobreza'},
+                        {num: 2, c: '#DDA63A', n: '2. Hambre Cero'},
+                        {num: 3, c: '#4C9F38', n: '3. Salud'},
+                        {num: 4, c: '#C5192D', n: '4. Educación'},
+                        {num: 5, c: '#FF3A21', n: '5. Género'},
+                        {num: 6, c: '#26BDE2', n: '6. Agua'},
+                        {num: 7, c: '#FCC30B', n: '7. Energía'},
+                        {num: 8, c: '#A21942', n: '8. Trabajo'},
+                        {num: 9, c: '#FD6925', n: '9. Industria'},
+                        {num: 10, c: '#DD1367', n: '10. Desigualdad'},
+                        {num: 11, c: '#FD9D24', n: '11. Ciudades'},
+                        {num: 12, c: '#BF8B2E', n: '12. Producción'},
+                        {num: 13, c: '#3F7E44', n: '13. Clima'},
+                        {num: 14, c: '#0A97D9', n: '14. Submarina'},
+                        {num: 15, c: '#56C02B', n: '15. Terrestre'},
+                        {num: 16, c: '#00689D', n: '16. Paz/Justicia'},
+                        {num: 17, c: '#19486A', n: '17. Alianzas'}
+                      ] as ods}
+                        <button
+                          type="button"
+                          class="fc-ods-chip"
+                          class:active={$odsSeleccionadoMapa === ods.num}
+                          style="--ods-bg: {ods.c};"
+                          onclick={() => odsSeleccionadoMapa.set($odsSeleccionadoMapa === ods.num ? null : ods.num)}
+                          title="{ods.n}"
+                        >
+                          {ods.num}
+                        </button>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/if}
           {/if}
@@ -1413,6 +1471,64 @@
 }
 
 .fc-check input { accent-color: var(--verde); }
+
+.fc-ods-selector-box {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.fc-ods-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+}
+.fc-ods-reset-btn {
+  background: none;
+  border: none;
+  color: var(--verde);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.fc-ods-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.fc-ods-chip {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--ods-bg);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+}
+.fc-ods-chip:hover {
+  transform: scale(1.15);
+  z-index: 2;
+}
+.fc-ods-chip.active {
+  outline: 2px solid #0f172a;
+  box-shadow: 0 0 0 2px #ffffff, 0 2px 5px rgba(0,0,0,0.3);
+  transform: scale(1.18);
+  font-size: 0.72rem;
+}
 
 .fc-divider { height: 1px; background: #f0f0f0; margin: 8px 16px; }
 .fc-home { color: #444 !important; font-weight: 600 !important; }

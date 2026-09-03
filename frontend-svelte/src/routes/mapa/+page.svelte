@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { fetchAPI, capaNBIActiva } from '$lib/stores';
+  import { fetchAPI, capaNBIActiva, capaODSActiva, odsSeleccionadoMapa } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { get } from 'svelte/store';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
@@ -19,6 +19,26 @@
     }
   }
 
+  const CATALOGO_17_ODS = [
+    { num: 1, nombre: "Fin de la Pobreza", color: "#E5243B", icono: "bi-cash-coin" },
+    { num: 2, nombre: "Hambre Cero", color: "#DDA63A", icono: "bi-egg-fried" },
+    { num: 3, nombre: "Salud y Bienestar", color: "#4C9F38", icono: "bi-heart-pulse-fill" },
+    { num: 4, nombre: "Educación de Calidad", color: "#C5192D", icono: "bi-book-fill" },
+    { num: 5, nombre: "Igualdad de Género", color: "#FF3A21", icono: "bi-gender-ambiguous" },
+    { num: 6, nombre: "Agua Limpia y Saneamiento", color: "#26BDE2", icono: "bi-droplet-fill" },
+    { num: 7, nombre: "Energía Asequible y No Contaminante", color: "#FCC30B", icono: "bi-lightning-charge-fill" },
+    { num: 8, nombre: "Trabajo Decente y Crecimiento Económico", color: "#A21942", icono: "bi-briefcase-fill" },
+    { num: 9, nombre: "Industria, Innovación e Infraestructura", color: "#FD6925", icono: "bi-building-gear" },
+    { num: 10, nombre: "Reducción de las Desigualdades", color: "#DD1367", icono: "bi-distribute-vertical" },
+    { num: 11, nombre: "Ciudades y Comunidades Sostenibles", color: "#FD9D24", icono: "bi-houses-fill" },
+    { num: 12, nombre: "Producción y Consumo Responsables", color: "#BF8B2E", icono: "bi-arrow-repeat" },
+    { num: 13, nombre: "Acción por el Clima", color: "#3F7E44", icono: "bi-tree-fill" },
+    { num: 14, nombre: "Vida Submarina", color: "#0A97D9", icono: "bi-water" },
+    { num: 15, nombre: "Vida de Ecosistemas Terrestres", color: "#56C02B", icono: "bi-flower1" },
+    { num: 16, nombre: "Paz, Justicia e Instituciones Sólidas", color: "#00689D", icono: "bi-shield-check" },
+    { num: 17, nombre: "Alianzas para Lograr los Objetivos", color: "#19486A", icono: "bi-people-fill" },
+  ];
+
   let facultades   = $state([]);
   let carreras     = $state([]);
   let periodos     = $state([]);
@@ -36,6 +56,36 @@
   let modalDocs = $state([]);       // documentos cacheados por proyecto id
   let modalDocsLoad = $state(false);
   let docAbierto = $state(null);    // {url, nombre, extension}
+
+  // Estado y datos de Capas ODS en el Mapa
+  let listaCapasOdsDB = $state([]);
+  let odsHudMinimizado = $state(false);
+  let modalHistoricoOds = $state(null);
+
+  async function cargarCapasOdsDB() {
+    try {
+      const data = await fetchAPI('/api/capas-ods/');
+      listaCapasOdsDB = data || [];
+    } catch {
+      listaCapasOdsDB = [];
+    }
+  }
+
+  let infoOdsActivo = $derived.by(() => {
+    if (!$capaODSActiva || !$odsSeleccionadoMapa) return null;
+    const dbItem = listaCapasOdsDB.find(o => o.num === $odsSeleccionadoMapa);
+    const catItem = CATALOGO_17_ODS.find(o => o.num === $odsSeleccionadoMapa);
+    if (!catItem) return null;
+    return {
+      ...catItem,
+      ...(dbItem || {}),
+      color: catItem.color,
+      icono: catItem.icono,
+      nombre: catItem.nombre,
+      cargado: dbItem?.cargado || false,
+    };
+  });
+
   function extractUrl(item) {
     if (!item) return '';
     let url = typeof item === 'string' ? item : (item.url || item.ruta_foto || item.foto_url || item.src || '');
@@ -189,6 +239,13 @@
     try {
       const params = new URLSearchParams();
       Object.entries(filtros).forEach(([k,v]) => { if(v) params.set(k,v); });
+      
+      const odsActivo = get(capaODSActiva);
+      const odsNum = get(odsSeleccionadoMapa);
+      if (odsActivo && odsNum) {
+        params.set('ods', odsNum);
+      }
+
       const data = await fetchAPI('/api/mapa/proyectos/?' + params.toString());
       total = data.features?.length ?? 0;
 
@@ -255,8 +312,21 @@
         modalDocs = [];
       });
 
+      let odsBadgeHtml = '';
+      if (p.ods) {
+        const odsItems = String(p.ods).split(',').map(s => s.trim()).filter(Boolean);
+        if (odsItems.length) {
+          odsBadgeHtml = `<div style="margin-top:4px;display:flex;gap:3px;flex-wrap:wrap;">` + 
+            odsItems.slice(0, 3).map(o => {
+              const num = parseInt(o.replace(/\D/g, ''));
+              const cat = CATALOGO_17_ODS.find(c => c.num === num);
+              return `<span style="background:${cat?.color || '#1b7505'};color:#ffffff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;">ODS ${num || o}</span>`;
+            }).join('') + (odsItems.length > 3 ? `<span style="font-size:9px;color:#64748b;">+${odsItems.length-3}</span>` : '') + `</div>`;
+        }
+      }
+
       marker.bindTooltip(
-        `<b>${p.nombre_corto}</b>${tieneMulti ? `<br><span style="color:#15803d;font-weight:700;">🌐 Red de ${numUbis} ubicaciones</span>` : ''}`,
+        `<b>${p.nombre_corto}</b>${tieneMulti ? `<br><span style="color:#15803d;font-weight:700;">🌐 Red de ${numUbis} ubicaciones</span>` : ''}${odsBadgeHtml}`,
         { direction: 'top', offset: [0, -35] }
       );
       markersLayer.addLayer(marker);
@@ -457,11 +527,19 @@
       mvTimer = setTimeout(renderNBILayer, 120);
     });
 
+    await cargarCapasOdsDB();
     await cargarProyectos();
 
-    // Suscribir al store DESPUÉS de que el mapa esté listo
+    // Suscribir a los stores DESPUÉS de que el mapa esté listo
     const unsubNBI = capaNBIActiva.subscribe(activo => toggleNBI(activo));
-    return () => unsubNBI();
+    const unsubODS = capaODSActiva.subscribe(() => { if (map) cargarProyectos(); });
+    const unsubODSNum = odsSeleccionadoMapa.subscribe(() => { if (map) cargarProyectos(); });
+
+    return () => {
+      unsubNBI();
+      unsubODS();
+      unsubODSNum();
+    };
   });
 
   async function filtrar() { await cargarProyectos(); }
@@ -607,6 +685,70 @@
         </button>
       </div>
 
+      <!-- CARD HUD FLOTANTE DE ODS (AGENDA 2030) -->
+      {#if $capaODSActiva && infoOdsActivo}
+        <div class="map-ods-floating-card" style="--ods-accent: {infoOdsActivo.color || '#E5243B'};">
+          <div class="mofc-header" style="background: {infoOdsActivo.color || '#E5243B'};">
+            <div class="mofc-title-wrap">
+              <span class="mofc-badge">ODS {infoOdsActivo.num}</span>
+              <span class="mofc-name">{infoOdsActivo.nombre}</span>
+            </div>
+            <div class="mofc-actions">
+              <button 
+                type="button" 
+                class="mofc-btn-icon" 
+                onclick={() => odsHudMinimizado = !odsHudMinimizado} 
+                title={odsHudMinimizado ? 'Expandir diagnóstico' : 'Minimizar'}
+              >
+                <i class="bi {odsHudMinimizado ? 'bi-chevron-down' : 'bi-chevron-up'}"></i>
+              </button>
+              <button 
+                type="button" 
+                class="mofc-btn-icon" 
+                onclick={() => { odsSeleccionadoMapa.set(null); }} 
+                title="Quitar filtro ODS"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          {#if !odsHudMinimizado}
+            <div class="mofc-body">
+              <div class="mofc-stat-row">
+                <div class="mofc-stat-box">
+                  <span class="mofc-stat-lbl">INDICADOR OFICIAL ECUADOR</span>
+                  <div class="mofc-stat-val">
+                    <strong>{infoOdsActivo.valor_reciente ?? '—'}</strong>
+                    <small>{infoOdsActivo.unidad || '%'}</small>
+                    <span class="mofc-stat-yr">({infoOdsActivo.anio_reciente || 'Reciente'})</span>
+                  </div>
+                  <p class="mofc-stat-sub" title={infoOdsActivo.nombre_indicador || infoOdsActivo.nombre}>
+                    {infoOdsActivo.nombre_indicador || 'Meta de Desarrollo Sostenible (CEPAL / ONU)'}
+                  </p>
+                </div>
+              </div>
+
+              <div class="mofc-impact-row">
+                <div class="mofc-impact-pill">
+                  <i class="bi bi-geo-alt-fill" style="color: {infoOdsActivo.color};"></i>
+                  <span><strong>{total}</strong> proyectos UTEQ alineados</span>
+                </div>
+                {#if infoOdsActivo.serie_historica && infoOdsActivo.serie_historica.length > 0}
+                  <button 
+                    type="button" 
+                    class="mofc-btn-hist" 
+                    onclick={() => modalHistoricoOds = infoOdsActivo}
+                  >
+                    <i class="bi bi-clock-history"></i> Evolución ({infoOdsActivo.serie_historica.length} años)
+                  </button>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <div class="map-hud-bar">
         <div class="hud-item"><i class="bi bi-geo-alt-fill text-verde"></i> <strong>{total}</strong> Proyectos ubicados</div>
         <div class="hud-sep"></div>
@@ -617,6 +759,84 @@
     </div>
   </div>
 </div>
+
+<!-- MODAL DE EVOLUCIÓN HISTÓRICA ODS -->
+{#if modalHistoricoOds}
+  <div class="ods-modal-overlay" onclick={() => modalHistoricoOds = null}>
+    <div class="ods-modal-box" onclick={(e) => e.stopPropagation()}>
+      <div class="omb-hdr" style="background: {modalHistoricoOds.color || '#1b7505'};">
+        <div class="omb-hdr-info">
+          <h3><i class="bi {modalHistoricoOds.icono || 'bi-globe-americas'}"></i> ODS {modalHistoricoOds.num}: {modalHistoricoOds.nombre}</h3>
+          <p>{modalHistoricoOds.nombre_indicador || 'Indicador Oficial CEPAL / ONU (Ecuador)'}</p>
+        </div>
+        <button class="omb-close" onclick={() => modalHistoricoOds = null}><i class="bi bi-x-lg"></i></button>
+      </div>
+
+      <div class="omb-body">
+        <div class="omb-kpi-row">
+          <div class="omb-kpi-card">
+            <span class="okc-lbl">VALOR MÁS RECIENTE EN ECUADOR</span>
+            <div class="okc-val">
+              {modalHistoricoOds.valor_reciente} <small>{modalHistoricoOds.unidad}</small>
+            </div>
+          </div>
+          <div class="omb-kpi-card">
+            <span class="okc-lbl">AÑO DE MEDICIÓN</span>
+            <div class="okc-val">{modalHistoricoOds.anio_reciente}</div>
+          </div>
+          <div class="omb-kpi-card">
+            <span class="okc-lbl">PROYECTOS UTEQ ALINEADOS</span>
+            <div class="okc-val text-verde">{total}</div>
+          </div>
+        </div>
+
+        <h4 class="omb-subhdr"><i class="bi bi-clock-history"></i> Serie Histórica Registrada en Ecuador</h4>
+        {#if modalHistoricoOds.serie_historica && modalHistoricoOds.serie_historica.length}
+          <div class="omb-table-wrap">
+            <table class="omb-table">
+              <thead>
+                <tr>
+                  <th>Año</th>
+                  <th>Valor Oficial</th>
+                  <th>Unidad</th>
+                  <th>Evolución</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each modalHistoricoOds.serie_historica as fila, idx}
+                  {@const prev = idx > 0 ? modalHistoricoOds.serie_historica[idx - 1].valor : null}
+                  {@const dif = prev !== null ? fila.valor - prev : null}
+                  <tr>
+                    <td><strong>{fila.anio}</strong></td>
+                    <td class="td-val">{fila.valor}</td>
+                    <td><span class="badge-unit">{modalHistoricoOds.unidad}</span></td>
+                    <td>
+                      {#if dif === null}
+                        <span class="trend-base">Línea base</span>
+                      {:else if dif > 0}
+                        <span class="trend-up">▲ +{dif.toFixed(2)}</span>
+                      {:else if dif < 0}
+                        <span class="trend-down">▼ {dif.toFixed(2)}</span>
+                      {:else}
+                        <span class="trend-eq">═ 0.00</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p class="empty-hist">No hay serie histórica registrada para este indicador.</p>
+        {/if}
+      </div>
+
+      <div class="omb-ftr">
+        <button class="btn-sec" onclick={() => modalHistoricoOds = null}>Cerrar</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- MODAL -->
 {#if proySeleccionado}
@@ -848,9 +1068,21 @@
               </ul>
             {/if}
 
-          {:else if modalTab === 'notas'}
             {#if p.ods}
-              <div class="mi-block"><span class="mi-l">ODS</span><p class="mi-p">{p.ods}</p></div>
+              {@const odsItems = String(p.ods).split(',').map(s => s.trim()).filter(Boolean)}
+              <div class="mi-block">
+                <span class="mi-l"><i class="bi bi-globe-americas"></i> Alineación ODS (Agenda 2030)</span>
+                <div class="proy-ods-badges-wrap">
+                  {#each odsItems as o}
+                    {@const num = parseInt(o.replace(/\D/g, ''))}
+                    {@const cat = CATALOGO_17_ODS.find(c => c.num === num)}
+                    <span class="proy-ods-badge-item" style="--ods-col: {cat?.color || '#1b7505'};">
+                      <i class="bi {cat?.icono || 'bi-bullseye'}"></i>
+                      <strong>ODS {num || o}:</strong> {cat?.nombre || o}
+                    </span>
+                  {/each}
+                </div>
+              </div>
             {/if}
             {#if p.motivo_detencion}
               <div class="mi-block warn"><span class="mi-l">Motivo detención</span><p class="mi-p">{p.motivo_detencion}</p></div>
@@ -1654,4 +1886,408 @@
 
 .modal-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px 14px; }
 @media (max-width:520px) { .modal-grid { grid-template-columns:1fr; } }
+
+/* ── HUD CARD FLOTANTE DE ODS EN EL MAPA ── */
+.map-ods-floating-card {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 999;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(8px);
+  animation: slideInDown 0.25s ease-out;
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mofc-header {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffffff;
+}
+
+.mofc-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mofc-badge {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.mofc-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mofc-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mofc-btn-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s ease;
+}
+
+.mofc-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.mofc-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mofc-stat-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.mofc-stat-lbl {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.mofc-stat-val {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.mofc-stat-val strong {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.mofc-stat-val small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.mofc-stat-yr {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.mofc-stat-sub {
+  font-size: 0.72rem;
+  color: #475569;
+  line-height: 1.3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mofc-impact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mofc-impact-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #334155;
+}
+
+.mofc-impact-pill strong {
+  color: #0f172a;
+}
+
+.mofc-btn-hist {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.mofc-btn-hist:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ── MODAL EVOLUCIÓN HISTÓRICA ODS ── */
+.ods-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ods-modal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 620px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.omb-hdr {
+  padding: 14px 18px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.omb-hdr-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.omb-hdr-info p {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.omb-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.omb-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.omb-body {
+  padding: 18px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.omb-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.omb-kpi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.okc-lbl {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.okc-val {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.okc-val small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.omb-subhdr {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.omb-table-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.omb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.omb-table th {
+  background: #f8fafc;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.omb-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.omb-table tr:last-child td {
+  border-bottom: none;
+}
+
+.td-val {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.badge-unit {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.trend-base { color: #94a3b8; font-size: 0.72rem; font-weight: 600; }
+.trend-up { color: #dc2626; font-size: 0.72rem; font-weight: 700; }
+.trend-down { color: #16a34a; font-size: 0.72rem; font-weight: 700; }
+.trend-eq { color: #64748b; font-size: 0.72rem; font-weight: 600; }
+
+.empty-hist {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 20px;
+}
+
+.omb-ftr {
+  padding: 12px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-sec {
+  background: #e2e8f0;
+  border: none;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-sec:hover {
+  background: #cbd5e1;
+}
+
+/* ── BADGES ODS EN MODAL DE PROYECTO ── */
+.proy-ods-badges-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.proy-ods-badge-item {
+  background: #ffffff;
+  border: 1px solid var(--ods-col);
+  color: var(--ods-col);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.proy-ods-badge-item strong {
+  font-weight: 800;
+}
 </style>
