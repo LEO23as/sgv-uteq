@@ -1,0 +1,17 @@
+# Dockerignore para SGV-UTEQ
+media/
+media/**
+frontend-svelte/
+.git/
+.github/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.tar.gz
+*.zip
+*.rar
+*.log
+scratch/
+node_modules/
