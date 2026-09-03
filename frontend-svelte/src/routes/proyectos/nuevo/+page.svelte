@@ -51,10 +51,24 @@
 
     if (pPer) {
       form.id_periodo_inicio = String(pPer);
-      facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+      try {
+        facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+      } catch {
+        facultades = [];
+      }
+      if (!facultades || !facultades.length) {
+        try { facultades = await fetchAPI('/api/facultades/'); } catch { facultades = []; }
+      }
       if (pFac) {
         form.id_facultad = String(pFac);
-        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+        try {
+          carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+        } catch {
+          carrerasFil = [];
+        }
+        if (!carrerasFil || !carrerasFil.length) {
+          try { carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${form.id_facultad}`); } catch { carrerasFil = []; }
+        }
         if (pCar) form.id_carrera = String(pCar);
       }
     }
@@ -64,13 +78,29 @@
     form.id_facultad = ''; form.id_carrera = '';
     facultades = []; carrerasFil = [];
     if (!form.id_periodo_inicio) return;
-    facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+    try {
+      facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+    } catch {
+      facultades = [];
+    }
+    if (!facultades || !facultades.length) {
+      try { facultades = await fetchAPI('/api/facultades/'); } catch { facultades = []; }
+    }
   }
 
   async function onFacultadChange() {
     form.id_carrera = ''; carrerasFil = [];
-    if (!form.id_facultad || !form.id_periodo_inicio) return;
-    carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+    if (!form.id_facultad) return;
+    if (form.id_periodo_inicio) {
+      try {
+        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+      } catch {
+        carrerasFil = [];
+      }
+    }
+    if (!carrerasFil || !carrerasFil.length) {
+      try { carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${form.id_facultad}`); } catch { carrerasFil = []; }
+    }
   }
 
   function onFotosChange(e) {
@@ -298,7 +328,7 @@
             <input
               type="text"
               bind:value={form.director_nombre}
-              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]/g, '')}
+              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]/g, '')}
               placeholder="Ing. Moisés Menace, MSc."
             />
           </div>

@@ -57,19 +57,61 @@
   };
 
   onMount(async () => {
+    loading = true;
     try {
       const [pers, data] = await Promise.all([
         fetchAPI('/api/periodos/'),
         fetchAPI(`/api/proyectos/${id}/edit/`),
       ]);
-      periodos = pers;
+      periodos = pers || [];
       proyecto = data;
+
+      const pPer = String(data.id_periodo_inicio || '');
+      const pFac = String(data.id_facultad || '');
+      const pCar = String(data.id_carrera || '');
+
+      // 1. Cargar Facultades (del período o catálogo global)
+      if (pPer) {
+        try {
+          facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${pPer}`);
+        } catch {
+          facultades = [];
+        }
+      }
+      if (!facultades || !facultades.length) {
+        try {
+          facultades = await fetchAPI('/api/facultades/');
+        } catch {
+          facultades = [];
+        }
+      }
+
+      // 2. Cargar Carreras de la facultad
+      if (pFac) {
+        if (pPer) {
+          try {
+            carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${pPer}&facultad=${pFac}`);
+          } catch {
+            carrerasFil = [];
+          }
+        }
+        if (!carrerasFil || !carrerasFil.length) {
+          try {
+            carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${pFac}`);
+          } catch {
+            carrerasFil = [];
+          }
+        }
+      }
+
+      // 3. Asignar los valores del proyecto al formulario
       for (const k of Object.keys(form)) {
         if (data[k] !== undefined && data[k] !== null) form[k] = String(data[k] ?? '');
       }
-      form.id_facultad = String(data.id_facultad || '');
-      form.id_carrera = String(data.id_carrera || '');
-      form.id_periodo_inicio = String(data.id_periodo_inicio || '');
+      form.id_periodo_inicio = pPer;
+      form.id_facultad = pFac;
+      form.id_carrera = pCar;
+
       fotosExist = data.fotos || [];
       ubicaciones = data.ubicaciones || [];
       if (data.ods) {
@@ -78,12 +120,6 @@
       if (data.resolucion_aprobacion) resolForm.resolucion_aprobacion = data.resolucion_aprobacion;
       if (data.fecha_aprobacion) resolForm.fecha_aprobacion = data.fecha_aprobacion;
 
-      if (form.id_periodo_inicio) {
-        facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
-        if (form.id_facultad) {
-          carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
-        }
-      }
       await cargarDocumentos();
     } catch (e) {
       console.error(e);
@@ -102,12 +138,33 @@
   async function onPeriodoChange() {
     form.id_facultad = ''; form.id_carrera = ''; facultades = []; carrerasFil = [];
     if (!form.id_periodo_inicio) return;
-    facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+    try {
+      facultades = await fetchAPI(`/api/facultades-periodo/?periodo=${form.id_periodo_inicio}`);
+    } catch {
+      facultades = [];
+    }
+    if (!facultades || !facultades.length) {
+      try { facultades = await fetchAPI('/api/facultades/'); } catch { facultades = []; }
+    }
   }
+
   async function onFacultadChange() {
     form.id_carrera = ''; carrerasFil = [];
-    if (!form.id_facultad || !form.id_periodo_inicio) return;
-    carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+    if (!form.id_facultad) return;
+    if (form.id_periodo_inicio) {
+      try {
+        carrerasFil = await fetchAPI(`/api/carreras-periodo/?periodo=${form.id_periodo_inicio}&facultad=${form.id_facultad}`);
+      } catch {
+        carrerasFil = [];
+      }
+    }
+    if (!carrerasFil || !carrerasFil.length) {
+      try {
+        carrerasFil = await fetchAPI(`/api/carreras-por-facultad/?facultad_id=${form.id_facultad}`);
+      } catch {
+        carrerasFil = [];
+      }
+    }
   }
 
   function onFotosChange(e) {
@@ -313,8 +370,8 @@
             <input
               type="text"
               bind:value={form.director_nombre}
-              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]/g, '')}
-              placeholder="Nombre completo del director..."
+              oninput={(e) => e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]/g, '')}
+              placeholder="Nombre completo del director (ej: Ing. Juan Pérez, MSc.)..."
             />
           </div>
           <div class="field"><label>Correo del director</label><input type="email" bind:value={form.director_correo} placeholder="director@uteq.edu.ec" /></div>

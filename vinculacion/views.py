@@ -2054,8 +2054,8 @@ def api_proyecto_create(request):
                     return JsonResponse({'error': 'El presupuesto debe ser un número válido'}, status=400)
 
             # Validar nombre del director si fue ingresado
-            if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]+$', director_nombre):
-                return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+            if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', director_nombre):
+                return JsonResponse({'error': 'El nombre del director contiene caracteres inválidos'}, status=400)
 
             lat = request.POST.get('latitud', '').strip() or None
             lng = request.POST.get('longitud', '').strip() or None
@@ -2356,8 +2356,8 @@ def api_proyecto_update(request, id):
                         return JsonResponse({'error': 'El presupuesto debe ser un número válido'}, status=400)
 
                 # Validar nombre del director si fue ingresado
-                if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]+$', director_nombre):
-                    return JsonResponse({'error': 'Los nombres solo deben contener letras y espacios'}, status=400)
+                if director_nombre and not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s.,\-–()/\'\"°]+$', director_nombre):
+                    return JsonResponse({'error': 'El nombre del director contiene caracteres inválidos'}, status=400)
 
                 proyecto.codigo = codigo
                 proyecto.nombre = nombre
