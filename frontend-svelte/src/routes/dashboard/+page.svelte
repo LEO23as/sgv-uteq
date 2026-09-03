@@ -177,6 +177,7 @@
       {#each filtered as m}
         {#if m.disabled}
           <div class="mod-card disabled">
+            <span class="mod-star"><i class="bi bi-star-fill"></i></span>
             <div class="mod-icon-container" style="background-color: {m.bg}; color: {m.color};">
               <i class="bi {m.bi}"></i>
             </div>
@@ -185,9 +186,7 @@
           </div>
         {:else}
           <a href={m.href} class="mod-card">
-            {#if !cargando && stats && m.key && stats[m.key] !== undefined}
-              <span class="mod-card-badge">{stats[m.key]}</span>
-            {/if}
+            <span class="mod-star"><i class="bi bi-star-fill"></i></span>
             <div class="mod-icon-container" style="background-color: {m.bg}; color: {m.color};">
               <i class="bi {m.bi}"></i>
             </div>
@@ -454,30 +453,34 @@
 }
 
 .modulos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
 .mod-card {
   position: relative;
+  width: 178px;
+  height: 200px;
   background: #ffffff;
-  border-radius: 14px;
-  padding: 20px 16px;
+  border-radius: 12px;
+  padding: 18px 14px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   text-decoration: none;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .mod-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   border-color: #cbd5e1;
 }
 
@@ -486,28 +489,26 @@
   cursor: not-allowed;
 }
 
-.mod-card-badge {
+.mod-star {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: #1b7a2b;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 12px;
+  top: 10px;
+  left: 12px;
+  font-size: 0.82rem;
+  color: #f59e0b;
+  opacity: 0.9;
 }
 
 .mod-icon-container {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
+  font-size: 1.7rem;
   margin-bottom: 12px;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .mod-card:hover .mod-icon-container {
@@ -515,15 +516,20 @@
 }
 
 .mod-title {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  line-height: 1.2;
 }
 
 .mod-desc {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #64748b;
-  line-height: 1.3;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
