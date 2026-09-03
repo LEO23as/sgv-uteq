@@ -5,6 +5,7 @@
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
+  import PdfViewerModal from '$lib/PdfViewerModal.svelte';
 
   const API = '';
   const id = $derived($page.params.id);
@@ -14,6 +15,20 @@
   let archivoAnexo = $state(null);
   let tipoDoc = $state('');
   let descDoc = $state('');
+
+  // Estado del Visor PDF
+  let pdfViewerOpen = $state(false);
+  let pdfUrl = $state('');
+  let pdfTitle = $state('');
+  let pdfCategory = $state('');
+
+  function verAnexoPdf(a) {
+    if (!a || !a.url) return;
+    pdfUrl = API + a.url;
+    pdfTitle = a.nombre_archivo || 'Anexo de Convenio';
+    pdfCategory = `Convenio Institucional — ${a.tipo_documento || 'Documento Oficial'}`;
+    pdfViewerOpen = true;
+  }
 
   const ESTADOS = {
     VIGENTE:   { label:'Vigente',   cls:'vigente'  },
@@ -240,20 +255,27 @@
         <div class="anexos-list">
           {#each c.anexos as a}
             <div class="anexo-item">
-              <i class="bi {iconAnexo(a.nombre_archivo)} anexo-icon"></i>
-              <div class="anexo-info">
-                <span class="anexo-nombre">{a.nombre_archivo}</span>
-                <span class="anexo-meta">
-                  {a.tipo_documento || 'Documento'} · {a.tamanio_kb || 0} KB
-                  {#if a.descripcion} · {a.descripcion}{/if}
-                </span>
-              </div>
-              <a href={API + a.url} target="_blank" class="btn-dl" title="Descargar anexo">
-                <i class="bi bi-download"></i>
-              </a>
-              <button class="btn-del" onclick={() => eliminarAnexo(a)} title="Eliminar anexo">
-                <i class="bi bi-trash"></i>
+              <button type="button" class="anexo-preview-btn" onclick={() => verAnexoPdf(a)} title="Ver anexo en visor">
+                <i class="bi {iconAnexo(a.nombre_archivo)} anexo-icon"></i>
+                <div class="anexo-info">
+                  <span class="anexo-nombre">{a.nombre_archivo}</span>
+                  <span class="anexo-meta">
+                    {a.tipo_documento || 'Documento'} · {a.tamanio_kb || 0} KB
+                    {#if a.descripcion} · {a.descripcion}{/if}
+                  </span>
+                </div>
               </button>
+              <div class="anexo-actions">
+                <button type="button" class="btn-ver-anexo" onclick={() => verAnexoPdf(a)} title="Ver documento">
+                  <i class="bi bi-eye-fill"></i> Ver
+                </button>
+                <a href={API + a.url} download class="btn-dl" title="Descargar anexo">
+                  <i class="bi bi-download"></i>
+                </a>
+                <button class="btn-del" onclick={() => eliminarAnexo(a)} title="Eliminar anexo">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
             </div>
           {/each}
         </div>
@@ -263,6 +285,15 @@
     </div>
   </div>
 </div>
+
+<!-- VISOR INTERACTIVO DE PDF -->
+<PdfViewerModal
+  bind:show={pdfViewerOpen}
+  docUrl={pdfUrl}
+  docTitle={pdfTitle}
+  docCategory={pdfCategory}
+  onClose={() => { pdfViewerOpen = false; }}
+/>
 {:else}
   <div class="loading-wrap">Convenio no encontrado</div>
 {/if}
@@ -309,11 +340,17 @@
 .btn-subir:hover { background:#145c04; }
 
 .anexos-list { display:flex;flex-direction:column;gap:8px; }
-.anexo-item { display:flex;align-items:center;gap:12px;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0; }
-.anexo-icon { font-size:1.3rem;color:#1b7505; }
+.anexo-item { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;transition:background .15s; }
+.anexo-item:hover { background:#f1f5f9; }
+.anexo-preview-btn { background:none;border:none;padding:0;display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;cursor:pointer; }
+.anexo-preview-btn:hover .anexo-nombre { color:#1b7505; }
+.anexo-icon { font-size:1.3rem;color:#1b7505;flex-shrink:0; }
 .anexo-info { flex:1;min-width:0;display:flex;flex-direction:column;gap:2px; }
 .anexo-nombre { font-size:.85rem;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .anexo-meta { font-size:.75rem;color:#64748b; }
+.anexo-actions { display:flex;align-items:center;gap:6px;flex-shrink:0; }
+.btn-ver-anexo { background:#e8f5e0;color:#1b7505;border:1px solid #cbebc0;padding:5px 10px;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s; }
+.btn-ver-anexo:hover { background:#1b7505;color:#ffffff; }
 .btn-dl, .btn-del { width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;text-decoration:none;font-size:.85rem; }
 .btn-dl { background:#e0f2fe;color:#0369a1; }
 .btn-del { background:#fee2e2;color:#dc2626; }
