@@ -27,6 +27,7 @@
   let selectedIndex = $state(0);
   let inputEl: HTMLInputElement | null = $state(null);
   let debounceTimer: any = null;
+  let recentSearches = $state<string[]>([]);
 
   // Lista plana de todos los elementos para navegación por teclado
   let flatItems = $derived([
@@ -35,6 +36,13 @@
     ...resultados.convenios.map((c) => ({ ...c, _kind: 'convenio' })),
     ...resultados.territorios.map((t) => ({ ...t, _kind: 'territorio' }))
   ]);
+
+  onMount(() => {
+    try {
+      const saved = localStorage.getItem('sgv_recent_searches');
+      if (saved) recentSearches = JSON.parse(saved);
+    } catch {}
+  });
 
   $effect(() => {
     if (isOpen) {
@@ -47,6 +55,37 @@
       selectedIndex = 0;
     }
   });
+
+  $effect(() => {
+    if (isOpen && selectedIndex >= 0) {
+      tick().then(() => {
+        const el = document.querySelector('.result-row.active');
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    }
+  });
+
+  function guardarBusquedaReciente(texto: string) {
+    if (!texto || texto.trim().length < 2) return;
+    const t = texto.trim();
+    const nueva = [t, ...recentSearches.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, 5);
+    recentSearches = nueva;
+    try {
+      localStorage.setItem('sgv_recent_searches', JSON.stringify(nueva));
+    } catch {}
+  }
+
+  function limpiarHistorial() {
+    recentSearches = [];
+    try {
+      localStorage.removeItem('sgv_recent_searches');
+    } catch {}
+  }
+
+  function usarBusquedaReciente(texto: string) {
+    query = texto;
+    buscar(texto);
+  }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
     // Atajo Ctrl+K o Cmd+K
@@ -133,6 +172,8 @@
     isOpen = false;
     if (!item) return;
 
+    guardarBusquedaReciente(query || item.codigo || item.nombre || item.canton || item.entidad);
+
     if (item._kind === 'proyecto') {
       if (onSelectProject) {
         onSelectProject(item.id || item.id_proyecto);
@@ -176,12 +217,29 @@
         {#if loading}
           <div class="search-spinner"></div>
         {:else if query}
-          <button class="btn-clear-search" onclick={() => { query = ''; cargarSugerencias(); }}>
+          <button type="button" class="btn-clear-search" onclick={() => { query = ''; cargarSugerencias(); }}>
             <i class="bi bi-x-circle-fill"></i>
           </button>
         {/if}
         <span class="kbd-badge">ESC</span>
       </div>
+
+      <!-- HISTORIAL DE BÚSQUEDAS RECIENTES -->
+      {#if !query && recentSearches.length > 0}
+        <div class="recent-searches-bar">
+          <span class="rs-label"><i class="bi bi-clock-history"></i> Recientes:</span>
+          <div class="rs-chips">
+            {#each recentSearches as rs}
+              <button type="button" class="rs-chip" onclick={() => usarBusquedaReciente(rs)}>
+                {rs}
+              </button>
+            {/each}
+            <button type="button" class="btn-clear-history" onclick={limpiarHistorial} title="Limpiar historial">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      {/if}
 
       <!-- LISTA DE RESULTADOS -->
       <div class="search-results-box">
@@ -230,6 +288,9 @@
                 <div class="rr-badge-estado {p.estado?.toLowerCase()}">
                   {p.estado || 'ACTIVO'}
                 </div>
+                {#if isSel}
+                  <span class="rr-enter-hint"><kbd>↵</kbd></span>
+                {/if}
               </div>
             {/each}
           </div>
@@ -262,6 +323,9 @@
                   </div>
                 </div>
                 <span class="rr-tag">Docente UTEQ</span>
+                {#if isSel}
+                  <span class="rr-enter-hint"><kbd>↵</kbd></span>
+                {/if}
               </div>
             {/each}
           </div>
@@ -294,6 +358,9 @@
                   </div>
                 </div>
                 <span class="rr-badge-estado vigente">{c.estado || 'VIGENTE'}</span>
+                {#if isSel}
+                  <span class="rr-enter-hint"><kbd>↵</kbd></span>
+                {/if}
               </div>
             {/each}
           </div>
@@ -326,6 +393,9 @@
                   </div>
                 </div>
                 <span class="rr-tag">{t.total_proyectos} {t.total_proyectos === 1 ? 'proyecto' : 'proyectos'}</span>
+                {#if isSel}
+                  <span class="rr-enter-hint"><kbd>↵</kbd></span>
+                {/if}
               </div>
             {/each}
           </div>
@@ -451,6 +521,65 @@
     letter-spacing: 0.04em;
   }
 
+  /* RECENT SEARCHES BAR */
+  .recent-searches-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+    overflow-x: auto;
+  }
+
+  .rs-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #64748b;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .rs-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .rs-chip {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    border-radius: 14px;
+    padding: 3px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.14s;
+  }
+
+  .rs-chip:hover {
+    background: #e8f5e0;
+    color: #1b7505;
+    border-color: #a7f3d0;
+  }
+
+  .btn-clear-history {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px;
+  }
+
+  .btn-clear-history:hover {
+    color: #ef4444;
+  }
+
   /* RESULTS BOX */
   .search-results-box {
     flex: 1;
@@ -500,6 +629,7 @@
     cursor: pointer;
     transition: background 0.12s, transform 0.12s;
     user-select: none;
+    position: relative;
   }
 
   .result-row:hover, .result-row.active {
@@ -509,6 +639,21 @@
   .result-row.active {
     border-left: 3px solid #1b7505;
     background: #f0fdf4;
+  }
+
+  .rr-enter-hint {
+    margin-left: 6px;
+  }
+
+  .rr-enter-hint kbd {
+    background: #ffffff;
+    border: 1px solid #a7f3d0;
+    color: #1b7505;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(27, 117, 5, 0.15);
   }
 
   .rr-icon {
@@ -677,5 +822,6 @@
   @media (max-width: 640px) {
     .search-backdrop { padding-top: 20px; }
     .footer-hints { display: none; }
+    .recent-searches-bar { display: none; }
   }
 </style>
