@@ -898,18 +898,10 @@ def api_mapa_proyectos(request):
     if carrera_id:
         qs = qs.filter(id_carrera_id=carrera_id)
     if periodo_id:
-        try:
-            p_obj = PeriodoAcademico.objects.get(id_periodo=periodo_id)
-            qs = qs.filter(
-                Q(id_periodo_inicio_id=periodo_id) |
-                Q(id_periodo_fin_id=periodo_id) |
-                Q(
-                    id_periodo_inicio__fecha_inicio__lte=p_obj.fecha_fin,
-                    id_periodo_fin__fecha_fin__gte=p_obj.fecha_inicio
-                )
-            )
-        except Exception:
-            qs = qs.filter(id_periodo_inicio_id=periodo_id)
+        qs = qs.filter(
+            Q(id_periodo_inicio_id=periodo_id) |
+            (Q(id_periodo_inicio__isnull=True) & Q(id_periodo_fin_id=periodo_id))
+        )
     if estado:
         qs = qs.filter(estado=estado)
     if anio:
@@ -1728,18 +1720,10 @@ def api_proyectos(request):
     if carrera_id:
         qs = qs.filter(id_carrera_id=carrera_id)
     if periodo_id:
-        try:
-            p_obj = PeriodoAcademico.objects.get(id_periodo=periodo_id)
-            qs = qs.filter(
-                Q(id_periodo_inicio_id=periodo_id) |
-                Q(id_periodo_fin_id=periodo_id) |
-                Q(
-                    id_periodo_inicio__fecha_inicio__lte=p_obj.fecha_fin,
-                    id_periodo_fin__fecha_fin__gte=p_obj.fecha_inicio
-                )
-            )
-        except Exception:
-            qs = qs.filter(id_periodo_inicio_id=periodo_id)
+        qs = qs.filter(
+            Q(id_periodo_inicio_id=periodo_id) |
+            (Q(id_periodo_inicio__isnull=True) & Q(id_periodo_fin_id=periodo_id))
+        )
     if estado:
         qs = qs.filter(estado=estado)
 
@@ -2667,18 +2651,10 @@ def api_reportes_stats(request):
     periodo_id = request.GET.get('periodo')
     qs_proyectos = Proyecto.objects.all()
     if periodo_id:
-        try:
-            p_obj = PeriodoAcademico.objects.get(id_periodo=periodo_id)
-            qs_proyectos = qs_proyectos.filter(
-                Q(id_periodo_inicio_id=periodo_id) |
-                Q(id_periodo_fin_id=periodo_id) |
-                Q(
-                    id_periodo_inicio__fecha_inicio__lte=p_obj.fecha_fin,
-                    id_periodo_fin__fecha_fin__gte=p_obj.fecha_inicio
-                )
-            )
-        except Exception:
-            qs_proyectos = qs_proyectos.filter(id_periodo_inicio_id=periodo_id)
+        qs_proyectos = qs_proyectos.filter(
+            Q(id_periodo_inicio_id=periodo_id) |
+            (Q(id_periodo_inicio__isnull=True) & Q(id_periodo_fin_id=periodo_id))
+        )
 
     total_proyectos = qs_proyectos.count()
     total_entidades = EntidadCooperante.objects.filter(activo=True).count()

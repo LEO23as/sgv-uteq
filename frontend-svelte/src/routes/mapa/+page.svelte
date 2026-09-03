@@ -494,35 +494,35 @@
     <div class="filtros-bar">
       <div class="filtros-inner">
 
-        <select class="fsel" bind:value={filtros.facultad} onchange={() => { filtros.carrera=''; }}>
+        <select class="fsel" bind:value={filtros.facultad} onchange={() => { filtros.carrera=''; filtrar(); }}>
           <option value="">Facultad (Todas)</option>
           {#each facultades as f}
             <option value={f.id_facultad}>{f.nombre_corto || f.nombre}</option>
           {/each}
         </select>
 
-        <select class="fsel" bind:value={filtros.carrera}>
+        <select class="fsel" bind:value={filtros.carrera} onchange={filtrar}>
           <option value="">Carrera (Todas)</option>
           {#each carrerasFiltradas as c}
             <option value={c.id_carrera}>{c.nombre}</option>
           {/each}
         </select>
 
-        <select class="fsel" bind:value={filtros.periodo}>
+        <select class="fsel" bind:value={filtros.periodo} onchange={filtrar}>
           <option value="">Período (Todos)</option>
           {#each periodos as p}
             <option value={p.id_periodo}>{p.nombre}</option>
           {/each}
         </select>
 
-        <select class="fsel" bind:value={filtros.estado}>
+        <select class="fsel" bind:value={filtros.estado} onchange={filtrar}>
           <option value="">Estado (Todos)</option>
           {#each ESTADOS as e}
             <option value={e.val}>{e.label}</option>
           {/each}
         </select>
 
-        <select class="fsel fsel-sm" bind:value={filtros.anio}>
+        <select class="fsel fsel-sm" bind:value={filtros.anio} onchange={filtrar}>
           <option value="">Año</option>
           {#each anios as a}
             <option value={a}>{a}</option>
