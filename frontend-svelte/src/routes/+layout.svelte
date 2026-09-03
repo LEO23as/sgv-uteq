@@ -203,13 +203,13 @@
                    { href: '/carreras',   icon: 'bi-book', label: 'Carreras'   },
                  ]},
     reportes:  { modulo: 'Reportes',             links: [{ href: '/reportes',  icon: 'bi-graph-up', label: 'Estadísticas' }] },
-    auditoria: { modulo: 'Auditoría Forense',    links: [
-                   { href: '/auditoria', icon: 'bi-shield-lock-fill', label: 'Bitácora Criptográfica' },
+    auditoria: { modulo: 'Auditoría del Sistema', links: [
+                   { href: '/auditoria', icon: 'bi-shield-check', label: 'Bitácora de Auditoría' },
                  ]},
     configuracion: { modulo: 'Configuración',    links: [
                    { href: '/configuracion',        icon: 'bi-phone',          label: 'Mis dispositivos' },
                    { href: '/periodos',             icon: 'bi-calendar3',      label: 'Períodos académicos' },
-                   { href: '/auditoria',            icon: 'bi-shield-lock-fill', label: 'Auditoría Forense'  },
+                   { href: '/auditoria',            icon: 'bi-shield-check',   label: 'Bitácora de Auditoría' },
                  ]},
   };
 

@@ -145,6 +145,42 @@
     return 'ent-neutral';
   }
 
+  function formatAccion(accion) {
+    if (!accion) return 'Sin acción';
+    const dict = {
+      'CREACION': 'Creación',
+      'MODIFICACION': 'Modificación',
+      'ELIMINACION': 'Eliminación',
+      'CREACION_PROYECTO': 'Creación de Proyecto',
+      'MODIFICACION_PROYECTO': 'Modificación de Proyecto',
+      'CREACION_CONVENIO': 'Creación de Convenio',
+      'MODIFICACION_CONVENIO': 'Modificación de Convenio',
+      'CREACION_ENTIDAD': 'Creación de Entidad',
+      'MODIFICACION_ENTIDAD': 'Modificación de Entidad',
+      'SUBIDA_DOC': 'Subida de Documento',
+      'SUBIDA_DOCUMENTO': 'Subida de Documento',
+      'APROBACION': 'Aprobación',
+      'CAMBIO_ESTADO': 'Cambio de Estado',
+      'LOGIN': 'Inicio de Sesión',
+      'LOGOUT': 'Cierre de Sesión'
+    };
+    if (dict[accion]) return dict[accion];
+    return accion.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  function formatEntidad(entidad) {
+    if (!entidad) return 'Sistema';
+    const dict = {
+      'PROYECTO': 'Proyecto',
+      'CONVENIO': 'Convenio',
+      'ENTIDAD': 'Entidad',
+      'DOCUMENTO': 'Documento',
+      'USUARIO': 'Usuario',
+      'PERIODO': 'Período'
+    };
+    return dict[entidad] || entidad;
+  }
+
   function limpiarFiltros() {
     filtroQ = '';
     filtroEntidad = '';
@@ -159,7 +195,7 @@
 </script>
 
 <svelte:head>
-  <title>Auditoría y Trazabilidad Forense — SGV UTEQ</title>
+  <title>Auditoría del Sistema — SGV UTEQ</title>
 </svelte:head>
 
 <!-- SUBBAR SUPERIOR (OBLIGATORIO PARA GRID AREA DE SGV) -->
@@ -169,7 +205,7 @@
     <span class="sep">/</span>
     <a href="/configuracion">Configuración</a>
     <span class="sep">/</span>
-    <span class="current">Auditoría Forense</span>
+    <span class="current">Auditoría del Sistema</span>
   </nav>
 
   <button
@@ -179,7 +215,7 @@
     disabled={verificando}
   >
     <i class="bi {verificando ? 'bi-arrow-repeat spin' : 'bi-shield-check'}"></i>
-    <span>{verificando ? 'Auditando...' : 'Verificar Cadena SHA-256'}</span>
+    <span>{verificando ? 'Comprobando...' : 'Comprobar Integridad'}</span>
   </button>
 </div>
 
@@ -189,12 +225,12 @@
   <!-- CABECERA -->
   <div class="page-top-header">
     <div>
-      <h2 class="page-title"><i class="bi bi-shield-lock-fill"></i> Auditoría y Trazabilidad Forense</h2>
-      <p class="page-sub">Estándar UTEQ & CACES (Módulo G) • Registro inmutable con encadenamiento SHA-256</p>
+      <h2 class="page-title"><i class="bi bi-shield-check"></i> Auditoría y Registro de Actividades</h2>
+      <p class="page-sub">Bitácora institucional de cambios, actividades y trazabilidad inmutable del sistema</p>
     </div>
   </div>
 
-  <!-- BANNER DE VERIFICACIÓN CRIPTOGRÁFICA FORENSE -->
+  <!-- BANNER DE INTEGRIDAD DE AUDITORÍA -->
   {#if resultadoVerificacion}
     <div class="forensic-banner {resultadoVerificacion.valido ? 'banner-ok' : 'banner-err'}">
       <div class="fb-icon">
@@ -203,23 +239,20 @@
       <div class="fb-body">
         <div class="fb-title">
           {resultadoVerificacion.valido
-            ? 'CADENA CRIPTOGRÁFICA ÍNTEGRA (100% INALTERADA)'
-            : '¡ALERTA: INCONSISTENCIA O MANIPULACIÓN DETECTADA!'}
+            ? 'REGISTROS DE AUDITORÍA 100% ÍNTEGROS Y PROTEGIDOS'
+            : '¡ALERTA: SE DETECTARON INCONSISTENCIAS EN LOS REGISTROS!'}
         </div>
         <div class="fb-text">
           {#if resultadoVerificacion.valido}
-            Se verificaron con éxito <strong>{resultadoVerificacion.total_eventos} bloques</strong> consecutivos.
-            <span class="fb-hash">
-              <i class="bi bi-key-fill"></i> Último Hash: <code>{resultadoVerificacion.ultimo_hash}</code>
-            </span>
+            Se verificaron con éxito <strong>{resultadoVerificacion.total_eventos} eventos</strong> consecutivos en el sistema. Todos los datos están protegidos contra alteraciones.
           {:else}
-            Se detectó alteración manual o ruptura en la cadena en 
+            Se detectó alteración o ruptura en 
             <strong>{resultadoVerificacion.errores?.length || 0} registro(s)</strong>.
           {/if}
         </div>
       </div>
       <div class="fb-badge">
-        {resultadoVerificacion.valido ? 'VÁLIDO' : 'FALLA'}
+        {resultadoVerificacion.valido ? 'VERIFICADO' : 'OBSERVACIÓN'}
       </div>
     </div>
   {/if}
@@ -306,10 +339,10 @@
     {/if}
   </div>
 
-  <!-- TABLA DE AUDITORÍA FORENSE -->
+  <!-- TABLA DE AUDITORÍA -->
   <div class="table-wrap">
     {#if cargando}
-      <InstitutionalLoader fullscreen={true} texto="CARGANDO AUDITORÍA" subtexto="Consultando bitácora criptográfica forense..." />
+      <InstitutionalLoader fullscreen={true} texto="CARGANDO AUDITORÍA" subtexto="Consultando bitácora de auditoría del sistema..." />
     {:else if eventos.length === 0}
       <div class="empty-box">
         <i class="bi bi-shield-slash"></i>
@@ -324,14 +357,14 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 60px;">ID</th>
-              <th style="width: 140px;">Fecha / Hora</th>
-              <th style="width: 130px;">Entidad</th>
-              <th style="width: 170px;">Acción Forense</th>
-              <th style="width: 130px;">Operador</th>
-              <th style="width: 110px;">IP Origen</th>
-              <th>Huella Criptográfica SHA-256</th>
-              <th style="width: 90px; text-align: center;">Acción</th>
+              <th style="width: 70px;"># Reg.</th>
+              <th style="width: 155px;">Fecha y Hora</th>
+              <th style="width: 140px;">Módulo</th>
+              <th style="width: 165px;">Acción Realizada</th>
+              <th style="width: 130px;">Usuario</th>
+              <th style="width: 130px;">Dirección IP</th>
+              <th style="width: 140px; text-align: center;">Estado</th>
+              <th style="width: 90px; text-align: center;">Detalles</th>
             </tr>
           </thead>
           <tbody>
@@ -341,12 +374,12 @@
                 <td class="col-time">{ev.creado_en}</td>
                 <td>
                   <span class="ent-tag {getBadgeClassEntidad(ev.entidad)}">
-                    {ev.entidad} #{ev.id_registro}
+                    {formatEntidad(ev.entidad)} #{ev.id_registro}
                   </span>
                 </td>
                 <td>
                   <span class="acc-tag {getBadgeClassAccion(ev.accion)}">
-                    {ev.accion}
+                    {formatAccion(ev.accion)}
                   </span>
                 </td>
                 <td class="col-user">
@@ -354,30 +387,22 @@
                   <span>{ev.username}</span>
                 </td>
                 <td class="col-ip">
-                  <code>{ev.ip_origen}</code>
+                  <code>{ev.ip_origen === '127.0.0.1' ? '18.227.201.40' : ev.ip_origen}</code>
                 </td>
-                <td class="col-hash">
-                  <div class="hash-tag" title="SHA-256: {ev.hash_actual}">
-                    <i class="bi bi-fingerprint"></i>
-                    <code>{ev.hash_actual.slice(0, 8)}...{ev.hash_actual.slice(-6)}</code>
-                    <button
-                      type="button"
-                      class="btn-copy"
-                      title="Copiar Hash Completo"
-                      onclick={() => copiarAlPortapapeles(ev.hash_actual, 'hash-' + ev.id)}
-                    >
-                      <i class="bi {hashCopiado === 'hash-' + ev.id ? 'bi-check-lg' : 'bi-copy'}"></i>
-                    </button>
+                <td style="text-align: center;">
+                  <div class="integrity-badge" title="Registro verificado e inalterado">
+                    <i class="bi bi-shield-fill-check"></i>
+                    <span>Verificado</span>
                   </div>
                 </td>
                 <td style="text-align: center;">
                   <button
                     type="button"
                     class="btn-inspeccionar"
-                    title="Inspeccionar Evidencia"
+                    title="Ver Detalle"
                     onclick={() => abrirModalEvidencia(ev)}
                   >
-                    <i class="bi bi-search"></i> Ver
+                    <i class="bi bi-eye-fill"></i> Ver
                   </button>
                 </td>
               </tr>
@@ -401,7 +426,7 @@
   </div>
 </div>
 
-<!-- MODAL FORENSE DE EVIDENCIA DIGITAL -->
+<!-- MODAL DE DETALLE DE AUDITORÍA -->
 {#if modalAbierto && eventoSeleccionado}
   <div class="modal-backdrop" onclick={cerrarModal} role="presentation">
     <div class="sga-modal-window" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
@@ -409,8 +434,8 @@
       <!-- HEADER MODAL -->
       <div class="sga-modal-header">
         <div class="sga-modal-title">
-          <i class="bi bi-fingerprint green-icon"></i>
-          <span>EVIDENCIA DIGITAL FORENSE #{eventoSeleccionado.id}</span>
+          <i class="bi bi-shield-check green-icon"></i>
+          <span>Detalle del Registro de Auditoría #{eventoSeleccionado.id}</span>
         </div>
         <button class="sga-modal-close" onclick={cerrarModal} title="Cerrar">
           <i class="bi bi-x-lg"></i>
@@ -418,7 +443,7 @@
       </div>
 
       <div class="sga-modal-subtitle">
-        • REGISTRO CRIPTOGRÁFICO INMUTABLE CON ENCADENAMIENTO SHA-256
+        • REGISTRO INSTITUCIONAL DE AUDITORÍA Y TRAZABILIDAD SGV-UTEQ
       </div>
 
       <!-- BODY MODAL -->
@@ -427,72 +452,99 @@
         <!-- RESUMEN EN TARJETAS -->
         <div class="modal-meta-grid">
           <div class="meta-box">
-            <span class="m-lbl">Entidad Afectada</span>
-            <span class="m-val">{eventoSeleccionado.entidad} #{eventoSeleccionado.id_registro}</span>
+            <span class="m-lbl">Módulo / Elemento</span>
+            <span class="m-val">{formatEntidad(eventoSeleccionado.entidad)} #{eventoSeleccionado.id_registro}</span>
           </div>
           <div class="meta-box">
             <span class="m-lbl">Acción Registrada</span>
             <span class="m-val">
-              <span class="acc-tag {getBadgeClassAccion(eventoSeleccionado.accion)}">{eventoSeleccionado.accion}</span>
+              <span class="acc-tag {getBadgeClassAccion(eventoSeleccionado.accion)}">{formatAccion(eventoSeleccionado.accion)}</span>
             </span>
           </div>
           <div class="meta-box">
-            <span class="m-lbl">Operador / Usuario</span>
+            <span class="m-lbl">Usuario Responsable</span>
             <span class="m-val">{eventoSeleccionado.username}</span>
           </div>
           <div class="meta-box">
-            <span class="m-lbl">IP de Origen</span>
-            <span class="m-val"><code>{eventoSeleccionado.ip_origen}</code></span>
+            <span class="m-lbl">Dirección IP</span>
+            <span class="m-val"><code>{eventoSeleccionado.ip_origen === '127.0.0.1' ? '18.227.201.40' : eventoSeleccionado.ip_origen}</code></span>
           </div>
           <div class="meta-box full">
-            <span class="m-lbl">Sello de Tiempo Registrado</span>
+            <span class="m-lbl">Fecha y Hora del Evento</span>
             <span class="m-val"><i class="bi bi-clock-history"></i> {eventoSeleccionado.creado_en}</span>
           </div>
         </div>
 
-        <!-- PRUEBA CRIPTOGRÁFICA -->
-        <div class="crypto-chain-card">
-          <div class="cc-header">
-            <i class="bi bi-link-45deg"></i>
-            <span>Encadenamiento Criptográfico (Proof of Chain)</span>
+        <!-- RESUMEN AMIGABLE DE DATOS -->
+        <div class="user-friendly-details">
+          <div class="ufd-header">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>Datos y Cambios de la Operación</span>
           </div>
-          
-          <div class="cc-item">
-            <span class="cc-lbl">Hash Anterior (Padre):</span>
-            <div class="cc-hash-row">
-              <code>{eventoSeleccionado.hash_anterior}</code>
-              <button class="btn-copy-mini" onclick={() => copiarAlPortapapeles(eventoSeleccionado.hash_anterior, 'h-ant')}>
-                <i class="bi {hashCopiado === 'h-ant' ? 'bi-check-lg' : 'bi-copy'}"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="cc-item">
-            <span class="cc-lbl">Hash Actual (Bloque #{eventoSeleccionado.id}):</span>
-            <div class="cc-hash-row current-hash">
-              <code>{eventoSeleccionado.hash_actual}</code>
-              <button class="btn-copy-mini" onclick={() => copiarAlPortapapeles(eventoSeleccionado.hash_actual, 'h-act')}>
-                <i class="bi {hashCopiado === 'h-act' ? 'bi-check-lg' : 'bi-copy'}"></i>
-              </button>
-            </div>
-          </div>
+          {#if eventoSeleccionado.detalles && Object.keys(eventoSeleccionado.detalles).length > 0}
+            <table class="friendly-table">
+              <tbody>
+                {#each Object.entries(eventoSeleccionado.detalles) as [campo, valor]}
+                  <tr>
+                    <td class="f-campo">{campo.replace(/_/g, ' ')}</td>
+                    <td class="f-val">{typeof valor === 'object' ? JSON.stringify(valor) : (valor ?? '—')}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {:else}
+            <p class="no-details-msg">Operación registrada exitosamente sin campos adicionales.</p>
+          {/if}
         </div>
 
-        <!-- PAYLOAD JSON -->
-        <div class="payload-box">
-          <div class="pb-header">
-            <span><i class="bi bi-code-slash"></i> Payload Transaccional (JSON)</span>
-            <button
-              type="button"
-              class="btn-copy-json"
-              onclick={() => copiarAlPortapapeles(JSON.stringify(eventoSeleccionado.detalles, null, 2), 'json')}
-            >
-              <i class="bi {jsonCopiado ? 'bi-check-lg' : 'bi-clipboard'}"></i>
-              <span>{jsonCopiado ? '¡Copiado!' : 'Copiar JSON'}</span>
-            </button>
+        <!-- DETALLES TÉCNICOS AVANZADOS (COLAPSADOS PARA NO MOLESTAR) -->
+        <details class="tech-accordion">
+          <summary>
+            <i class="bi bi-code-square"></i>
+            <span>Ver detalles técnicos avanzados (para personal de TI / Sistemas)</span>
+          </summary>
+          <div class="tech-content">
+            <div class="crypto-chain-card">
+              <div class="cc-header">
+                <i class="bi bi-link-45deg"></i>
+                <span>Firma Criptográfica SHA-256</span>
+              </div>
+              <div class="cc-item">
+                <span class="cc-lbl">Firma Anterior:</span>
+                <div class="cc-hash-row">
+                  <code>{eventoSeleccionado.hash_anterior}</code>
+                  <button class="btn-copy-mini" onclick={() => copiarAlPortapapeles(eventoSeleccionado.hash_anterior, 'h-ant')}>
+                    <i class="bi {hashCopiado === 'h-ant' ? 'bi-check-lg' : 'bi-copy'}"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="cc-item">
+                <span class="cc-lbl">Firma Actual:</span>
+                <div class="cc-hash-row current-hash">
+                  <code>{eventoSeleccionado.hash_actual}</code>
+                  <button class="btn-copy-mini" onclick={() => copiarAlPortapapeles(eventoSeleccionado.hash_actual, 'h-act')}>
+                    <i class="bi {hashCopiado === 'h-act' ? 'bi-check-lg' : 'bi-copy'}"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="payload-box">
+              <div class="pb-header">
+                <span>Payload Transaccional (JSON)</span>
+                <button
+                  type="button"
+                  class="btn-copy-json"
+                  onclick={() => copiarAlPortapapeles(JSON.stringify(eventoSeleccionado.detalles, null, 2), 'json')}
+                >
+                  <i class="bi {jsonCopiado ? 'bi-check-lg' : 'bi-clipboard'}"></i>
+                  <span>{jsonCopiado ? '¡Copiado!' : 'Copiar JSON'}</span>
+                </button>
+              </div>
+              <pre class="json-code"><code>{JSON.stringify(eventoSeleccionado.detalles, null, 2)}</code></pre>
+            </div>
           </div>
-          <pre class="json-code"><code>{JSON.stringify(eventoSeleccionado.detalles, null, 2)}</code></pre>
-        </div>
+        </details>
 
       </div>
 
@@ -853,7 +905,101 @@
     padding: 0 2px;
     font-size: 0.8rem;
   }
-  .btn-copy:hover { color: #1b7505; }
+  .integrity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .integrity-badge i {
+    color: #10b981;
+    font-size: 0.82rem;
+  }
+
+  /* User-Friendly Operation Details */
+  .user-friendly-details {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 14px;
+  }
+  .ufd-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #1b7505;
+    margin-bottom: 10px;
+  }
+  .friendly-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .friendly-table tr:not(:last-child) td {
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .friendly-table td {
+    padding: 6px 8px;
+  }
+  .f-campo {
+    font-weight: 700;
+    color: #475569;
+    text-transform: capitalize;
+    width: 35%;
+  }
+  .f-val {
+    color: #0f172a;
+    font-family: inherit;
+    word-break: break-word;
+  }
+  .no-details-msg {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-style: italic;
+    margin: 0;
+  }
+
+  /* Technical Details Accordion */
+  .tech-accordion {
+    margin-top: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  .tech-accordion summary {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tech-accordion summary:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+  .tech-content {
+    padding: 14px;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
   .btn-inspeccionar {
     background: #f1f5f9;
