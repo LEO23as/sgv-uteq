@@ -529,7 +529,10 @@
               <div class="info-grid">
                 <div class="info-item"><span class="il">Facultad</span><span class="iv">{proy.facultad}</span></div>
                 <div class="info-item"><span class="il">Carrera</span><span class="iv">{proy.carrera}</span></div>
-                <div class="info-item"><span class="il">Período Inicio</span><span class="iv">{proy.periodo}</span></div>
+                <div class="info-item"><span class="il">Período Inicio</span><span class="iv">{proy.periodo_inicio || proy.periodo}</span></div>
+                {#if proy.periodo_fin}
+                  <div class="info-item"><span class="il">Período Cierre</span><span class="iv font-semibold text-green">{proy.periodo_fin}</span></div>
+                {/if}
                 {#if proy.linea_vinculacion}
                   <div class="info-item"><span class="il">Línea Vinculación</span><span class="iv">{proy.linea_vinculacion}</span></div>
                 {/if}
