@@ -86,6 +86,34 @@
     };
   });
 
+  let resumenOdsGlobal = $derived.by(() => {
+    if (!$capaODSActiva) return null;
+    const counts = {};
+    CATALOGO_17_ODS.forEach(cat => { counts[cat.num] = 0; });
+
+    (proyectosGeoJSON?.features || []).forEach(f => {
+      const p = f.properties || {};
+      if (p.ods) {
+        const odsNums = (String(p.ods).match(/\d+/g) || []).map(Number);
+        odsNums.forEach(num => {
+          if (counts[num] !== undefined) counts[num]++;
+        });
+      }
+    });
+
+    const listado = CATALOGO_17_ODS.map(cat => ({
+      ...cat,
+      proyectosCount: counts[cat.num] || 0,
+      indicador: listaCapasOdsDB.find(o => o.num === cat.num)
+    })).filter(item => item.proyectosCount > 0);
+
+    return {
+      totalProyectos: total,
+      totalOdsActivos: listado.length,
+      listado,
+    };
+  });
+
   function extractUrl(item) {
     if (!item) return '';
     let url = typeof item === 'string' ? item : (item.url || item.ruta_foto || item.foto_url || item.src || '');
@@ -377,18 +405,23 @@
     if (!$capaODSActiva) return;
 
     const odsActivo = infoOdsActivo;
-    const colorODS = odsActivo?.color || '#1b7505';
+    const colorODS = odsActivo?.color || '#16a34a';
 
-    // Contar proyectos por cantón
-    const cantonesCount = {};
+    // Indexar datos territoriales y ODS por cantón
+    const cantonesData = {};
     (proyectosGeoJSON?.features || []).forEach(f => {
       const p = f.properties || {};
       const ubiList = p.ubicaciones || [{ canton: p.canton, provincia: p.provincia }];
+      const odsNums = (String(p.ods || '').match(/\d+/g) || []).map(Number);
+
       ubiList.forEach(u => {
         const cNorm = normalizarNombreCanton(u.canton || p.canton);
-        if (cNorm) {
-          cantonesCount[cNorm] = (cantonesCount[cNorm] || 0) + 1;
+        if (!cNorm) return;
+        if (!cantonesData[cNorm]) {
+          cantonesData[cNorm] = { count: 0, odsSet: new Set() };
         }
+        cantonesData[cNorm].count++;
+        odsNums.forEach(num => cantonesData[cNorm].odsSet.add(num));
       });
     });
 
@@ -396,36 +429,54 @@
     odsPolygonsLayer = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
       style: (feature) => {
         const p = feature.properties || {};
-        const cNorm = normalizarNombreCanton(p.canton || p.name);
-        const count = cantonesCount[cNorm] || 0;
+        const cNorm = normalizarNombreCanton(p.canton || p.DPA_DESCAN || p.name);
+        const dataC = cantonesData[cNorm];
+        const count = dataC ? dataC.count : 0;
         const tieneProy = count > 0;
         return {
           weight: tieneProy ? 1.5 : 0.5,
           opacity: tieneProy ? 0.9 : 0.35,
           color: tieneProy ? colorODS : '#94a3b8',
-          fillOpacity: tieneProy ? Math.min(0.28 + (count * 0.12), 0.75) : 0.04,
+          fillOpacity: tieneProy ? Math.min(0.28 + (count * 0.08), 0.75) : 0.04,
           fillColor: tieneProy ? colorODS : '#cbd5e1',
         };
       },
       onEachFeature: (feature, layer) => {
         const p = feature.properties || {};
-        const nombre = p.canton || p.name || 'Cantón';
-        const prov = p.province || p.provincia || '';
+        const nombre = p.canton || p.DPA_DESCAN || p.name || 'Cantón';
+        const prov = p.province || p.provincia || p.DPA_DESPRO || '';
         const cNorm = normalizarNombreCanton(nombre);
-        const count = cantonesCount[cNorm] || 0;
+        const dataC = cantonesData[cNorm];
+        const count = dataC ? dataC.count : 0;
+        const odsList = dataC ? Array.from(dataC.odsSet).sort((a,b) => a - b) : [];
 
         let metaInfo = '';
         if (odsActivo) {
-          metaInfo = `<div style="margin-top:4px;border-top:1px solid rgba(0,0,0,0.1);padding-top:4px;">
-            <b style="color:${colorODS}">ODS ${odsActivo.num}: ${odsActivo.nombre}</b><br>
-            <span style="font-size:0.75rem;color:#475569"><b>Indicador nacional:</b> ${odsActivo.valor_reciente ?? '—'} ${odsActivo.unidad || ''} (${odsActivo.anio_reciente || 'Reciente'})</span>
+          metaInfo = `<div style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.1);padding-top:5px;">
+            <b style="color:${colorODS};">ODS ${odsActivo.num}: ${odsActivo.nombre}</b><br>
+            <span style="font-size:0.75rem;color:#475569;"><b>Indicador oficial:</b> ${odsActivo.valor_reciente ?? '—'} ${odsActivo.unidad || ''} (${odsActivo.anio_reciente || 'Reciente'})</span>
+          </div>`;
+        } else if (odsList.length > 0) {
+          const badges = odsList.map(num => {
+            const cat = CATALOGO_17_ODS.find(c => c.num === num);
+            return `<span style="background:${cat?.color || '#16a34a'};color:#ffffff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;display:inline-block;">ODS ${num}</span>`;
+          }).join(' ');
+          metaInfo = `<div style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.1);padding-top:5px;">
+            <span style="font-size:0.72rem;font-weight:700;color:#475569;display:block;margin-bottom:3px;">Metas ODS activas en este territorio:</span>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;">${badges}</div>
           </div>`;
         }
 
+        const textoProyectos = count > 0 
+          ? `<span style="color:#15803d;font-weight:800;">📍 ${count} proyectos UTEQ activos</span>`
+          : `<span style="color:#94a3b8;font-style:italic;">Sin proyectos UTEQ registrados</span>`;
+
         layer.bindTooltip(
-          `<b>Cantón:</b> ${nombre}${prov ? ` (${prov})` : ''}<br>` +
-          `<span style="color:#0f172a;font-weight:700;">📍 Proyectos UTEQ:</span> ${count > 0 ? `<strong>${count}</strong> proyectos activos` : '<i>Sin proyectos en esta meta</i>'}` +
-          metaInfo,
+          `<div style="font-family:inherit;font-size:0.8rem;line-height:1.4;">
+            <b>Cantón:</b> ${nombre}${prov ? ` (${prov})` : ''}<br>
+            ${textoProyectos}
+            ${metaInfo}
+          </div>`,
           { sticky: true, direction: 'top' }
         );
 
@@ -809,67 +860,122 @@
       </div>
 
       <!-- CARD HUD FLOTANTE DE ODS (AGENDA 2030) -->
-      {#if $capaODSActiva && infoOdsActivo}
-        <div class="map-ods-floating-card" style="--ods-accent: {infoOdsActivo.color || '#E5243B'};">
-          <div class="mofc-header" style="background: {infoOdsActivo.color || '#E5243B'};">
-            <div class="mofc-title-wrap">
-              <span class="mofc-badge">ODS {infoOdsActivo.num}</span>
-              <span class="mofc-name">{infoOdsActivo.nombre}</span>
+      {#if $capaODSActiva}
+        {#if infoOdsActivo}
+          <!-- VISTA DE ODS ESPECÍFICO -->
+          <div class="map-ods-floating-card" style="--ods-accent: {infoOdsActivo.color || '#E5243B'};">
+            <div class="mofc-header" style="background: {infoOdsActivo.color || '#E5243B'};">
+              <div class="mofc-title-wrap">
+                <span class="mofc-badge">ODS {infoOdsActivo.num}</span>
+                <span class="mofc-name">{infoOdsActivo.nombre}</span>
+              </div>
+              <div class="mofc-actions">
+                <button 
+                  type="button" 
+                  class="mofc-btn-icon" 
+                  onclick={() => odsHudMinimizado = !odsHudMinimizado} 
+                  title={odsHudMinimizado ? 'Expandir diagnóstico' : 'Minimizar'}
+                >
+                  <i class="bi {odsHudMinimizado ? 'bi-chevron-down' : 'bi-chevron-up'}"></i>
+                </button>
+                <button 
+                  type="button" 
+                  class="mofc-btn-icon" 
+                  onclick={() => { odsSeleccionadoMapa.set(null); }} 
+                  title="Ver todos los ODS"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
             </div>
-            <div class="mofc-actions">
-              <button 
-                type="button" 
-                class="mofc-btn-icon" 
-                onclick={() => odsHudMinimizado = !odsHudMinimizado} 
-                title={odsHudMinimizado ? 'Expandir diagnóstico' : 'Minimizar'}
-              >
-                <i class="bi {odsHudMinimizado ? 'bi-chevron-down' : 'bi-chevron-up'}"></i>
-              </button>
-              <button 
-                type="button" 
-                class="mofc-btn-icon" 
-                onclick={() => { odsSeleccionadoMapa.set(null); }} 
-                title="Quitar filtro ODS"
-              >
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </div>
-          </div>
 
-          {#if !odsHudMinimizado}
-            <div class="mofc-body">
-              <div class="mofc-stat-row">
-                <div class="mofc-stat-box">
-                  <span class="mofc-stat-lbl">INDICADOR OFICIAL ECUADOR</span>
-                  <div class="mofc-stat-val">
-                    <strong>{infoOdsActivo.valor_reciente ?? '—'}</strong>
-                    <small>{infoOdsActivo.unidad || '%'}</small>
-                    <span class="mofc-stat-yr">({infoOdsActivo.anio_reciente || 'Reciente'})</span>
+            {#if !odsHudMinimizado}
+              <div class="mofc-body">
+                <div class="mofc-stat-row">
+                  <div class="mofc-stat-box">
+                    <span class="mofc-stat-lbl">INDICADOR OFICIAL ECUADOR</span>
+                    <div class="mofc-stat-val">
+                      <strong>{infoOdsActivo.valor_reciente ?? '—'}</strong>
+                      <small>{infoOdsActivo.unidad || '%'}</small>
+                      <span class="mofc-stat-yr">({infoOdsActivo.anio_reciente || 'Reciente'})</span>
+                    </div>
+                    <p class="mofc-stat-sub" title={infoOdsActivo.nombre_indicador || infoOdsActivo.nombre}>
+                      {infoOdsActivo.nombre_indicador || 'Meta de Desarrollo Sostenible (CEPAL / ONU)'}
+                    </p>
                   </div>
-                  <p class="mofc-stat-sub" title={infoOdsActivo.nombre_indicador || infoOdsActivo.nombre}>
-                    {infoOdsActivo.nombre_indicador || 'Meta de Desarrollo Sostenible (CEPAL / ONU)'}
-                  </p>
+                </div>
+
+                <div class="mofc-impact-row">
+                  <div class="mofc-impact-pill">
+                    <i class="bi bi-geo-alt-fill" style="color: {infoOdsActivo.color};"></i>
+                    <span><strong>{total}</strong> proyectos UTEQ alineados</span>
+                  </div>
+                  {#if infoOdsActivo.serie_historica && infoOdsActivo.serie_historica.length > 0}
+                    <button 
+                      type="button" 
+                      class="mofc-btn-hist" 
+                      onclick={() => modalHistoricoOds = infoOdsActivo}
+                    >
+                      <i class="bi bi-clock-history"></i> Evolución ({infoOdsActivo.serie_historica.length} años)
+                    </button>
+                  {/if}
                 </div>
               </div>
-
-              <div class="mofc-impact-row">
-                <div class="mofc-impact-pill">
-                  <i class="bi bi-geo-alt-fill" style="color: {infoOdsActivo.color};"></i>
-                  <span><strong>{total}</strong> proyectos UTEQ alineados</span>
-                </div>
-                {#if infoOdsActivo.serie_historica && infoOdsActivo.serie_historica.length > 0}
-                  <button 
-                    type="button" 
-                    class="mofc-btn-hist" 
-                    onclick={() => modalHistoricoOds = infoOdsActivo}
-                  >
-                    <i class="bi bi-clock-history"></i> Evolución ({infoOdsActivo.serie_historica.length} años)
-                  </button>
-                {/if}
+            {/if}
+          </div>
+        {:else if resumenOdsGlobal}
+          <!-- VISTA GLOBAL: TODOS LOS ODS ACTIVOS -->
+          <div class="map-ods-floating-card global" style="--ods-accent: #16a34a;">
+            <div class="mofc-header" style="background: #15803d;">
+              <div class="mofc-title-wrap">
+                <span class="mofc-badge"><i class="bi bi-globe-americas"></i> Agenda 2030</span>
+                <span class="mofc-name">Impacto Integral UTEQ</span>
+              </div>
+              <div class="mofc-actions">
+                <button 
+                  type="button" 
+                  class="mofc-btn-icon" 
+                  onclick={() => odsHudMinimizado = !odsHudMinimizado} 
+                  title={odsHudMinimizado ? 'Expandir' : 'Minimizar'}
+                >
+                  <i class="bi {odsHudMinimizado ? 'bi-chevron-down' : 'bi-chevron-up'}"></i>
+                </button>
               </div>
             </div>
-          {/if}
-        </div>
+
+            {#if !odsHudMinimizado}
+              <div class="mofc-body">
+                <div class="mofc-global-summary">
+                  <div class="mgs-stat">
+                    <strong>{resumenOdsGlobal.totalProyectos}</strong>
+                    <span>Proyectos vinculados</span>
+                  </div>
+                  <div class="mgs-sep"></div>
+                  <div class="mgs-stat">
+                    <strong>{resumenOdsGlobal.totalOdsActivos}</strong>
+                    <span>Metas ODS activas</span>
+                  </div>
+                </div>
+
+                <div class="mofc-global-pills-label">METAS ODS CON PROYECTOS UTEQ:</div>
+                <div class="mofc-global-chips-wrap">
+                  {#each resumenOdsGlobal.listado as meta}
+                    <button 
+                      type="button"
+                      class="mofc-global-chip" 
+                      style="--chip-c: {meta.color};"
+                      onclick={() => odsSeleccionadoMapa.set(meta.num)}
+                      title="{meta.nombre}: {meta.proyectosCount} proyectos"
+                    >
+                      <span class="mgc-num">ODS {meta.num}</span>
+                      <span class="mgc-cnt">{meta.proyectosCount}</span>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          </div>
+        {/if}
       {/if}
 
       <div class="map-hud-bar">
@@ -2283,6 +2389,107 @@
 .mofc-btn-hist:hover {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+/* ── HUD GLOBAL ODS EN EL MAPA ── */
+.mofc-global-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.mgs-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mgs-stat strong {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #15803d;
+  line-height: 1.1;
+}
+
+.mgs-stat span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.mgs-sep {
+  width: 1px;
+  height: 24px;
+  background: #cbd5e1;
+}
+
+.mofc-global-pills-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.mofc-global-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 125px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.mofc-global-chips-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mofc-global-chips-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.mofc-global-chip {
+  background: #ffffff;
+  border: 1px solid var(--chip-c);
+  border-radius: 6px;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.mofc-global-chip:hover {
+  background: var(--chip-c);
+}
+
+.mgc-num {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--chip-c);
+}
+
+.mgc-cnt {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #334155;
+}
+
+.mofc-global-chip:hover .mgc-num,
+.mofc-global-chip:hover .mgc-cnt {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* ── MODAL EVOLUCIÓN HISTÓRICA ODS ── */
