@@ -607,8 +607,17 @@
       });
 
       progresoLote = 100;
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        if (!res.ok) {
+          throw new Error(`El servidor respondió con código ${res.status}. Asegúrate de reiniciar el backend en el servidor con: docker restart sgv_backend`);
+        }
+      }
+
+      if (!res.ok) throw new Error(data.error || 'Error al guardar en base de datos');
 
       toast.success(`¡Excelente! ${data.procesados} indicadores ODS guardados en la base de datos.`);
       loteDetectado = {};
