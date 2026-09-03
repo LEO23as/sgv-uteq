@@ -77,17 +77,6 @@
       color: '#475569', 
       bg: '#f1f5f9',
       disabled: false 
-    },
-    { 
-      href: null, 
-      bi: 'bi-person-badge', 
-      label: 'Docentes', 
-      desc: 'Próximamente', 
-      key: null, 
-      color: '#64748b', 
-      bg: '#f8fafc',
-      disabled: true 
-    },
     { 
       href: '/usuarios', 
       bi: 'bi-people', 
