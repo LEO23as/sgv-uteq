@@ -10,12 +10,18 @@
   import Toasts from '$lib/Toasts.svelte';
   import ConfirmDialog from '$lib/ConfirmDialog.svelte';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
+  import GlobalSearchModal from '$lib/GlobalSearchModal.svelte';
+  import ProyectoDetalleModal from '$lib/ProyectoDetalleModal.svelte';
 
   let { children } = $props();
 
   const PUBLIC = ['/'];
   let authChecked = $state(false);
   let capasAbiertas = $state(false);
+
+  // Modal Búsqueda Global (Ctrl + K) & Detalle Rápido
+  let showGlobalSearch = $state(false);
+  let searchProyectoModalId = $state(null);
 
   // Dropdown & Modal states
   let showPeriodModal = $state(false);
@@ -272,6 +278,20 @@
           <span class="nav-brand-sep">|</span>
           <span class="nav-brand-sub">Sistema de Gestión de Vinculación</span>
         </a>
+      </div>
+
+      <!-- BUSCADOR GLOBAL RÁPIDO (CTRL + K) -->
+      <div class="navbar-center">
+        <button
+          type="button"
+          class="nav-search-trigger"
+          onclick={() => showGlobalSearch = true}
+          title="Búsqueda global rápida (Presiona Ctrl + K)"
+        >
+          <i class="bi bi-search search-ico"></i>
+          <span class="search-placeholder">Buscar proyectos, docentes, convenios, cantones...</span>
+          <span class="search-shortcut"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+        </button>
       </div>
 
       <div class="navbar-right">
@@ -566,6 +586,21 @@
   </div>
 {/if}
 
+<!-- MODAL DE BÚSQUEDA GLOBAL RÁPIDA (CTRL + K) -->
+<GlobalSearchModal
+  bind:isOpen={showGlobalSearch}
+  onSelectProject={(id) => { searchProyectoModalId = id; }}
+/>
+
+<!-- MODAL DE DETALLE RÁPIDO DE PROYECTO -->
+{#if searchProyectoModalId}
+  <ProyectoDetalleModal
+    idProyecto={searchProyectoModalId}
+    isOpen={!!searchProyectoModalId}
+    onClose={() => searchProyectoModalId = null}
+  />
+{/if}
+
 <style>
 /* ── GENERAL ── */
 .app-shell { 
@@ -603,6 +638,67 @@
 }
 
 .navbar-left { display: flex; align-items: center; gap: 10px; }
+.navbar-center {
+  flex: 1;
+  max-width: 440px;
+  margin: 0 16px;
+  display: flex;
+  align-items: center;
+}
+.nav-search-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 5px 12px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 0.82rem;
+}
+.nav-search-trigger:hover {
+  background: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.search-ico {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.search-placeholder {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+  font-weight: 500;
+}
+.search-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.search-shortcut kbd {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: inherit;
+}
+@media (max-width: 820px) {
+  .navbar-center { max-width: 220px; }
+  .search-placeholder { display: none; }
+}
+@media (max-width: 580px) {
+  .navbar-center { display: none; }
+}
 .navbar-right { display: flex; align-items: center; gap: 12px; }
 
 .nav-brand {
