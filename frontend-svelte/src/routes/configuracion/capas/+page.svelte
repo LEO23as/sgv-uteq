@@ -337,6 +337,11 @@
     };
   }
 
+  let auditoriaLote = $state([]); // Logs de auditoría de cada archivo procesado
+  let odsFaltantes = $derived(
+    [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17].filter(num => !loteDetectado[num] && !listaOds.find(o => o.num === num && o.cargado))
+  );
+
   async function onArchivosLoteODS(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -344,6 +349,7 @@
     totalArchivosLote = files.length;
     archivosProcesados = 0;
     const nuevoLote = { ...loteDetectado };
+    const logs = [];
 
     for (const f of files) {
       try {
@@ -355,7 +361,40 @@
 
         const parsed = procesarFilasODS(f.name, rows);
         if (parsed) {
-          nuevoLote[parsed.ods_num] = parsed;
+          const yaExiste = nuevoLote[parsed.ods_num];
+          const esDup = Boolean(yaExiste);
+          
+          if (yaExiste) {
+            // Si el nuevo archivo tiene más años registrados, lo prefiere
+            if (parsed.serie_historica.length >= yaExiste.serie_historica.length) {
+              nuevoLote[parsed.ods_num] = parsed;
+            }
+          } else {
+            nuevoLote[parsed.ods_num] = parsed;
+          }
+
+          logs.push({
+            nombre_archivo: f.name,
+            ods_num: parsed.ods_num,
+            nombre_ods: parsed.nombre_ods,
+            total_anios: parsed.serie_historica.length,
+            anio_reciente: parsed.anio_reciente,
+            valor_reciente: parsed.valor_reciente,
+            unidad: parsed.unidad,
+            es_duplicado: esDup,
+          });
+        } else {
+          logs.push({
+            nombre_archivo: f.name,
+            ods_num: null,
+            nombre_ods: 'No reconocido',
+            total_anios: 0,
+            anio_reciente: null,
+            valor_reciente: null,
+            unidad: '',
+            es_duplicado: false,
+            error: 'No se encontraron columnas de Ecuador o indicador ODS',
+          });
         }
       } catch (err) {
         console.error('Error leyendo archivo ODS:', f.name, err);
@@ -363,6 +402,7 @@
       archivosProcesados++;
     }
 
+    auditoriaLote = logs;
     loteDetectado = nuevoLote;
     const count = Object.keys(loteDetectado).length;
     if (count > 0) {
@@ -646,6 +686,41 @@
         </label>
       </div>
 
+      <!-- AUDITORÍA Y TRAZABILIDAD DE ARCHIVOS PROCESADOS -->
+      {#if auditoriaLote.length > 0}
+        <div class="ods-audit-card">
+          <div class="oac-hdr">
+            <h4><i class="bi bi-shield-check"></i> Certificación y Trazabilidad de Archivos ({totalArchivosLote} procesados)</h4>
+            <span class="oac-stat">{odsDetectadosCount} ODS Únicos Detectados</span>
+          </div>
+          <div class="oac-list">
+            {#each auditoriaLote as aud}
+              <div class="oac-item" class:is-duplicate={aud.es_duplicado}>
+                <div class="oac-icon">
+                  <i class="bi {aud.es_duplicado ? 'bi-exclamation-triangle-fill text-amber' : 'bi-check-circle-fill text-green'}"></i>
+                </div>
+                <div class="oac-detail">
+                  <div class="oac-title-row">
+                    <strong class="oac-filename">{aud.nombre_archivo}</strong>
+                    {#if aud.es_duplicado}
+                      <span class="badge-dup">⚠️ Repetido / Reemplazo</span>
+                    {/if}
+                  </div>
+                  <span class="oac-sub">➔ Asignado a <b>ODS {aud.ods_num}: {aud.nombre_ods}</b> ({aud.total_anios} años históricos, valor {aud.valor_reciente} {aud.unidad} en {aud.anio_reciente})</span>
+                </div>
+              </div>
+            {/each}
+          </div>
+
+          {#if odsFaltantes.length > 0}
+            <div class="oac-missing-alert">
+              <i class="bi bi-info-circle-fill"></i>
+              <span><b>Faltan {odsFaltantes.length} ODS por descargar:</b> {odsFaltantes.map(n => `ODS ${n}`).join(', ')}. Puedes descargarlos de la CEPAL y soltarlos aquí cuando desees.</span>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <!-- BARRA FLOTANTE DE ACCIÓN LOTE -->
       {#if odsDetectadosCount > 0}
         <div class="ods-batch-action-bar">
@@ -718,6 +793,11 @@
                     <div class="odb-meta-row">
                       <small><i class="bi bi-clock-history"></i> {dato.serie_historica?.length || 0} años registrados</small>
                     </div>
+                    {#if dato.nombre_archivo}
+                      <div class="odb-file-pill" title={dato.nombre_archivo}>
+                        <i class="bi bi-file-earmark-spreadsheet"></i> {dato.nombre_archivo}
+                      </div>
+                    {/if}
                   </div>
                 {:else}
                   <div class="ods-empty-box">
@@ -1077,6 +1157,86 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ── AUDITORÍA Y TRAZABILIDAD DE LOTE ODS ── */
+.ods-audit-card {
+  margin-top: 18px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+.oac-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.oac-hdr h4 { margin: 0; font-size: 0.92rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+.oac-stat { font-size: 0.76rem; font-weight: 800; color: #15803d; background: #dcfce7; padding: 3px 10px; border-radius: 20px; }
+
+.oac-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.oac-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #eef2f6;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.oac-item.is-duplicate {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.oac-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.text-green { color: #16a34a; }
+.text-amber { color: #d97706; }
+.oac-detail { display: flex; flex-direction: column; gap: 2px; }
+.oac-title-row { display: flex; align-items: center; gap: 8px; }
+.oac-filename { color: #1e293b; font-family: monospace; font-size: 0.82rem; }
+.badge-dup { background: #fef3c7; color: #92400e; font-size: 0.68rem; font-weight: 800; padding: 1px 6px; border-radius: 4px; }
+.oac-sub { color: #475569; font-size: 0.76rem; }
+
+.oac-missing-alert {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pastilla de archivo original en tarjeta */
+.odb-file-pill {
+  margin-top: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* BARRA FLOTANTE DE LOTE */
