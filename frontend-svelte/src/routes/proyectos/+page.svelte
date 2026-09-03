@@ -1,7 +1,7 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { fetchAPI, fetchAPICached } from '$lib/stores';
+  import { fetchAPI, fetchAPICached, periodoSeleccionadoGlobal } from '$lib/stores';
   import { toast } from '$lib/toast';
   import { confirmDialog } from '$lib/confirm';
   import ProgressBar from '$lib/ProgressBar.svelte';
@@ -210,6 +210,8 @@
     return { pct, label: `${pct}% avance`, sub: `${restDias}d restantes`, variant: 'auto' };
   }
 
+  let unsubPeriodo;
+
   onMount(async () => {
     try {
       // PROYECTOS: Siempre datos vivos y frescos del servidor
@@ -225,14 +227,39 @@
       carreras = carrsRes || [];
       periodos = persRes || [];
     } finally { loading = false; }
+
+    unsubPeriodo = periodoSeleccionadoGlobal.subscribe(p => {
+      if (p && p.id) {
+        filtPer = String(p.id);
+      } else if (p === null) {
+        filtPer = '';
+      }
+      page = 1;
+    });
   });
 
-  // Estadísticas y Conteo por Facultades
+  onDestroy(() => {
+    if (unsubPeriodo) unsubPeriodo();
+  });
+
+  function onFiltPerChange() {
+    page = 1;
+    const pObj = periodos.find(p => String(p.id_periodo) === String(filtPer));
+    if (pObj) {
+      periodoSeleccionadoGlobal.set({ id: pObj.id_periodo, codigo: pObj.codigo || pObj.nombre, nombre: pObj.nombre });
+    } else {
+      periodoSeleccionadoGlobal.set(null);
+    }
+  }
+
+  // Estadísticas y Conteo por Facultades (Alineadas con el filtro de período)
   let statsFacultades = $derived.by(() => {
     return facultades.map(fac => {
       const proysFac = items.filter(p => {
-        return (p.id_facultad && String(p.id_facultad) === String(fac.id_facultad)) ||
+        const matchPer = !filtPer || String(p.id_periodo_inicio) === String(filtPer) || (!p.id_periodo_inicio && String(p.id_periodo_fin) === String(filtPer));
+        const matchFac = (p.id_facultad && String(p.id_facultad) === String(fac.id_facultad)) ||
                (p.facultad_nombre && p.facultad_nombre.toLowerCase() === fac.nombre.toLowerCase());
+        return matchPer && matchFac;
       });
       const enEjec = proysFac.filter(p => p.estado === 'EN_EJECUCION').length;
       const finalizados = proysFac.filter(p => p.estado === 'FINALIZADO').length;
@@ -248,18 +275,19 @@
     });
   });
 
-  // Carreras de la Facultad Seleccionada con sus conteos
+  // Carreras de la Facultad Seleccionada con sus conteos (Alineadas con el filtro de período)
   let carrerasDeFacultad = $derived.by(() => {
     if (!facSeleccionada) return [];
     const carrs = carreras.filter(c => String(c.id_facultad) === String(facSeleccionada.id_facultad));
     
     return carrs.map(c => {
       const proysCar = items.filter(p => {
+        const matchPer = !filtPer || String(p.id_periodo_inicio) === String(filtPer) || (!p.id_periodo_inicio && String(p.id_periodo_fin) === String(filtPer));
         const matchFac = (p.id_facultad && String(p.id_facultad) === String(facSeleccionada.id_facultad)) ||
                          (p.facultad_nombre && p.facultad_nombre.toLowerCase() === facSeleccionada.nombre.toLowerCase());
         const matchCar = (p.id_carrera && String(p.id_carrera) === String(c.id_carrera)) ||
                          (p.carrera_nombre && p.carrera_nombre.toLowerCase() === c.nombre.toLowerCase());
-        return matchFac && matchCar;
+        return matchPer && matchFac && matchCar;
       });
 
       return {
@@ -292,7 +320,7 @@
       p.codigo.toLowerCase().includes(q.toLowerCase());
     
     const matchE = !filtEst || p.estado === filtEst;
-    const matchP = !filtPer || String(p.id_periodo_inicio) === String(filtPer);
+    const matchP = !filtPer || String(p.id_periodo_inicio) === String(filtPer) || (!p.id_periodo_inicio && String(p.id_periodo_fin) === String(filtPer));
 
     return matchQ && matchE && matchP;
   }));
@@ -347,6 +375,7 @@
     filtEst = '';
     filtPer = '';
     page = 1;
+    periodoSeleccionadoGlobal.set(null);
   }
 
   function abrirDetalle(id) {
@@ -438,7 +467,7 @@
         class:active={vistaModo === 'todos'}
         onclick={irATodos}
       >
-        <i class="bi bi-table"></i> Lista General ({items.length})
+        <i class="bi bi-table"></i> Lista General ({filtPer ? filtered.length : items.length})
       </button>
     </div>
   </div>
@@ -446,6 +475,40 @@
   {#if loading}
     <InstitutionalLoader fullscreen={true} texto="CARGANDO PROYECTOS" subtexto="Consultando proyectos institucionales UTEQ..." />
   {:else}
+
+    <!-- BARRA GLOBAL DE FILTRO POR PERÍODO ACADÉMICO -->
+    <div class="proy-periodo-bar">
+      <div class="ppb-left">
+        <i class="bi bi-calendar3 ppb-icon"></i>
+        <span class="ppb-label">Filtrar por Período:</span>
+        <select class="ppb-select" bind:value={filtPer} onchange={onFiltPerChange}>
+          <option value="">Todos los períodos ({items.length} proyectos)</option>
+          {#each periodos as p}
+            {@const totalP = items.filter(x => String(x.id_periodo_inicio) === String(p.id_periodo) || (!x.id_periodo_inicio && String(x.id_periodo_fin) === String(p.id_periodo))).length}
+            <option value={String(p.id_periodo)}>
+              {p.nombre || p.codigo} ({totalP} {totalP === 1 ? 'proyecto' : 'proyectos'})
+            </option>
+          {/each}
+        </select>
+        {#if filtPer}
+          <button type="button" class="ppb-btn-clear" onclick={() => { filtPer = ''; onFiltPerChange(); }} title="Quitar filtro de período">
+            <i class="bi bi-x-circle-fill"></i> Ver todos
+          </button>
+        {/if}
+      </div>
+      
+      <div class="ppb-right">
+        <span class="ppb-badge">
+          <i class="bi bi-folder-check"></i>
+          {#if filtPer}
+            {@const pNom = periodos.find(p => String(p.id_periodo) === String(filtPer))?.codigo || 'Período'}
+            Mostrando <strong>{filtered.length}</strong> de <strong>{items.length}</strong> proyectos en <strong>{pNom}</strong>
+          {:else}
+            Mostrando todos los <strong>{items.length}</strong> proyectos institucionales
+          {/if}
+        </span>
+      </div>
+    </div>
 
     <!-- ══════════════════════════════════════════════════════════════
          NIVEL 1: TARJETAS DE FACULTADES
@@ -647,10 +710,10 @@
           <input bind:value={q} placeholder="Buscar por nombre o código…" oninput={() => page = 1} />
         </div>
 
-        <select bind:value={filtPer} onchange={() => page = 1}>
+        <select bind:value={filtPer} onchange={onFiltPerChange}>
           <option value="">Todos los períodos</option>
           {#each periodos as p}
-            <option value={p.id_periodo}>{p.nombre || p.codigo}</option>
+            <option value={String(p.id_periodo)}>{p.nombre || p.codigo}</option>
           {/each}
         </select>
 
@@ -1097,4 +1160,90 @@
   .fcc-tb-icon { font-size: 1.4rem; color: #0284c7; flex-shrink: 0; line-height: 1; margin-top: 2px; }
   .fcc-tb-content strong { color: #0369a1; font-size: 0.94rem; display: block; margin-bottom: 4px; }
   .fcc-tb-content p { color: #334155; font-size: 0.86rem; line-height: 1.5; margin: 0; }
+
+  /* Barra de Filtro de Período Académico */
+  .proy-periodo-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  }
+  .ppb-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ppb-icon {
+    font-size: 1.15rem;
+    color: #1b7505;
+  }
+  .ppb-label {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .ppb-select {
+    padding: 7px 14px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: #f8fafc;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .ppb-select:focus {
+    border-color: #1b7505;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(27, 117, 5, 0.12);
+  }
+  .ppb-btn-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 5px 12px;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .ppb-btn-clear:hover {
+    background: #fecaca;
+    color: #991b1b;
+  }
+  .ppb-right {
+    display: flex;
+    align-items: center;
+  }
+  .ppb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.86rem;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .ppb-badge strong {
+    color: #0f172a;
+  }
 </style>

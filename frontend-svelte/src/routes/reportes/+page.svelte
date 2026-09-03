@@ -1,7 +1,7 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
-  import { fetchAPI, fetchAPICached } from '$lib/stores';
+  import { fetchAPI, fetchAPICached, periodoSeleccionadoGlobal } from '$lib/stores';
   import Pagination from '$lib/Pagination.svelte';
   import ProyectoDetalleModal from '$lib/ProyectoDetalleModal.svelte';
   import InstitutionalLoader from '$lib/InstitutionalLoader.svelte';
@@ -88,8 +88,31 @@
       periodos = await fetchAPICached('/api/periodos/');
     } catch {}
 
+    unsubPeriodo = periodoSeleccionadoGlobal.subscribe(p => {
+      const nuevo = p && p.id ? String(p.id) : '';
+      if (nuevo !== periodoFiltro) {
+        periodoFiltro = nuevo;
+        cargarEstadisticas();
+      }
+    });
+
     await cargarEstadisticas();
   });
+
+  let unsubPeriodo;
+  onDestroy(() => {
+    if (unsubPeriodo) unsubPeriodo();
+  });
+
+  function onPeriodoFiltroChange() {
+    const pObj = periodos.find(p => String(p.id_periodo) === String(periodoFiltro));
+    if (pObj) {
+      periodoSeleccionadoGlobal.set({ id: pObj.id_periodo, codigo: pObj.codigo || pObj.nombre, nombre: pObj.nombre });
+    } else {
+      periodoSeleccionadoGlobal.set(null);
+    }
+    cargarEstadisticas();
+  }
 
   async function cargarEstadisticas() {
     loading = true;
@@ -222,10 +245,10 @@
   <div class="rep-actions">
     <div class="filter-group">
       <i class="bi bi-funnel"></i>
-      <select bind:value={periodoFiltro} onchange={cargarEstadisticas} class="rep-select">
+      <select bind:value={periodoFiltro} onchange={onPeriodoFiltroChange} class="rep-select">
         <option value="">Todos los períodos</option>
         {#each periodos as p}
-          <option value={p.id_periodo}>{p.nombre || p.codigo}</option>
+          <option value={String(p.id_periodo)}>{p.nombre || p.codigo}</option>
         {/each}
       </select>
     </div>
